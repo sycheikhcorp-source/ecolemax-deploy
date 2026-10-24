@@ -422,6 +422,40 @@ def _call_llm(messages, base, key, model, endpoint="/chat/completions", extra=No
     with urllib.request.urlopen(req, timeout=45) as r:
         return json.loads(r.read().decode())
 
+def _calculer(question):
+    \"\"\"Calcule les expressions mathématiques simples localement (ex: 12 x 12).\"\"\"
+    import re
+    q = question.lower()
+    # Expression: nombre op nombre (op: + - * / × ÷)
+    m = re.search(r'(\d+(?:[.,]\d+)?)\s*([+\-*/×÷])\s*(\d+(?:[.,]\d+)?)', q)
+    if m:
+        try:
+            a = float(m.group(1).replace(',', '.'))
+            op = m.group(2)
+            b = float(m.group(3).replace(',', '.'))
+            if op in ('+',):
+                res = a + b
+            elif op in ('-',):
+                res = a - b
+            elif op in ('*', '×'):
+                res = a * b
+            elif op in ('/', '÷'):
+                if b == 0:
+                    return None
+                res = a / b
+            else:
+                return None
+            return {
+                "reponse": f"**Résultat :** {a:g} {op} {b:g} = **{res:g}**",
+                "explication": f"L'opération « {a:g} {op} {b:g} » donne {res:g}.",
+                "confiance": 0.99,
+                "source": "Calcul local",
+                "etapes": [f"Étape 1 : identifier l'opération {a:g} {op} {b:g}", f"Étape 2 : effectuer le calcul = {res:g}", "Étape 3 : vérifier (recalcul mental ou contre-vérification)"],
+            }
+        except (ValueError, ZeroDivisionError):
+            return None
+    return None
+
 def reponse_ia(question, plan):
     """Assistant IA réel : OpenAI -> Groq -> Gemini -> Pollinations (gratuit) -> repli."""
     # Cache (réduit les appels, limite les requêtes au service gratuit)
@@ -430,7 +464,11 @@ def reponse_ia(question, plan):
         cached = dict(_IA_CACHE[cache_key])
         cached["source"] = str(cached.get("source", "")) + " (cache)"
         return cached
-    # 0. Pollinations (PRIORITÉ — gratuit, sans clé, GPT-OSS 20B)
+    # 0. Calcul local instantané (ex: 12 x 12, 2+2) — pas de dépendance réseau
+    calcul = _calculer(question)
+    if calcul:
+        return calcul
+    # 1. Pollinations (PRIORITÉ — gratuit, sans clé, GPT-OSS 20B)
     for attempt in range(2):
         try:
             headers = {"Content-Type": "application/json"}
