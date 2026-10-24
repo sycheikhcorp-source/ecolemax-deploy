@@ -476,6 +476,12 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
+        try:
+            self._do_GET()
+        except Exception as e:
+            self.send_json({"erreur":"Erreur interne: "+str(e), "trace": str(e)[:200]}, 500)
+
+    def _do_GET(self):
         path = self.path.split("?")[0]
         if path == "/health":
             return self.send_json({"status":"ok","service":"ecolemax","time":now()})
@@ -590,6 +596,12 @@ class Handler(BaseHTTPRequestHandler):
         return self.send_json({"erreur":"Non trouvé"}, 404)
 
     def do_POST(self):
+        try:
+            self._do_POST()
+        except Exception as e:
+            self.send_json({"erreur":"Erreur interne: "+str(e), "trace": str(e)[:200]}, 500)
+
+    def _do_POST(self):
         path = self.path.split("?")[0]
         data = self.body()
         u = get_user_by_token(self)
