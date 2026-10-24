@@ -754,7 +754,7 @@ class Handler(BaseHTTPRequestHandler):
             c.execute("DELETE FROM abonnements WHERE user_id=?", (uid,))
             c.execute("DELETE FROM paiements WHERE user_id=?", (uid,))
             c.execute("DELETE FROM results WHERE user_id=?", (uid,))
-            c.execute("DELETE FROM support WHERE user_id=?", (uid,))
+            c.execute("DELETE FROM supports WHERE user_id=?", (uid,))
             c.execute("DELETE FROM users WHERE id=?", (uid,))
             c.commit(); c.close()
             log_sec(1, "admin_action", f"Utilisateur {uid} supprimé")
