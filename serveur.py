@@ -413,7 +413,43 @@ def reponse_ia(question, plan):
         cached = dict(_IA_CACHE[cache_key])
         cached["source"] = str(cached.get("source", "")) + " (cache)"
         return cached
-    # 1. OpenAI / Groq / OpenRouter (OpenAI-compatible)
+    # 0. Pollinations (PRIORITÉ — gratuit, sans clé, GPT-OSS 20B)
+    for attempt in range(4):
+        try:
+            headers = {"Content-Type": "application/json"}
+            if POLLINATIONS_KEY:
+                headers["Authorization"] = "Bearer " + POLLINATIONS_KEY
+            req = urllib.request.Request(
+                "https://text.pollinations.ai/",
+                data=json.dumps({"messages": _llm_messages(question), "model": "openai"}).encode(),
+                headers=headers)
+            with urllib.request.urlopen(req, timeout=45) as r:
+                raw = r.read().decode()
+            try:
+                txt = json.loads(raw)["choices"][0]["message"]["content"]
+            except Exception:
+                txt = raw.strip()
+            if "limit" in txt.lower() or "too many" in txt.lower():
+                if attempt < 3:
+                    time.sleep(3 + attempt * 3)
+                    continue
+                local = reponses_locales.chercher(question)
+                if local:
+                    return local
+                return _message_saturation()
+            return {"reponse": txt, "confiance": 0.9, "source": "IA", "explication": "", "etapes": []}
+        except Exception as e:
+            msg = str(e)
+            if any(k in msg.lower() for k in ("rate", "limit", "every", "429", "402", "too many")):
+                if attempt < 3:
+                    time.sleep(3 + attempt * 3)
+                    continue
+                local = reponses_locales.chercher(question)
+                if local:
+                    return local
+                continue
+            continue
+    # 1. OpenAI / Groq / OpenRouter (OpenAI-compatible) — si clés présentes
     for key, base, model in ((OPENAI_API_KEY, OPENAI_BASE, OPENAI_MODEL),
                              (GROQ_API_KEY, "https://api.groq.com/openai/v1", GROQ_MODEL),
                              (OPENROUTER_API_KEY, "https://openrouter.ai/api/v1", OPENROUTER_MODEL)):
@@ -438,44 +474,7 @@ def reponse_ia(question, plan):
             return {"reponse": txt, "confiance": 0.95, "source": "IA", "explication": "", "etapes": []}
         except Exception:
             pass
-    # 3. Pollinations (gratuit, limite ~1/30s par IP sans clé) — avec retry 3x
-    for attempt in range(3):
-        try:
-            headers = {"Content-Type": "application/json"}
-            if POLLINATIONS_KEY:
-                headers["Authorization"] = "Bearer " + POLLINATIONS_KEY
-            req = urllib.request.Request(
-                "https://text.pollinations.ai/",
-                data=json.dumps({"messages": _llm_messages(question), "model": "openai"}).encode(),
-                headers=headers)
-            with urllib.request.urlopen(req, timeout=45) as r:
-                raw = r.read().decode()
-            try:
-                txt = json.loads(raw)["choices"][0]["message"]["content"]
-            except Exception:
-                txt = raw.strip()
-            if "limit" in txt.lower() or "too many" in txt.lower():
-                if attempt < 2:
-                    time.sleep(2 + attempt * 2)
-                    continue
-                local = reponses_locales.chercher(question)
-                if local:
-                    return local
-                return _message_saturation()
-            return {"reponse": txt, "confiance": 0.9, "source": "IA", "explication": "", "etapes": []}
-        except Exception as e:
-            msg = str(e)
-            if any(k in msg.lower() for k in ("rate", "limit", "every", "429", "402", "too many")):
-                if attempt < 2:
-                    time.sleep(2 + attempt * 2)
-                    continue
-                local = reponses_locales.chercher(question)
-                if local:
-                    return local
-                return _message_saturation()
-            r = _repli_mock(question)
-            r["source"] = "repli hors ligne"
-            return r
+    # Repli : bibliothèque locale puis mock
     local = reponses_locales.chercher(question)
     if local:
         return local
