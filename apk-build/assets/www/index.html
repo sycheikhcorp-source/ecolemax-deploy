@@ -356,6 +356,7 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
     <div class="prof-row"><span class="k">Statut</span><span class="v" id="planStatus">—</span></div>
     <div style="margin-top:12px"><button class="btn btn-ghost" onclick="showPlans()">🔍 Voir les plans</button></div>
   </div>
+  <div class="prof-card"><button class="btn btn-ghost" onclick="showHistory()">🕒 Voir l'historique</button></div>
   <div class="prof-card"><button class="btn btn-ghost" onclick="goToTab('iaadmin')">🤖 IA Admin — Poser des questions</button></div>
   <div class="prof-card"><button class="btn btn-danger" onclick="logout()">🚪 Déconnexion</button></div>
   <p style="text-align:center;font-size:10px;color:var(--ink-soft);padding:16px">ÉcoleMax — Créé par <strong>SycheikhCorp</strong> © 2026</p>
@@ -381,11 +382,44 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
   </div>
 </div>
 
+<!-- ==================== CORRECTEUR DE TEXTE ==================== -->
+<div class="screen chat-screen" id="screen-text">
+  <div class="chat-header"><h3>✍️ Correcteur de texte</h3><p>Corrigez votre rédaction</p></div>
+  <div style="padding:12px">
+    <textarea id="textInput" placeholder="Copiez votre texte ici (rédaction, dissertation, grammaire)..." style="width:100%;min-height:120px;border:1px solid var(--line);border-radius:12px;padding:12px;font-family:inherit;font-size:14px;resize:vertical;outline:none"></textarea>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button class="btn btn-primary" style="flex:1" onclick="correctText()">✍️ Corriger</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('textInput').value='';document.getElementById('correctResult').style.display='none'">🗑️ Effacer</button>
+    </div>
+    <div id="correctResult" style="display:none">
+      <div class="sec-title">✅ Texte corrigé</div>
+      <div id="correctTextOut" style="background:var(--primary-l);border-radius:12px;padding:12px;margin-bottom:12px;white-space:pre-wrap"></div>
+      <div class="sec-title">📖 Explications</div>
+      <div id="correctExpl" style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;white-space:pre-wrap"></div>
+      <button class="btn btn-ghost" style="width:100%;margin-top:12px" onclick="saveCorrection()">💾 Enregistrer dans l'historique</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== EXERCICES ==================== -->
+<div class="screen chat-screen" id="screen-exercises">
+  <div class="chat-header"><h3>📚 Exercices</h3><p>Testez vos connaissances</p></div>
+  <div id="exList" style="padding:12px"></div>
+</div>
+
+<!-- ==================== HISTORIQUE ==================== -->
+<div class="screen chat-screen" id="screen-history">
+  <div class="chat-header"><h3>🕒 Historique</h3><p>Vos corrections enregistrées</p></div>
+  <div id="histList" style="padding:12px"></div>
+</div>
+
 <!-- ==================== TAB BAR ==================== -->
 <div class="tabbar" id="tabbar">
   <div class="tab active" onclick="goToTab('home')"><span class="ic">🏠</span>Accueil</div>
   <div class="tab" onclick="goToTab('chat')"><span class="ic">🤖</span>IA</div>
+  <div class="tab" onclick="goToTab('text')"><span class="ic">✍️</span>Texte</div>
   <div class="tab" onclick="goToTab('photo')"><span class="ic">📸</span>Photo</div>
+  <div class="tab" onclick="goToTab('exercises')"><span class="ic">📚</span>Exercices</div>
   <div class="tab" onclick="goToTab('profile')"><span class="ic">👤</span>Profil</div>
 </div>
 
@@ -533,9 +567,9 @@ function goToTab(tab){
     document.getElementById("iaInput").focus();
     return;
   }
-  var tabs={home:"screen-home",chat:"screen-chat",photo:"screen-photo",profile:"screen-profile"};
+  var tabs={home:"screen-home",chat:"screen-chat",photo:"screen-photo",profile:"screen-profile",text:"screen-text",exercises:"screen-exercises",history:"screen-history"};
   document.getElementById(tabs[tab]).classList.add("active");
-  document.querySelectorAll(".tab")[{home:0,chat:1,photo:2,profile:3}[tab]].classList.add("active");
+  document.querySelectorAll(".tab")[{home:0,chat:1,text:2,photo:3,exercises:4,profile:5}[tab]].classList.add("active");
   if(tab==="home"){renderSubjects();refreshSubscription();}
   if(tab==="chat"){document.getElementById("chatInput").focus();}
 }
@@ -713,6 +747,90 @@ async function resetVerify(){
     setTimeout(function(){switchAuth("login");},1500);
   }catch(e){errEl.textContent="Serveur inaccessible";errEl.classList.add("show");}
 }
+
+// ===== CORRECTEUR DE TEXTE =====
+async function correctText(){
+  var inp=document.getElementById("textInput");
+  var texte=inp.value.trim();
+  if(texte.length<10){alert("Mettez au moins 10 caractères");return;}
+  document.getElementById("correctResult").style.display="none";
+  addMsg("Correction en cours...","bot","loading");
+  try{
+    var r=await fetch(API+"/api/ai/correct",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({texte})});
+    var d=await r.json();
+    removeLastLoading();
+    if(!r.ok){throw new Error(d.erreur||"Erreur");}
+    // Séparer texte corrigé et explications
+    var rep=d.reponse||"Pas de réponse";
+    document.getElementById("correctTextOut").textContent=rep;
+    document.getElementById("correctExpl").textContent=d.explication||d.etapes?d.etapes.join("\n"):"";
+    document.getElementById("correctResult").style.display="block";
+    document.getElementById("correctResult").scrollIntoView({behavior:"smooth"});
+  }catch(e){removeLastLoading();addMsg(e.message,"err");}
+}
+function saveCorrection(){
+  var texte=document.getElementById("textInput").value.trim();
+  var corrige=document.getElementById("correctTextOut").textContent;
+  if(!texte)return;
+  try{
+    var hist=JSON.parse(localStorage.getItem("ecolemax_hist")||"[]");
+    hist.unshift({date:new Date().toLocaleString(),texte:texte.slice(0,100),corrige:corrige.slice(0,100)});
+    if(hist.length>20)hist=hist.slice(0,20);
+    localStorage.setItem("ecolemax_hist",JSON.stringify(hist));
+    alert("✅ Enregistré dans l'historique");
+  }catch(e){alert("Erreur enregistrement");}
+}
+function showHistory(){
+  goToTab("history");
+  renderHist();
+}
+function renderHist(){
+  var list=document.getElementById("histList");
+  try{
+    var hist=JSON.parse(localStorage.getItem("ecolemax_hist")||"[]");
+    if(hist.length===0){list.innerHTML='<div style="text-align:center;color:var(--ink-soft);padding:30px">Aucun historique<br>Utilisez le correcteur puis enregistrez</div>';return;}
+    list.innerHTML=hist.map(function(h,i){return '<div style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:8px"><div style="font-size:11px;color:var(--ink-soft);margin-bottom:4px">'+h.date+'</div><div style="font-size:13px;font-weight:600">✍️ '+escapeHtml(h.texte)+'</div><div style="font-size:12px;color:var(--ink-soft);margin-top:4px">✅ '+escapeHtml(h.corrige)+'</div></div>';}).join("");
+  }catch(e){list.innerHTML='<div style="text-align:center;color:var(--ink-soft);padding:30px">Erreur chargement</div>';}
+}
+
+// ===== EXERCICES =====
+var EXERCICES=[
+  {q:"Combien font 12 × 12 ?",opts:["124","134","144","154"],rep:2,exp:"12 × 12 = 144"},
+  {q:"Quel est le passé composé de « faire » ?",opts:["fais","fait","ai fait","feras"],rep:2,exp:"« Faire » au passé composé : j'ai fait."},
+  {q:"La capitale du Sénégal est :",opts:["Dakar","Saint-Louis","Thiès","Kaolack"],rep:0,exp:"La capitale du Sénégal est Dakar."},
+  {q:"2^3 = ?",opts:["6","8","9","12"],rep:1,exp:"2³ = 2 × 2 × 2 = 8"},
+  {q:"Quel est l'opposé de -5 ?",opts:["-5","0","5","10"],rep:2,exp:"L'opposé de -5 est +5."},
+  {q:"Combien font 100 / 4 ?",opts:["20","25","30","40"],rep:1,exp:"100 ÷ 4 = 25"},
+  {q:"La forme parfaite de « finir » est :",opts:["fini","finit","finissant","finira"],rep:0,exp:"« Fini » est le participe passé de finir."}
+];
+var exIdx=0,exScore=0;
+function renderExercises(){
+  var list=document.getElementById("exList");
+  list.innerHTML=EXERCICES.map(function(e,i){return '<div class="subj-card" onclick="startExercise('+i+')"><div class="ic">✏️</div><div class="nm">Exercice '+(i+1)+'</div><div class="nb">'+escapeHtml(e.q.slice(0,40))+'</div></div>';}).join("");
+}
+function startExercise(i){
+  exIdx=i;exScore=0;
+  var e=EXERCICES[i];
+  var list=document.getElementById("exList");
+  list.innerHTML='<div style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px"><div style="font-size:13px;color:var(--ink-soft);margin-bottom:8px">Question '+(i+1)+'</div><div style="font-size:16px;font-weight:700;margin-bottom:16px">'+escapeHtml(e.q)+'</div><div id="exOpts" style="display:flex;flex-direction:column;gap:8px"></div><div style="margin-top:16px;display:flex;gap:8px"><button class="btn btn-ghost" onclick="renderExercises()">← Retour</button></div></div>';
+  var opts=document.getElementById("exOpts");
+  e.opts.forEach(function(o,j){var b=document.createElement("button");b.className="btn btn-ghost";b.style.width="100%";b.style.textAlign="left";b.onclick=function(){checkAnswer(j,b);};b.textContent=o;opts.appendChild(b);});
+}
+function checkAnswer(j,btn){
+  var e=EXERCICES[exIdx];
+  if(j===e.rep){exScore++;btn.style.background="var(--primary-l)";btn.style.borderColor="var(--primary)";btn.style.color="var(--primary)";}
+  else{btn.style.background="#fee2e2";btn.style.borderColor="var(--red)";btn.style.color="var(--red)";
+    document.querySelectorAll("#exOpts button")[e.rep].style.background="var(--primary-l)";
+    document.querySelectorAll("#exOpts button")[e.rep].style.borderColor="var(--primary)";
+    document.querySelectorAll("#exOpts button")[e.rep].style.color="var(--primary)";}
+  setTimeout(function(){
+    var list=document.getElementById("exList");
+    list.innerHTML='<div style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px"><div style="font-size:14px;font-weight:700;margin-bottom:8px">✅ Résultat</div><div style="font-size:13px;margin-bottom:8px">Score : <strong style="color:var(--primary)">'+exScore+'/1</strong></div><div style="font-size:12px;background:var(--primary-l);border-radius:8px;padding:8px">'+escapeHtml(e.exp)+'</div><div style="margin-top:12px"><button class="btn btn-primary" onclick="renderExercises()">📚 Autres exercices</button></div></div>';
+  },600);
+}
+
+// Affiche les exercices au lancement
+renderExercises();
 
 (async function init(){
   if(token){
