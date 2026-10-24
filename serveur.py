@@ -58,7 +58,9 @@ def init_db():
         duree_jours INTEGER,
         limite_ia_jour INTEGER,
         photo_jour INTEGER,
-        description TEXT
+        description TEXT,
+        paiement_tranche TEXT DEFAULT 'unique',
+        nb_tranches INTEGER DEFAULT 1
     );
     CREATE TABLE IF NOT EXISTS abonnements(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -184,13 +186,15 @@ def init_db():
         UNIQUE(user_id,exercice_id)
     );
     """)
-    # Plans — conformément au prompt : offre gratuite 48H + 4 abonnements payants
+    # Plans — 7 offres : gratuit 48H + 6 abonnements (3 jours → annuel avec tranches)
     plans = [
-        ('gratuit',    'Essai gratuit 48 H', 0,     2,   30,   1, 'Essai 48 h : 30 questions IA · 1 photo · tout débloqué'),
-        ('hebdo',      'Hebdomadaire',       1500,  7,   60,   3, '60 questions IA/semaine · 3 photos · tout débloqué'),
-        ('mensuel',    'Mensuel',            5000,  30,  150,  10,'150 questions IA/mois · 10 photos · tout débloqué'),
-        ('trimestriel','Trimestriel',       12000, 90,  400,  30,'400 questions IA · 30 photos · tout débloqué'),
-        ('annuel',     'Annuel',            35000, 365, 1500, 100,'1500 questions IA/an · 100 photos · tout débloqué'),
+        ('gratuit',   'Essai gratuit 48 H',   0,    2,    30,   1, 'Essai 48 h : 30 questions IA · 1 photo · tout débloqué', 'unique', 1),
+        ('3jours',    'Pack 3 Jours',         250,  3,    15,   1, '3 jours · 15 questions IA/jour · 1 photo/jour', 'unique', 1),
+        ('1semaine',  'Pack 1 Semaine',       500,  7,    30,   2, '7 jours · 30 questions IA/jour · 2 photos/jour', 'unique', 1),
+        ('2semaines', 'Pack 2 Semaines',     1000,  14,   50,   3, '14 jours · 50 questions IA/jour · 3 photos/jour', 'unique', 1),
+        ('1mois',     'Pack 1 Mois',         2000,  30,   100,  5, '30 jours · 100 questions IA/jour · 5 photos/jour', 'unique', 1),
+        ('bac',       'Pack BAC',            3000,  90,   200,  10, '90 jours · 200 questions IA/jour · 10 photos/jour · tous niveaux', 'unique', 1),
+        ('annuel',    'Pack Annuel',        10000,  365,  500,  30, '1 an · 500 questions IA/jour · 30 photos/jour · tous niveaux', 'mensuel', 10),
     ]
     for p in plans:
         c.execute("INSERT OR IGNORE INTO plans (code,nom,prix,duree_jours,limite_ia_jour,photo_jour,description) VALUES (?,?,?,?,?,?,?)", p)
@@ -219,23 +223,74 @@ def init_db():
     ]
     for c_ in cours_list:
         c.execute("INSERT OR IGNORE INTO cours (sujet_code,titre,contenu,niveau,chapitre) VALUES (?,?,?,?,?)", c_)
-    # Exercices bibliothèque
+    # Exercices bibliothèque — CM1 → Université, 12 matières
     exercices = [
-        ('maths','Addition','qcm','2+3=?',json.dumps(['4','5','6','7']),'1','2+3=5','CP','Arithmétique',1),
-        ('maths','Multiplication','qcm','12×12=?',json.dumps(['124','134','144','154']),'2','12×12=144','6ème','Produit',1),
+        # ── CM1 ──
+        ('maths','Addition','qcm','2+3=?',json.dumps(['4','5','6','7']),'1','2+3=5','CM1','Arithmétique',1),
+        ('maths','Soustraction','qcm','7-4=?',json.dumps(['2','3','4','5']),'1','7-4=3','CM1','Arithmétique',1),
+        ('fr','Alphabet','qcm','Quelle lettre suit « D »?',json.dumps(['C','E','F','G']),'1','E','CM1','Alphabet',1),
+        ('fr','Mot de passe','qcm','Comment dit-on « maison »?',json.dumps(['maison','maisonne','mison','mayon']),'0','maison','CM1','Vocabulaire',1),
+        ('svt','Animaux','qcm','Qu\'appelle-t-on un baby-carriage?',json.dumps(['Un animal','Un vélo','Un jouet','Une maison']),'1','Un animal','CM1','Animaux',1),
+        # ── CM2 ──
+        ('maths','Multiplication','qcm','3×4=?',json.dumps(['7','10','12','14']),'2','3×4=12','CM2','Produit',1),
+        ('maths','Division','qcm','12/3=?',json.dumps(['2','3','4','6']),'2','12/3=4','CM2','Division',1),
+        ('fr','Conjugaison','qcm','« Je ___ à l\'école »?',json.dumps(['vais','vas','va','vont']),'0','vais','CM2','Conjugaison',1),
+        ('hist','Drapeau','qcm','Combien de couleurs a le drapeau sénégalais?',json.dumps(['2','3','4','5']),'1','3','CM2','Sénégal',1),
+        ('geo','Continent','qcm','Le Sénégal est en?',json.dumps(['Afrique','Europe','Asie','Amérique']),'0','Afrique','CM2','Géographie',1),
+        # ── 6ème ──
+        ('maths','Division longue','qcm','100/4=?',json.dumps(['20','25','30','40']),'1','100/4=25','6ème','Division',1),
+        ('maths','Fractions','qcm','1/2 + 1/2 = ?',json.dumps(['1','1/2','2','1/4']),'0','1','6ème','Fractions',2),
+        ('fr','Accord','qcm','« Les garçons ___ content »?',json.dumps(['est','sont','été','être']),'1','sont','6ème','Accord',2),
+        ('svt','Corps humain','qcm','Où se trouve le cœur?',json.dumps(['Tête','Poitrine','Dos','Bras']),'1','Poitrine','6ème','Anatomie',2),
+        ('ang','Salutation','qcm','« Hello » signifie?',json.dumps(['Au revoir','Bonjour','Merci','Oui']),'1','Bonjour','6ème','Vocabulaire',1),
+        # ── 5ème ──
         ('maths','Puissance','qcm','2³=?',json.dumps(['6','8','9','12']),'1','2³=8','5ème','Puissances',2),
-        ('maths','Division','qcm','100/4=?',json.dumps(['20','25','30','40']),'1','100/4=25','6ème','Division',1),
         ('maths','Opposé','qcm','Opposé de -5?',json.dumps(['-5','0','5','10']),'2','+5','5ème','Nombres relatifs',2),
-        ('fr','Passé composé','qcm','Passé composé de « faire »?',json.dumps(['fais','fait','ai fait','feras']),'2','j\'ai fait','2nde','Conjugaison',2),
-        ('fr','Participe passé','qcm','Participe passé de « finir »?',json.dumps(['fini','finit','finissant','finira']),'0','fini','2nde','Conjugaison',2),
-        ('fr','Préposition','qcm','« aller ___ l\'école »?',json.dumps(['à','a','en','au']),'0','à','2nde','Orthographe',1),
-        ('hist','Capitale','qcm','Capitale du Sénégal?',json.dumps(['Dakar','Saint-Louis','Thiès','Kaolack']),'0','Dakar','3ème','Sénégal',1),
-        ('phys','Newton','qcm','F = ?',json.dumps(['m+a','m×a','m/a','m-a']),'1','m×a','Terminale','Mécanique',2),
-        ('svt','Photosynthèse','qcm','La photosynthèse produit?',json.dumps(['O₂','CO₂','N₂','H₂O']),'0','O₂','3ème','Biologie',2),
-        ('ang','Salutation','qcm','« Hello » signifie?',json.dumps(['Au revoir','Bonjour','Merci','Oui']),'1','Bonjour','2nde','Vocabulaire',1),
+        ('fr','Temps','qcm','« Hier, je ___ à l\'école »?',json.dumps(['vais','allais','suis allé','irai']),'2','suis allé','5ème','Temps',2),
+        ('phys','Unités','qcm','L\'unité de mesure de la force est?',json.dumps(['kg','N','J','W']),'1','N (Newton)','5ème','Unités',2),
+        ('info','Algorithme','qcm','Une suite d\'instructions s\'appelle?',json.dumps(['Un algorithme','Un programme','Un code','Un site']),'0','Un algorithme','5ème','Algorithmes',2),
+        # ── 4ème ──
         ('maths','Problème ouvert','ouvert','Combien font 7×8 ?','','56','7×8=56','4ème','Produit',2),
         ('maths','Problème ouvert','ouvert','Résous : x+5=12','','x=7','x=7','4ème','Équations',3),
+        ('maths','PGCD','qcm','PGCD de 12 et 18?',json.dumps(['2','3','6','9']),'2','6','4ème','PGCD/PCM',3),
+        ('fr','Orthographe','qcm','« aller ___ l\'école »?',json.dumps(['à','a','en','au']),'0','à','4ème','Orthographe',2),
+        ('svt','Cellule','qcm','La cellule se divise en?',json.dumps(['Mitose','Métamorphose','Évolution','Photosynthèse']),'0','Mitose','4ème','Biologie',3),
+        # ── 3ème ──
+        ('maths','Fonction','qcm','Pour f(x)=2x+1, f(3)=?',json.dumps(['5','6','7','8']),'2','7','3ème','Fonctions',3),
+        ('maths','Théorème','qcm','Dans un triangle rectangle, a²+b²=?',json.dumps(['c','c²','2c','a×b']),'1','c²','3ème','Pythagore',3),
+        ('fr','Part du passé','qcm','« Il ___ hier »?',json.dumps(['vient','venait','est venu','viendra']),'2','est venu','3ème','Temps',3),
+        ('hist','Capitale','qcm','Capitale du Sénégal?',json.dumps(['Dakar','Saint-Louis','Thiès','Kaolack']),'0','Dakar','3ème','Sénégal',1),
+        ('geo','Climat','qcm','Quel climat a le Sénégal?',json.dumps(['Tempéré','Tropical','Polaire','Désertique']),'1','Tropical','3ème','Géographie',2),
+        ('svt','Photosynthèse','qcm','La photosynthèse produit?',json.dumps(['O₂','CO₂','N₂','H₂O']),'0','O₂','3ème','Biologie',2),
+        # ── 2nde ──
+        ('maths','Dérivée','qcm','Dérivée de x²?',json.dumps(['x','2x','2','x²']),'1','2x','2nde','Calcul',4),
+        ('fr','Conjugaison','qcm','Passé composé de « faire »?',json.dumps(['fais','fait','ai fait','feras']),'2','j\'ai fait','2nde','Conjugaison',2),
+        ('fr','Participe passé','qcm','Participe passé de « finir »?',json.dumps(['fini','finit','finissant','finira']),'0','fini','2nde','Conjugaison',2),
         ('fr','Rédaction','ouvert','Écris une phrase avec « cependant ».','','Cependant, il pleuvait.','La conjonction « cependant » introduit une opposition.','2nde','Rédaction',2),
+        ('phys','Newton','qcm','F = ?',json.dumps(['m+a','m×a','m/a','m-a']),'1','m×a','2nde','Mécanique',3),
+        ('chim','Eau','qcm','Formule de l\'eau est?',json.dumps(['CO₂','H₂O','O₂','H₂'],),'1','H₂O','2nde','Chimie',2),
+        ('ang','Grammar','qcm','« I ___ a book »?',json.dumps(['read','reads','reading','have read']),'0','read','2nde','Grammar',2),
+        ('es','Saludos','qcm','« Hola » signifie?',json.dumps(['Au revoir','Bonjour','Merci','Oui']),'1','Bonjour','2nde','Vocabulaire',1),
+        # ── Première ──
+        ('maths','Inégalité','qcm','Résous : 2x-3 > 7',json.dumps(['x>2','x>5','x>7','x>10']),'1','x>5','Première','Inéquations',4),
+        ('maths','Probabilités','qcm','P(obtenir 6 avec un dé)?',json.dumps(['1/3','1/6','1/2','1/12']),'1','1/6','Première','Probabilités',4),
+        ('phys','Énergie','qcm','Formule de l\'énergie cinétique?',json.dumps(['mv','½mv²','mgh','Fd']),'1','½mv²','Première','Énergie',4),
+        ('chim','Tableau','qcm','Dans le tableau périodique, H a numéro?',json.dumps(['1','2','8','18']),'0','1','Première','Chimie',3),
+        ('philo','Question','ouvert','Que signifie « penser »?','','Penser = exercer son esprit, raisonner, comprendre.','Penser est l\'acte de réfléchir et de raisonner.','Première','Philosophie',3),
+        ('info','Python','qcm','En Python, comment déclarer une variable?',json.dumps(['var x=5','x=5','x:5','set x=5']),'1','x=5','Première','Informatique',3),
+        ('ec','Définition','qcm','Qu\'est-ce que l\'inflation?',json.dumps(['Baisse des prix','Hausse générale des prix','Stagnation','Croissance',''] if False else ['Baisse des prix','Hausse générale des prix','Stagnation','Croissance']),'1','Hausse générale des prix','Première','Économie',3),
+        # ── Terminale ──
+        ('maths','Dérivée 2','qcm','Dérivée de sin(x)?',json.dumps(['cos(x)','-cos(x)','sin(x)','-sin(x)']),'0','cos(x)','Terminale','Calcul',5),
+        ('maths','Intégrale','qcm','∫ 2x dx = ?',json.dumps(['x²+C','2+C','x²+2','2x²+C']),'0','x²+C','Terminale','Calcul',5),
+        ('phys','Rélativité','qcm','Formule d\'énergie E=mc² est de?',json.dumps(['Newton','Einstein','Planck','Bohr']),'1','Einstein','Terminale','Physique',5),
+        ('fr','Argument','ouvert','Écris un argument sur la liberté d\'expression.','','La liberté d\'expression est un droit fondamental...','Argumenter = fournir des raisons pour défendre une position.','Terminale','Rédaction',4),
+        ('ara','Alif','qcm','Quelle lettre est la première de l\'alphabet arabe?',json.dumps(['Alif','Ba','Dal','Sad']),'0','Alif','Terminale','Arabe',2),
+        # ── Université ──
+        ('maths','Limite','qcm','lim(x→0) sin(x)/x = ?',json.dumps(['0','1','∞','x'],),'1','1','Université','Analyse',5),
+        ('maths','Dérivée partielle','qcm','∂/∂x (x²y) = ?',json.dumps(['2xy','x²y','2y','xy²']),'0','2xy','Université','Analyse',5),
+        ('info','Algorithme','qcm','La complexité de tri rapide est?',json.dumps(['O(n)','O(n log n)','O(n²)','O(log n)'],),'1','O(n log n)','Université','Algorithmes',5),
+        ('chim','Orbitale','qcm','Nombre d\'orbitales dans la couche n=2?',json.dumps(['1','2','4','8'],),'2','4','Université','Chimie',5),
+        ('ec','Monnaie','qcm','Qu\'est-ce que le Bitcoin?',json.dumps(['Monnaie numérique','Action','Obligation','Matière'],),'0','Monnaie numérique','Université','Économie',4),
     ]
     for e in exercices:
         c.execute("INSERT OR IGNORE INTO exercises (sujet_code,titre,type,qtext,options,reponse,explication,niveau,chapitre,difficulte) VALUES (?,?,?,?,?,?,?,?,?,?)", e)
@@ -360,12 +415,33 @@ def _calculer(question):
         return None
 
 REPONSES_LOCALES = {
-    "photosynthèse": ("La photosynthèse est le processus par lequel les végétaux verts transforment la lumière du soleil, le CO₂ et l'eau en glucose (énergie) et en dioxygène (O₂). Équation : 6CO₂ + 6H₂O → C₆H₁₂O₆ + 6O₂.", "SVT"),
-    "democratie": ("La démocratie est un régime politique où le pouvoir est exercé par le peuple, directement ou par l'intermédiaire de représentants élus librement. Au Sénégal, c'est une république démocratique sécularisée.", "Éducation nationale"),
-    "sénégal": ("Le Sénégal est un pays d\'Afrique de l\'Ouest, situé sur la côte de l'océan Atlantique. Capitale : Dakar. Langue officielle : français. Population : ~17 millions. Président : Bassirou Diomaye Faye (depuis 2024).", "Géographie"),
-    "dakar": ("Dakar est la capitale du Sénégal, située sur la côte atlantique, sur la presqu'île du Cap-Vert. C'est la plus grande ville du pays et son centre économique.", "Géographie"),
+    "photosynthèse": ("La photosynthèse est le processus par lequel les végétaux verts transforment la lumière du soleil, le CO₂ et l'eau en glucose (énergie) et en dioxygène (O₂). Équation : 6CO₂ + 6H₂O → C₆H₁₂O₆ + 6O₂. Elle se déroule dans les chloroplastes.", "SVT"),
+    "democratie": ("La démocratie est un régime politique où le pouvoir est exercé par le peuple. Au Sénégal, c'est une république démocratique sécularisée. Le peuple élit le président et les députés.", "Éducation nationale"),
+    "sénégal": ("Le Sénégal est un pays d'Afrique de l'Ouest. Capitale : Dakar. Langue officielle : français. Langues nationales : wolof, sérère, mandingue, soninké, peule. Population : ~17 millions.", "Géographie"),
+    "dakar": ("Dakar est la capitale du Sénégal, sur la côte atlantique, presqu'île du Cap-Vert. Centre économique et culturel. ~3 millions d'habitants.", "Géographie"),
     "sutu rekk": ("« Sutu rekk » en wolof signifie « cinquante » (50).", "Mathématiques"),
-    "newton": ("La loi de Newton (F=ma) dit que la force F est égale au produit de la masse m et de l'accélération a. Plus la masse est grande, plus la force nécessaire est grande pour obtenir la même accélération.", "Physique"),
+    "newton": ("La loi de Newton (F=ma) : la force F = masse m × accélération a. Unité : Newton (N).", "Physique"),
+    "pythagore": ("Théorème de Pythagore : dans un triangle rectangle, a² + b² = c² où c est l'hypoténuse.", "Mathématiques"),
+    "einstein": ("Albert Einstein (1879-1955), physicien. Théorie de la relativité, E=mc². Prix Nobel 1921.", "Physique"),
+    "hydrocarbure": ("Hydrocarbures : composés de C et H. Méthane CH₄, éthane C₂H₆, pétrole, gaz naturel.", "Chimie"),
+    "colonisation": ("La colonisation : domination d'un pays sur un autre. Sénégal colonisé par la France (1854-1960). Indépendance le 20 juin 1960.", "Histoire"),
+    "lumières": ("Les Lumières (18e s.) : mouvement intellectuel valorisant raison, liberté, égalité. Voltaire, Rousseau, Montesquieu, Diderot.", "Histoire"),
+    "bac": ("Le Baccalauréat : diplôme de fin de lycée. Séries : A (philosophie), B (sciences), C (littéraire).", "Éducation nationale"),
+    "informatique": ("L'informatique : science du traitement de l'information par ordinateurs. Algorithmique, programmation, réseaux, cybersécurité.", "Informatique"),
+    "économie": ("L'économie : science de production, distribution et consommation de biens. Microéconomie et macroéconomie.", "Économie"),
+    "philosophie": ("La philosophie : discipline étudiant existence, connaissance, valeurs, raison. Platon, Aristote, Descartes, Kant, Sartre.", "Philosophie"),
+    "anglais": ("L'anglais : langue germanique, internationale des affaires et de la science. Hello=Bonjour, Thank you=Merci.", "Anglais"),
+    "wolof": ("Le wolof : langue nigéro-congolaise du Sénégal. Suli=Bonjour, Wahaa=Oui, Degg=Médiocre.", "Wolof"),
+    "espagnol": ("L'espagnol : langue romane d'Espagne et d'Amérique latine. Hola=Bonjour, Gracias=Merci.", "Espagnol"),
+    "arabe": ("L'arabe : langue sémitique du monde arabe. Écrit de droite à gauche. مرحبا=Bienvenue, شكرا=Merci.", "Arabe"),
+    "portugais": ("Le portugais : langue romane du Portugal, Brésil, Angola. Olá=Bonjour, Obrigado=Merci.", "Portugais"),
+    "allemand": ("L'allemand : langue germanique d'Allemagne, Autriche, Suisse. Guten Tag=Bonjour, Danke=Merci.", "Allemand"),
+    "sine": ("Le sinus (sin) : fonction trigonométrique, rapport entre côté opposé et hypoténuse dans un triangle rectangle.", "Mathématiques"),
+    "cosine": ("Le cosinus (cos) : fonction trigonométrique, rapport entre côté adjacent et hypoténuse.", "Mathématiques"),
+    "intelligence": ("L'IA : domaine de l'informatique visant à créer des machines intelligentes : raisonnement, apprentissage, décision.", "Informatique"),
+    "volcan": ("Un volcan : rupture dans la croûte terrestre laissant sortir magma, lave, cendres. Placé sur plaques tectoniques.", "Géographie"),
+    "solaire": ("Le système solaire : Soleil + 8 planètes (Mercure à Neptune), lunes, astéroïdes, comètes.", "Géographie"),
+    "monde": ("Le monde : 7 continents, 195 pays. Afrique, Antarctique, Asie, Australie, Europe, Amérique N., Amérique S.", "Géographie"),
 }
 
 # File d'attente simple pour contourner le rate-limit Pollinations (1 réq/30s par IP)
@@ -408,7 +484,7 @@ def reponse_ia(question, plan=None):
             return {"reponse": rep, "explication": rep, "confiance": 0.85, "source": "Bibliothèque locale",
                     "etapes": ["Recherche dans la bibliothèque de cours ÉcoleMax"]}
     # 3. Pollinations IA avec retry
-    messages = [{"role":"system","content":"Tu es Professeur IA d'ÉcoleMax, pédagogue, bref et clair. Réponds en français. Structure : réponse directe, puis Explication, puis Étapes si nécessaire."},
+    messages = [{"role":"system","content":"Tu es Professeur IA d'ÉcoleMax. Tu réponds en français, pédagogique, bref et clair. Adapte ton niveau à l'élève (CM1 à Université). Structure : 1) Réponse directe, 2) Explication, 3) Étapes ou exemple si nécessaire. Pour les maths : donne la méthode. Pour les langues : donne la traduction + usage. Pour les sciences : donne la définition + exemple concret. Sois concis (max 150 mots)."},
                 {"role":"user","content":question}]
     content = _pollinations_call(messages, max_tokens=600, timeout=25)
     if content:
