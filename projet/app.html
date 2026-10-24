@@ -628,7 +628,7 @@ async function resetRequest(){
     const r=await fetch(API+"/api/reset-password/request",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo,contact})});
     const d=await r.json();
     if(!r.ok){errEl.textContent=d.erreur||"Erreur";errEl.classList.add("show");return;}
-    okEl.innerHTML="✅ "+d.message+"<br><br>Code: <strong style="font-size:20px;color:var(--primary)">"+d.code+"</strong><br><span style="font-size:11px">"+d.note+"</span>";
+    okEl.innerHTML="✅ "+d.message+"<br><br>Code: <strong style='font-size:20px;color:var(--primary)'>"+d.code+"</strong><br><span style='font-size:11px'>"+d.note+"</span>";
     okEl.classList.add("show");
     document.getElementById("resetStep1").classList.add("hidden");
     document.getElementById("resetStep2").classList.remove("hidden");
