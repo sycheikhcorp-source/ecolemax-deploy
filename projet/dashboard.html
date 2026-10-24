@@ -386,6 +386,24 @@ async function renderPaiements(){
   const d=await apiAdmin("/api/admin/paiements");
   const pays=d.paiements||[];
   c.innerHTML=`
+    <div class="card" style="margin-bottom:20px;border-color:var(--violet)">
+      <h3>🧪 Test des moyens de paiement</h3>
+      <p style="font-size:13px;color:var(--ink-soft);margin-bottom:12px">Teste chaque moyen de paiement pour vérifier que le système fonctionne correctement avant d'activer les vrais paiements.</p>
+      <div class="grid grid-3" style="gap:12px;margin-bottom:16px">
+        ${[
+          {method:"wave",label:"Wave",logo:"💳",commission:"0%"},
+          {method:"orange",label:"Orange Money",logo:"📲",commission:"1,5%"},
+          {method:"mtn",label:"MTN MoMo",logo:"📶",commission:"1,5%"},
+          {method:"carte",label:"Carte bancaire",logo:"💳",commission:"2%"},
+          {method:"paypal",label:"PayPal",logo:"🅿️",commission:"3,5%"},
+        ].map(m=>`<div class="card" style="padding:16px;text-align:center;cursor:pointer" onclick="testPayment('${m.method}',500)">
+          <div style="font-size:32px;margin-bottom:8px">${m.logo}</div>
+          <div style="font-weight:700;font-size:14px">${m.label}</div>
+          <div style="font-size:11px;color:var(--ink-soft)">Commission: ${m.commission}</div>
+        </div>`).join("")}
+      </div>
+      <div class="alert" id="payTestAlert"></div>
+    </div>
     <div class="card">
       <h3>💳 Paiements (${pays.length})</h3>
       <div class="filter-row">
@@ -414,6 +432,22 @@ function filterPays(){
     r.style.display=r.dataset.statut===f?"":"none";
   });
 }
+async function testPayment(method,montant){
+  showAlert("payTestAlert","🔄 Test en cours... "+method+" — "+montant+" FCFA",true);
+  try {
+    const r=await fetch("/api/payment/test",{method:"POST",headers:{"Content-Type":"application/json","X-Admin-Password":ADMIN},body:JSON.stringify({method,montant})});
+    const d=await r.json();
+    if(d.ok){
+      showAlert("payTestAlert",d.message+" — ✅ Réf: "+d.reference,true);
+    } else {
+      showAlert("payTestAlert","❌ "+(d.erreur||"Échec du test"),false);
+    }
+  } catch(err){
+    showAlert("payTestAlert","⚠️ Erreur réseau: "+err.message,false);
+  }
+  setTimeout(()=>refreshCurrent(),2000);
+}
+
 async function refundPay(ref){
   if(!confirm("Confirmer le remboursement de "+ref+" ?"))return;
   // Note: le remboursement est géré côté backend / prestataire

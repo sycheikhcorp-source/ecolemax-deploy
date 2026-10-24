@@ -219,9 +219,16 @@ input,textarea,select{font-family:inherit}
     <h3>🎓 Espace Élève</h3>
     <div class="alert" id="authAlert"></div>
     <div id="authForm">
+      <div style="text-align:center;margin-bottom:16px">
+        <div style="font-size:36px;margin-bottom:6px">🎓</div>
+        <div style="font-size:13px;color:var(--ink-soft);line-height:1.5">Bienvenue sur ÉcoleMax — ton assistant IA personnel. Professeur IA, Scanner, Correcteur, 56 exercices du CM1 à l'Université. Inscris-toi gratuitement et profite de 48 h d'essai complet.</div>
+      </div>
       <form onsubmit="doLogin(event)">
         <div class="field"><label>Pseudo</label><input id="lPseudo" required placeholder="Ton pseudo"></div>
-        <div class="field"><label>Mot de passe</label><input id="lMdp" type="password" required placeholder="8+ caractères"></div>
+        <div class="field" style="position:relative"><label>Mot de passe</label>
+          <input id="lMdp" type="password" required placeholder="8+ caractères" style="padding-right:40px">
+          <button type="button" onclick="togglePwd('lMdp',this)" style="position:absolute;right:8px;top:30px;background:none;border:none;cursor:pointer;font-size:18px;color:var(--ink-soft)">👁️</button>
+        </div>
         <button class="btn btn-primary btn-block" type="submit">Se connecter</button>
       </form>
       <p style="text-align:center;margin-top:14px;font-size:13px;color:var(--ink-soft)">Pas encore inscrit ? <a href="#" onclick="showRegister();return false">S'inscrire — Essai 48 H gratuit</a></p>
@@ -231,9 +238,12 @@ input,textarea,select{font-family:inherit}
       <form onsubmit="doRegister(event)">
         <div class="field"><label>Pseudo</label><input id="rPseudo" required placeholder="3+ caractères"></div>
         <div class="field"><label>Email (optionnel)</label><input id="rEmail" type="email"></div>
-        <div class="field"><label>Mot de passe</label><input id="rMdp" type="password" required placeholder="8+ caractères, lettre + chiffre"></div>
+        <div class="field" style="position:relative"><label>Mot de passe</label>
+          <input id="rMdp" type="password" required placeholder="8+ caractères, lettre + chiffre" style="padding-right:40px">
+          <button type="button" onclick="togglePwd('rMdp',this)" style="position:absolute;right:8px;top:30px;background:none;border:none;cursor:pointer;font-size:18px;color:var(--ink-soft)">👁️</button>
+        </div>
         <div class="field"><label>Niveau</label>
-          <select id="rNiveau"><option>CM1</option><option>CM2</option><option>6ème</option><option>5ème</option><option>4ème</option><option>3ème</option><option>2nde</option><option>1ère</option><option>Terminale</option><option>Université L1</option><option>Université L2</option><option>Université L3</option></select>
+          <select id="rNiveau"><option>CM1</option><option>CM2</option><option>6ème</option><option>5ème</option><option>4ème</option><option>3ème</option><option>2nde</option><option>1ère</option><option>Terminale</option><option>Université L1</option><option>Université L2</option><option>Université L3</option><option>Université S1</option><option>Université S2</option></select>
         </div>
         <button class="btn btn-primary btn-block" type="submit">Créer mon compte</button>
       </form>
@@ -354,7 +364,7 @@ input,textarea,select{font-family:inherit}
     <div class="back-row"><button class="back-btn" onclick="goToTab('home')">←</button><div class="section-title" style="margin:0">📚 Bibliothèque d'exercices</div></div>
     <div id="exFilters" style="margin-bottom:12px">
       <div class="field"><label>Filtrer par matière</label><select id="exSujet" onchange="loadExercises()"><option value="">Toutes</option></select></div>
-      <div class="field"><label>Filtrer par niveau</label><select id="exNiveau" onchange="loadExercises()"><option value="">Tous</option><option>CM1</option><option>CM2</option><option>6ème</option><option>5ème</option><option>4ème</option><option>3ème</option><option>2nde</option><option>1ère</option><option>Terminale</option><option>Université L1</option><option>Université L2</option><option>Université L3</option></select></div>
+      <div class="field"><label>Filtrer par niveau</label><select id="exNiveau" onchange="loadExercises()"><option value="">Tous</option><option>CM1</option><option>CM2</option><option>6ème</option><option>5ème</option><option>4ème</option><option>3ème</option><option>2nde</option><option>1ère</option><option>Terminale</option><option>Université L1</option><option>Université L2</option><option>Université L3</option><option>Université S1</option><option>Université S2</option></select></div>
     </div>
     <div id="exList"></div>
   </div>
@@ -454,7 +464,7 @@ input,textarea,select{font-family:inherit}
 </div>
 
 <script>
-const API="";
+const API = window.__ECOLEMAX_API__ || "";
 let TOKEN=localStorage.getItem("em_token")||"";
 let USER=JSON.parse(localStorage.getItem("em_user")||"null");
 let LAST_CORRECTION=null;
@@ -473,23 +483,27 @@ if(localStorage.getItem("em_theme")==="sombre"){toggleTheme();}
 // ── Auth ──
 function showRegister(){document.getElementById("authForm").style.display="none";document.getElementById("authRegister").style.display="block";}
 function showLogin(){document.getElementById("authForm").style.display="block";document.getElementById("authRegister").style.display="none";}
-function showAlert(id,text,ok){const e=document.getElementById(id);e.textContent=text;e.className="alert "+(ok?"ok":"err");}
+function showAlert(id,text,ok){const e=document.getElementById(id);if(!e)return;e.textContent=text;e.className="alert "+(ok?"ok":"err");}
 
 async function doLogin(e){e.preventDefault();
-  const r=await fetch(API+"/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo:document.getElementById("lPseudo").value.trim(),mot_de_passe:document.getElementById("lMdp").value})});
-  const d=await r.json();
-  if(d.ok){TOKEN=d.token;USER={pseudo:d.user.pseudo,id:d.user.id};localStorage.setItem("em_token",TOKEN);localStorage.setItem("em_user",JSON.stringify(USER));
-    enterApp();}
-  else showAlert("authAlert",d.erreur||"Échec",false);
+  try{
+    const r=await fetch(API+"/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo:document.getElementById("lPseudo").value.trim(),mot_de_passe:document.getElementById("lMdp").value})});
+    const d=await r.json();
+    if(d.ok){TOKEN=d.token;USER={pseudo:d.user.pseudo,id:d.user.id};localStorage.setItem("em_token",TOKEN);localStorage.setItem("em_user",JSON.stringify(USER));
+      enterApp();}
+    else showAlert("authAlert",d.erreur||"Échec",false);
+  }catch(err){showAlert("authAlert","⚠️ Erreur réseau : "+err.message,false);}
 }
 async function doRegister(e){e.preventDefault();
-  const r=await fetch(API+"/api/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
-    pseudo:document.getElementById("rPseudo").value.trim(),email:document.getElementById("rEmail").value.trim(),
-    mot_de_passe:document.getElementById("rMdp").value,niveau:document.getElementById("rNiveau").value})});
-  const d=await r.json();
-  if(d.ok){TOKEN=d.token;USER={pseudo:d.user.pseudo,id:d.user.id};localStorage.setItem("em_token",TOKEN);localStorage.setItem("em_user",JSON.stringify(USER));
-    enterApp();}
-  else showAlert("authAlert",d.erreur||"Échec",false);
+  try{
+    const r=await fetch(API+"/api/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+      pseudo:document.getElementById("rPseudo").value.trim(),email:document.getElementById("rEmail").value.trim(),
+      mot_de_passe:document.getElementById("rMdp").value,niveau:document.getElementById("rNiveau").value})});
+    const d=await r.json();
+    if(d.ok){TOKEN=d.token;USER={pseudo:d.user.pseudo,id:d.user.id};localStorage.setItem("em_token",TOKEN);localStorage.setItem("em_user",JSON.stringify(USER));
+      enterApp();}
+    else showAlert("authAlert",d.erreur||"Échec",false);
+  }catch(err){showAlert("authAlert","⚠️ Erreur réseau : "+err.message,false);}
 }
 async function doReset(){
   const pseudo=prompt("Entre ton pseudo pour récupérer un nouveau mot de passe :");
@@ -835,6 +849,18 @@ function openSupport(){
 // ── Init au lancement ──
 if(TOKEN&&USER){initApp();}
 
+
+  // ── Toggle mot de passe visible ──
+  function togglePwd(inputId, btn){
+    const inp = document.getElementById(inputId);
+    if(inp.type === "password"){
+      inp.type = "text";
+      btn.textContent = "🙈";
+    } else {
+      inp.type = "password";
+      btn.textContent = "👁️";
+    }
+  }
   // ── 7 Langues ──
   const LANGS = {
     fr: {name:"Français", flag:"🇫🇷"},

@@ -232,6 +232,19 @@ footer{background:var(--card);border-top:1px solid var(--line);padding:40px 0 24
   </div>
 </section>
 
+<!-- QUIZ UNIVERSEL -->
+<section id="quiz">
+  <div class="container">
+    <h2>🎲 Quiz Universel — Teste tes connaissances</h2>
+    <p class="subtitle">Géographie, Sciences, Histoire, Maths, Français... — 30 questions pour s'amuser et apprendre</p>
+    <div class="grid grid-3" id="quizCats"></div>
+    <div id="quizContainer" style="max-width:680px;margin:24px auto 0"></div>
+    <div style="text-align:center;margin-top:24px">
+      <button class="btn btn-primary btn-lg" onclick="startSiteQuiz()">🎲 Lancer le quiz</button>
+    </div>
+  </div>
+</section>
+
 <!-- MATIERES ET NIVEAUX -->
 <section id="matieres" style="background:var(--card)">
   <div class="container">
@@ -503,6 +516,67 @@ async function sendContact(e){e.preventDefault();
 // ── Init ──
 loadSubjects();loadPricing();loadFAQ();
 document.getElementById("modalOverlay").addEventListener("click",e=>{if(e.target.id==="modalOverlay")closeModal();});
+// ── Quiz Universel (Site) ──
+let SITE_QUIZ=[];
+let SITE_Q_SCORE=0;
+let SITE_Q_TOTAL=0;
+let SITE_Q_CURRENT=0;
+
+function startSiteQuiz(categorie){
+  cat = categorie || "Toutes";
+  document.getElementById("quizContainer").innerHTML='<div class="site-q-card"><p style="text-align:center">Chargement des questions...</p></div>';
+  const params=new URLSearchParams();
+  if(cat!=="Toutes") params.set("categorie",cat);
+  fetch("/api/quiz?"+params)
+    .then(r=>r.json())
+    .then(d=>{
+      SITE_QUIZ=d.quiz||[];
+      if(SITE_QUIZ.length===0){document.getElementById("quizContainer").innerHTML='<div class="site-q-card"><p>🎲 Pas de questions dans cette catégorie.</p></div>';return;}
+      SITE_Q_SCORE=0;SITE_Q_TOTAL=0;SITE_Q_CURRENT=0;
+      renderSiteQuiz();
+    })
+    .catch(()=>{document.getElementById("quizContainer").innerHTML='<div class="site-q-card"><p>⚠️ Erreur réseau</p></div>';});
+}
+
+function renderSiteQuiz(){
+  if(SITE_Q_CURRENT>=SITE_QUIZ.length){
+    document.getElementById("quizContainer").innerHTML=
+      '<div class="site-q-card"><h3>🎯 Quiz terminé !</h3>'+
+      '<p style="font-size:24px;font-weight:800;color:var(--violet);text-align:center;margin:16px 0">'+SITE_Q_SCORE+' / '+SITE_Q_TOTAL+'</p>'+
+      '<p style="text-align:center;font-size:14px;color:var(--ink-soft)">Score : '+Math.round(SITE_Q_SCORE/SITE_Q_TOTAL*100)+'% — '+(SITE_Q_SCORE/SITE_Q_TOTAL>=0.7?"Excellent!":"Continue à pratiquer!")+'</p>'+
+      '<div style="text-align:center;margin-top:16px"><button class="btn btn-primary" onclick="startSiteQuiz()">🔄 Rejouer</button></div></div>';
+    return;
+  }
+  const q=SITE_QUIZ[SITE_Q_CURRENT];
+  const options=JSON.parse(q.options||"[]");
+  document.getElementById("quizContainer").innerHTML=
+    '<div class="site-q-card">'+
+    '<div class="q-num">Question '+(SITE_Q_CURRENT+1)+' / '+SITE_QUIZ.length+'</div>'+
+    '<div class="q-cat-badge">'+q.categorie+'</div>'+
+    '<div class="q-text">'+q.question+'</div>'+
+    '<div class="q-opts">'+options.map((o,i)=>'<div class="q-opt" onclick="answerSiteQuiz('+i+')">'+o+'</div>').join("")+'</div>'+
+    '<div class="q-explain" id="siteQuizExplain"></div>'+
+    '</div>';
+  SITE_Q_TOTAL++;
+}
+
+function answerSiteQuiz(idx){
+  const q=SITE_QUIZ[SITE_Q_CURRENT];
+  const correct=idx===q.reponse;
+  const opts=document.querySelectorAll("#quizContainer .q-opt");
+  opts.forEach((o,i)=>{o.style.pointerEvents="none";o.classList.add(i===q.reponse?"q-right":i===idx?"q-wrong":"q-dim");});
+  if(correct)SITE_Q_SCORE++;
+  document.getElementById("siteQuizExplain").innerHTML='<strong>'+(correct?"✅ Correct!":"❌ Non, la bonne réponse est: "+JSON.parse(q.options||"[]")[q.reponse])+'</strong><br>'+q.explication;
+  setTimeout(()=>{SITE_Q_CURRENT++;renderSiteQuiz();},2500);
+}
+
+// ── Initialiser les catégories quiz ──
+(function(){
+  const cats=[["Toutes","🎯"],["Géographie","🌍"],["Sciences","🔬"],["Histoire","📚"],["Maths","➗"],["Français","✍️"],["Anglais","🇬🇧"],["Physique","⚡"],["Chimie","🧪"],["SVT","🧬"],["Informatique","💻"],["Économie","💰"],["Philosophie","🤔"]];
+  const el=document.getElementById("quizCats");
+  if(el){el.innerHTML=cats.map(c=>'<div class="card" onclick="startSiteQuiz("'+c[0]+'")"><div style="font-size:32px;margin-bottom:8px">'+c[1]+'</div><div style="font-weight:700">'+c[0]+'</div></div>').join("");}
+})();
+
 </script>
 </body>
 </html>

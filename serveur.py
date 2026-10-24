@@ -16,7 +16,8 @@ DB_PATH = os.environ.get("DB_PATH", os.path.join(os.path.dirname(os.path.abspath
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "ecolemax2026")
 POLLINATIONS_URL = "https://text.pollinations.ai/openai"
 OVH_AI_URL = "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/chat/completions"
-OVH_AI_MODEL = "meta-llama/Llama-3.3-70B-Instruct"
+OVH_AI_MODEL = "Qwen2.5-VL-72B-Instruct"  # Primaire: 72B, vision, multilingue
+OVH_AI_FALLBACK = "Meta-Llama-3_3-70B-Instruct"  # Repli: 70B, multilingue
 POLLINATIONS_REFERER = "https://ecolemax.onrender.com"
 
 # ─────────────────────────────────────────────
@@ -34,7 +35,7 @@ def init_db():
     # Recrée les tables pour une structure cohérente (migration complète)
     tables = ["journaux","supports","notifications","favoris","results","corrections",
               "exercices_favoris","exercises","cours","sujets","usages","paiements",
-              "abonnements","plans","sessions","users","admins"]
+              "abonnements","plans","sessions","users","admins","quiz","quiz_resultats"]
     for t in tables:
         c.execute(f"DROP TABLE IF EXISTS {t}")
     c.executescript("""
@@ -180,6 +181,23 @@ def init_db():
         detail TEXT,
         date TEXT
     );
+    CREATE TABLE IF NOT EXISTS quiz(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        categorie TEXT,
+        question TEXT,
+        options TEXT,
+        reponse INTEGER,
+        explication TEXT,
+        niveau TEXT,
+        ordre INTEGER DEFAULT 0
+    );
+    CREATE TABLE IF NOT EXISTS quiz_resultats(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        score INTEGER,
+        total INTEGER,
+        date TEXT
+    );
     CREATE TABLE IF NOT EXISTS exercices_favoris(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
@@ -305,9 +323,97 @@ def init_db():
         ('chim','Organique','qcm','Quel groupe fonctionnel contient le méthane?',json.dumps(['Aldéhyde','Alcool','Alcan','Acide']),'2','Alcan','Université S2','Chimie organique',5),
         ('fr','Argument','ouvert','Rédige un plan de dissertation (intro-dév-concl).','','Introduction : définition + problématique. Développement : arguments + exemples. Conclusion : synthèse + ouverture.','Un plan de dissertation suit une structure tripartite.','Université S2','Rédaction',4),
         ('ec','Étude','qcm','Qu est-ce que le PIB nominal?',json.dumps(['PIB à prix constants','PIB à prix courants','PIB réel','PIB en volume']),'1','PIB à prix courants','Université S2','Économie',4),
+        # ── Suppléments v4.0 : exercices supplémentaires ──
+        ('maths','Addition','qcm','15+27=?',json.dumps(['32','42','45','52']),'1','15+27=42','CM1','Arithmétique',1),
+        ('maths','Soustraction','qcm','45-18=?',json.dumps(['25','27','33','37']),'1','45-18=27','CM1','Arithmétique',1),
+        ('maths','Multiplication','qcm','5×6=?',json.dumps(['25','30','35','40']),'1','5×6=30','CM2','Produit',1),
+        ('maths','Division','qcm','48/6=?',json.dumps(['6','7','8','9']),'2','48/6=8','CM2','Division',1),
+        ('fr','Vocabulaire','qcm','« soleil » est?',json.dumps(['un animal','un astre','un arbre','un poisson']),'1','un astre','CM1','Vocabulaire',1),
+        ('fr','Vocabulaire','qcm','« pomme » est?',json.dumps(['un fruit','un légume','un animal','un mineral']),'0','un fruit','CM1','Vocabulaire',1),
+        ('svt','Animaux','qcm','Que donne un lion?',json.dumps(['Lionneau','Poulet','Veau','Chevreau']),'0','Lionneau','CM1','Animaux',1),
+        ('maths','PGCD','qcm','PGCD de 8 et 12?',json.dumps(['2','4','6','8']),'1','4','6ème','PGCD',2),
+        ('maths','Fractions','qcm','3/4 + 1/4 = ?',json.dumps(['1','1/2','3/4','1/4']),'0','1','6ème','Fractions',2),
+        ('fr','Conjugaison','qcm','« Nous ___ à l\'école »?',json.dumps(['vais','vas','allons','allez']),'2','allons','6ème','Conjugaison',2),
+        ('fr','Genre','qcm','« un chien » est?',json.dumps(['masculin','féminin','neutre','ambigu']),'0','masculin','6ème','Genre',2),
+        ('maths','Puissance','qcm','3²=?',json.dumps(['6','9','12','27']),'1','3²=9','5ème','Puissances',2),
+        ('maths','Nombres relatifs','qcm','-3 + 7 = ?',json.dumps(['-10','4','10','-4']),'1','4','5ème','Nombres relatifs',2),
+        ('phys','Vitesse','qcm','L\'unité de vitesse est?',json.dumps(['m/s','N','J','W']),'0','m/s','5ème','Unités',2),
+        ('maths','Équations','qcm','x - 4 = 9 → x = ?',json.dumps(['5','13','13','9'],),'1','x=13','4ème','Équations',3),
+        ('maths','Problème ouvert','ouvert','Résous : 3x = 15','','x=5','3x=15 → x=5','4ème','Équations',3),
+        ('fr','Temps','qcm','« demain, je ___ »?',json.dumps(['vais','irai','suis allé','allais']),'1','irai','5ème','Temps',2),
+        ('svt','Cellule','qcm','Le noyau contient?',json.dumps(['ADN','Glucose','Eau','Oxygène']),'0','ADN','4ème','Biologie',3),
+        ('maths','Fonction','qcm','Pour f(x)=3x-2, f(2)=?',json.dumps(['2','4','6','8']),'1','4','3ème','Fonctions',3),
+        ('maths','Pythagore','qcm','Dans un triangle rectangle, si a=3, b=4, c=?',json.dumps(['5','7','25','√7']),'0','c=5','3ème','Pythagore',3),
+        ('fr','Part du passé','qcm','« Il ___ finir »?',json.dumps(['a fini','finit','finissait','finira']),'0','a fini','3ème','Temps',3),
+        ('hist','Indépendance','qcm','Le Sénégal a obtenu l\'indépendance en?',json.dumps(['1958','1960','1965','1970']),'1','1960','3ème','Sénégal',2),
+        ('geo','République','qcm','Le Sénégal est un?',json.dumps(['Monarchie','République','Dictature','Empire']),'1','République','3ème','Géographie',2),
+        ('svt','Respiration','qcm','Le dioxygène est absorbé par?',json.dumps(['Les poumons','Le cœur','Le foie','Les reins']),'0','Les poumons','3ème','Biologie',2),
+        ('maths','Dérivée','qcm','Dérivée de 5x?',json.dumps(['5','5x','x','0'],),'0','5','2nde','Calcul',4),
+        ('fr','Conjugaison','qcm','« Ils ___ le livre »?',json.dumps(['lit','lis','lisons','lisent']),'3','lisent','2nde','Conjugaison',2),
+        ('phys','Force','qcm','La masse est mesurée en?',json.dumps(['kg','N','J','W']),'0','kg','2nde','Mécanique',3),
+        ('chim','Molécule','qcm','L\'azote moléculaire est?',json.dumps(['N','N₂','NO','NH₃'],),'1','N₂','2nde','Chimie',2),
+        ('ang','Grammar','qcm','« She ___ to school »?',json.dumps(['go','goes','going','gone']),'1','goes','2nde','Grammar',2),
+        ('es','Saludos','qcm','« Gracias » signifie?',json.dumps(['Bonjour','Au revoir','Merci','Oui']),'2','Merci','2nde','Vocabulaire',1),
+        ('ara','Alphabet','qcm','Quelle lettre est la deuxième de l\'alphabet arabe?',json.dumps(['Alif','Ba','Dal','Sad']),'1','Ba','Terminale','Arabe',2),
+        ('maths','Inégalité','qcm','Résous : x + 3 < 8 → x < ?',json.dumps(['2','3','5','8']),'2','x<5','Première','Inéquations',4),
+        ('maths','Probabilités','qcm','P(obtenir un face avec une pièce)?',json.dumps(['1/3','1/2','1/4','1/6']),'1','1/2','Première','Probabilités',4),
+        ('phys','Énergie','qcm','L\'énergie potentielle gravitationnelle = ?',json.dumps(['mv','½mv²','mgh','Fd'],),'2','mgh','Première','Énergie',4),
+        ('info','Python','qcm','En Python, quelle fonction affiche au terminal?',json.dumps(['echo','print','console.log','display'],),'1','print','Première','Informatique',3),
+        ('ec','Inflation','qcm','L\'inflation est une?',json.dumps(['Hausse des prix','Baisse des prix','Stabilité','Déflation'],),'0','Hausse des prix','Première','Économie',3),
+        ('maths','Dérivée 2','qcm','Dérivée de e^x?',json.dumps(['e^x','x*e^x','0','ln(x)'],),'0','e^x','Terminale','Calcul',5),
+        ('maths','Intégrale','qcm','∫ 1 dx = ?',json.dumps(['x+C','1+C','x','0'],),'0','x+C','Terminale','Calcul',5),
+        ('phys','Relativité','qcm','E = mc² est la formule d\'énergie de?',json.dumps(['Newton','Einstein','Planck','Bohr'],),'1','Einstein','Terminale','Physique',5),
+        ('fr','Argument','ouvert','Écris un paragraphe sur l\'importance de l\'éducation.','','L\'éducation est un pilier fondamental de la société...','L\'éducation permet l\'épanouissement personnel et le progrès collectif.','Terminale','Rédaction',4),
+        ('maths','Limite','qcm','lim(x→0) sin(x)/x = ?',json.dumps(['0','1','∞','x'],),'1','1','Université','Analyse',5),
+        ('maths','Dérivée partielle','qcm','∂/∂x (x²y) = ?',json.dumps(['2xy','x²y','2y','xy²'],),'0','2xy','Université','Analyse',5),
+        ('info','Tri','qcm','La complexité du tri à bulles est?',json.dumps(['O(n)','O(n log n)','O(n²)','O(log n)'],),'2','O(n²)','Université','Algorithmes',5),
+        ('chim','Orbitales','qcm','Nombre d\'orbitales dans la couche n=1?',json.dumps(['1','2','4','8'],),'0','1','Université','Chimie',5),
+        ('ec','Bitcoin','qcm','Le Bitcoin est une?',json.dumps(['Monnaie numérique','Action','Obligation','Matière'],),'0','Monnaie numérique','Université','Économie',4),
+        ('maths','Statistique','qcm','La moyenne de (2,4,6,8) est?',json.dumps(['4','5','6','7'],),'0','5','Université S2','Statistiques',5),
+        ('info','SQL','qcm','Quel langage pour interroger une base SQL?',json.dumps(['HTML','Python','SQL','CSS'],),'2','SQL','Université S2','Bases de données',4),
+        ('phys','Ohm','qcm','La loi d\'Ohm est V = ?',json.dumps(['R/I','I×R','I/R','R×I²'],),'1','I×R','Université S2','Électricité',5),
+        ('chim','Organique','qcm','Le méthane contient quel atome de carbone?',json.dumps(['1','2','3','4'],),'0','1','Université S2','Chimie organique',5),
+        ('fr','Dissertation','ouvert','Écris une introduction de dissertation sur le travail.','','Le travail est une activité humaine fondamentale...','Une introduction présente le sujet, la problématique et l\'annonce du plan.','Université S2','Rédaction',4),
+        ('ec','PIB','qcm','Le PIB réel est?',json.dumps(['PIB à prix constants','PIB à prix courants','PIB nominal','PIB nominal'],),'0','PIB à prix constants','Université S2','Économie',4),
     ]
     for e in exercices:
         c.execute("INSERT OR IGNORE INTO exercises (sujet_code,titre,type,qtext,options,reponse,explication,niveau,chapitre,difficulte) VALUES (?,?,?,?,?,?,?,?,?,?)", e)
+    # Quiz Universel — catégories variées
+    quiz_q = [
+        ("Géographie","Quelle est la capitale du Mali?",json.dumps(["Dakar","Bamako","Mopti","Ségou"]),1,"Bamako est la capitale du Mali.","Toutes"),
+        ("Géographie","Quel est le plus long fleuve du monde?",json.dumps(["Amazone","Nil","Danube","Mississippi"]),1,"Le Nil est généralement considéré comme le plus long.","Toutes"),
+        ("Géographie","Quel pays a la plus grande population?",json.dumps(["Inde","Chine","États-Unis","Russie"]),0,"L'Inde a dépassé la Chine en 2023.","Toutes"),
+        ("Sciences","Quelle est la vitesse de la lumière?",json.dumps(["300 000 km/s","150 000 km/s","500 000 km/s","100 000 km/s"]),0,"Environ 299 792 km/s, soit ~300 000 km/s.","Toutes"),
+        ("Sciences","Quel est le symbole de l'or?",json.dumps(["Ag","Au","Cu","Fe"]),1,"Au est le symbole chimique de l'or (aurum).","Toutes"),
+        ("Sciences","Combien de planètes a le système solaire?",json.dumps(["7","8","9","10"]),1,"8 planètes : Mercure, Vénus, Terre, Mars, Jupiter, Saturne, Uranus, Neptune.","Toutes"),
+        ("Histoire","Qui était le premier président du Sénégal?",json.dumps(["Léopold Sédar Senghor","Mamadou Dia","Abdoulaye Ly","Blaise Diagne"]),0,"Léopold Sédar Senghor, 1960.","Toutes"),
+        ("Histoire","En quelle année le Sénégal a-t-il obtenu l'indépendance?",json.dumps(["1958","1960","1965","1970"]),1,"20 juin 1960.","Toutes"),
+        ("Maths","Quel est le nombre d'or?",json.dumps(["1,414","1,618","1,508","1,732"]),1,"φ = (1+√5)/2 ≈ 1,618.","Toutes"),
+        ("Maths","Combien vaut π (pi) approximativement?",json.dumps(["2,71","3,14","3,41","3,14"],),1,"π ≈ 3,14159.","Toutes"),
+        ("Maths","Quel est le carré de 12?",json.dumps(["124","144","164","144"],),1,"12² = 144.","Toutes"),
+        ("Français","Quel est le pluriel de « un enfant »?",json.dumps(["des enfants","des enfant","des enfantss","les enfant"]),0,"des enfants.","Toutes"),
+        ("Français","Quel verbe est à l'imparfait : « Hier, je ___ »?",json.dumps(["suis allé","allais","irai","vais"]),1,"« j'allais » est à l'imparfait.","Toutes"),
+        ("Français","« Élève » est masculin ou féminin?",json.dumps(["Masculin","Féminin","Les deux","Ni l'un ni l'autre"]),2,"« Un élève » (masculin) et « une élève » (féminin).","Toutes"),
+        ("Anglais","« How are you? » signifie?",json.dumps(["Bonjour","Comment ça va?","Au revoir","Merci"]),1,"How are you? = Comment ça va?","Toutes"),
+        ("Anglais","Quel est le pluriel de « child »?",json.dumps(["childs","children","childes","child"],),1,"children.","Toutes"),
+        ("Anglais","« I have been » = Present Perfect. Vrai?",json.dumps(["Vrai","Faux","Peut-être","Je ne sais pas"]),0,"I have been = Present Perfect.","Toutes"),
+        ("Physique","Quelle est la formule de la vitesse?",json.dumps(["v = d/t","v = m×a","v = F/m","v = mc²"],),0,"v = distance/temps.","Toutes"),
+        ("Physique","Quelle unité mesure la température?",json.dumps(["Newton","Kelvin","Joule","Watt"]),1,"Kelvin (K), mais Celsius (°C) courant.","Toutes"),
+        ("Physique","Quelle est la loi de la gravitation?",json.dumps(["F = ma","F = G×m1×m2/r²","E = mc²","F = mv"],),1,"Loi de Newton : F = Gm₁m₂/r².","Toutes"),
+        ("Chimie","Quelle est la formule du dioxyde de carbone?",json.dumps(["H₂O","CO₂","O₂","CO"],),1,"CO₂.","Toutes"),
+        ("Chimie","Quel est le métal le plus léger?",json.dumps(["Fer","Lithium","Aluminium","Cuivre"]),1,"Le lithium (densité 0,534 g/cm³).","Toutes"),
+        ("SVT","Quel organe filtre les sangs dans le corps?",json.dumps(["Cœur","Foie","Rein","Poumon"]),2,"Le rein filtre le sang.","Toutes"),
+        ("SVT","Quel gaz est absorbé par les plantes?",json.dumps(["Oxygène","CO₂","Nitrogène","Argon"],),1,"CO₂ (dioxyde de carbone).","Toutes"),
+        ("Informatique","Quel est le langage utilisé pour les sites web?",json.dumps(["HTML","Python","Java","C++"],),0,"HTML (avec CSS et JavaScript).","Toutes"),
+        ("Informatique","Quel est le système de numberation binaire basé sur?",json.dumps(["0 et 1","0 et 2","1 et 2","A et B"],),0,"0 et 1.","Toutes"),
+        ("Informatique","Quel est le port HTTP par défaut?",json.dumps(["21","80","443","8080"],),1,"Port 80.","Toutes"),
+        ("Économie","Quelle est la monnaie du Sénégal?",json.dumps(["Franc CFA","Euro","Dollar","Livre"],),0,"Franc CFA (XOF).","Toutes"),
+        ("Économie","Qu'est-ce que le PIB?",json.dumps(["Produit brut","Produit intérieur brut","Prix global","Production individuelle"],),1,"Produit Intérieur Brut.","Toutes"),
+        ("Philosophie","« Je pense, donc je suis » est de qui?",json.dumps(["Platon","Descartes","Kant","Nietzsche"],),1,"Descartes (Cogito ergo sum).","Toutes"),
+    ]
+    for qz in quiz_q:
+        c.execute("INSERT OR IGNORE INTO quiz (categorie,question,options,reponse,explication,niveau,ordre) VALUES (?,?,?,?,?,?,?)", qz)
+
     # Notifications par défaut pour nouveaux utilisateurs (créées à l'inscription)
     c.execute("INSERT OR IGNORE INTO admins (pseudo,mot_de_passe,role,created_at) VALUES ('admin',?,'superadmin',?)",
               (hashlib.sha256(ADMIN_PASSWORD.encode()).hexdigest(), datetime.datetime.now().isoformat()))
@@ -514,13 +620,26 @@ def reponse_ia(question, plan=None):
             return {"reponse": rep, "explication": rep, "confiance": 0.85, "source": "Bibliothèque locale",
                     "etapes": ["Recherche dans la bibliothèque de cours ÉcoleMax"]}
     # 3. Pollinations IA avec retry
-    messages = [{"role":"system","content":"Tu es Professeur IA d'ÉcoleMax. Tu réponds en français, pédagogique, bref et clair. Adapte ton niveau à l'élève (CM1 à Université). Structure : 1) Réponse directe, 2) Explication, 3) Étapes ou exemple si nécessaire. Pour les maths : donne la méthode. Pour les langues : donne la traduction + usage. Pour les sciences : donne la définition + exemple concret. Sois concis (max 150 mots)."},
+    messages = [{"role":"system","content":"Tu es Professeur IA d'ÉcoleMax, expert pédagogique. Tu réponds en français (ou dans la langue demandée), clair, précis et structuré. Adapte ton niveau à l'élève (CM1 à Université). Structure obligatoire : 1) Réponse directe et exacte, 2) Explication détaillée, 3) Étapes ou exemple concret. Pour les maths : montre le calcul étape par étape. Pour les langues : traduction + usage + exemple. Pour les sciences : définition + propriétés + exemple. Sois complet mais concis (max 200 mots). Vérifie toujours la justesse factuelle de tes réponses."},
                 {"role":"user","content":question}]
-    content = _ai_call(messages, max_tokens=600, timeout=25)
+    content = _ai_call(messages, max_tokens=1500, timeout=40)
     if content:
         return {"reponse": content, "source": "IA"}
     return {"reponse": "⚠️ IA momentanément saturée (trop d'élèves en même temps). Essaye un calcul (2+2), ou demande un sujet du cours. Réessaille dans 30 secondes.",
                 "source": "hors ligne"}
+
+def reponse_ia_vision(question, image_b64, plan=None):
+    """Vision IA : Qwen2.5-VL analyse l'image + répond."""
+    question = question or "Décris et analyse cette image de manière pédagogique."
+    messages = [{"role":"system","content":"Tu es Professeur IA d'ÉcoleMax. Analyse l'image fournie par l'élève et répond à sa question de manière pédagogique, claire et structurée en français. Si l'image est floue ou illisible, demande une photo plus nette. Structure : 1) Analyse de l'image, 2) Réponse à la question, 3) Explication ou exemple."},
+                {"role":"user","content":[
+                    {"type":"text","text":question},
+                    {"type":"image_url","image_url":{"url":f"data:image/jpeg;base64,{image_b64}"}}
+                ]}]
+    content = _ai_call(messages, max_tokens=1500, timeout=45)
+    if content:
+        return {"reponse": content, "source": "IA Vision (Qwen2.5-VL)"}
+    return {"reponse": "⚠️ IA Vision momentanément saturée. Vérifie la luminosité et reprends une photo claire, ou envoie l'énoncé en texte. Réessaille dans 30 secondes.", "source": "hors ligne"}
 
 def reponse_ia_photo(question, image_b64, plan=None):
     """Correction photo : OCR + résolution via Pollinations vision."""
@@ -530,7 +649,7 @@ def reponse_ia_photo(question, image_b64, plan=None):
                     {"type":"text","text":question},
                     {"type":"image_url","image_url":{"url":f"data:image/jpeg;base64,{image_b64}"}}
                 ]}]
-    content = _ai_call(messages, max_tokens=700, timeout=30)
+    content = _ai_call(messages, max_tokens=1200, timeout=40)
     if content:
         return {"reponse": content, "source": "IA Vision"}
     return {"reponse": "⚠️ IA Vision momentanément saturée. Vérifie la luminosité et reprends une photo claire, ou envoie l'énoncé en texte. Réessaille dans 30 secondes.", "source": "hors ligne"}
@@ -854,7 +973,7 @@ class Handler(BaseHTTPRequestHandler):
             c.close()
             return self.send_json({"ok":True,"nouveau_mdp":new})
 
-        # ── IA — Professeur ──
+        # ── IA — Professeur (avec photo optionnelle) ──
         if path == "/api/ai/ask":
             if not u: return self.send_json({"erreur":"Authentification requise"}, 401)
             p = plan_actif(u)
@@ -862,9 +981,14 @@ class Handler(BaseHTTPRequestHandler):
             ok, msg = check_quota(u, p, "ia")
             if not ok: return self.send_json({"erreur":msg}, 402)
             q = data.get("question","").strip()
-            if not q: return self.send_json({"erreur":"Question vide"}, 400)
-            r = reponse_ia(q, p)
-            log_sec(u["id"], "ia_question", q[:100])
+            if not q and not data.get("image",""): return self.send_json({"erreur":"Question ou photo vide"}, 400)
+            image = data.get("image","")
+            if image:
+                # Vision: Qwen2.5-VL analyse l'image + la question
+                r = reponse_ia_vision(q or "Décris et analyse cette image.", image, p)
+            else:
+                r = reponse_ia(q, p)
+            log_sec(u["id"], "ia_question", q[:100] if q else "[photo]")
             return self.send_json(r)
 
         # ── IA — Scanner photo ──
@@ -901,6 +1025,35 @@ class Handler(BaseHTTPRequestHandler):
             c.close()
             log_sec(u["id"], "correction_texte", "Correction texte")
             return self.send_json(r)
+
+        # ── Quiz Universel ──
+        if path == "/api/quiz":
+            c = db()
+            categorie = data.get("categorie","")
+            niveau = data.get("niveau","")
+            q = "SELECT * FROM quiz WHERE 1=1"
+            params = []
+            if categorie: q += " AND categorie=?"; params.append(categorie)
+            if niveau: q += " AND niveau=?"; params.append(niveau)
+            rows = c.execute(q, params).fetchall()
+            c.close()
+            return self.send_json({"quiz":[dict(r) for r in rows]})
+
+        if path == "/api/quiz/reponse":
+            if not u: return self.send_json({"erreur":"Authentification requise"}, 401)
+            qid = data.get("quiz_id")
+            rep = data.get("reponse",0)
+            c = db()
+            q = c.execute("SELECT * FROM quiz WHERE id=?", (qid,)).fetchone()
+            correct = 0
+            if q:
+                correct = 1 if int(rep) == int(q["reponse"]) else 0
+                c.execute("INSERT INTO quiz_resultats (user_id,score,total,date) VALUES (?,?,?,?)",
+                          (u["id"], correct, 1, now()))
+            c.commit()
+            c.close()
+            update_usage(u["id"], "ex")
+            return self.send_json({"ok":True, "correct":correct, "explication":q["explication"] if q else ""})
 
         # ── Exercices ──
         if path == "/api/exercises":
@@ -1013,6 +1166,61 @@ class Handler(BaseHTTPRequestHandler):
             c.close()
             log_sec(u["id"], "paiement_creation", f"{plan_code} {method} {ref}")
             return self.send_json({"ok":True,"reference":ref,"abonnement_id":aid,"montant":plan["prix"]})
+
+        # ── Changement de plan par l'élève ──
+        if path == "/api/change_plan":
+            if not u: return self.send_json({"erreur":"Authentification requise"}, 401)
+            new_code = data.get("plan","").strip()
+            c = db()
+            new_plan = c.execute("SELECT * FROM plans WHERE code=?", (new_code,)).fetchone()
+            if not new_plan: return self.send_json({"erreur":"Plan non trouvé"}, 404)
+            if new_code == "gratuit":
+                return self.send_json({"erreur":"Impossible de revenir à l'essai gratuit"}, 400)
+            # Vérifie l'autorisation (student peut changer de plan payant)
+            # Ajoute un abonnement en_attente et un paiement
+            ref = "CHG-" + secrets.token_hex(6).upper()
+            c.execute("INSERT INTO paiements (user_id,montant,method,statut,reference,created_at) VALUES (?,?,?,?,?,?)",
+                      (u["id"], new_plan["prix"], data.get("method","wave"), "en_attente", ref, now()))
+            pid = c.execute("SELECT id FROM paiements WHERE reference=?", (ref,)).fetchone()["id"]
+            c.execute("INSERT INTO abonnements (user_id,plan_code,statut,debut,expire,montant) VALUES (?,?,?,?,?,?)",
+                      (u["id"], new_code, "en_attente", now(), "", new_plan["prix"]))
+            aid = c.execute("SELECT id FROM abonnements WHERE user_id=? AND statut='en_attente' ORDER BY debut DESC LIMIT 1", (u["id"],)).fetchone()["id"]
+            c.execute("UPDATE paiements SET abonnement_id=? WHERE id=?", (aid, pid))
+            c.commit()
+            c.close()
+            log_sec(u["id"], "changement_plan", f"-> {new_code} ({ref})")
+            return self.send_json({"ok":True, "reference":ref, "abonnement_id":aid, "plan":new_plan["nom"], "montant":new_plan["prix"]})
+
+        # ── Test de paiement (dashboard admin) ──
+        if path == "/api/payment/test":
+            if self.headers.get("X-Admin-Password","") != ADMIN_PASSWORD:
+                return self.send_json({"erreur":"Non autorisé"}, 403)
+            method = data.get("method","wave")
+            montant = data.get("montant", 500)
+            method_info = {
+                "wave": {"nom": "Wave", "logo": "💳", "statut": "actif", "commission": "0%"},
+                "orange": {"nom": "Orange Money", "logo": "📲", "statut": "actif", "commission": "1,5%"},
+                "mtn": {"nom": "MTN MoMo", "logo": "📶", "statut": "actif", "commission": "1,5%"},
+                "paypal": {"nom": "PayPal", "logo": "🅿️", "statut": "hors ligne", "commission": "3,5%"},
+                "carte": {"nom": "Carte bancaire", "logo": "💳", "statut": "actif", "commission": "2%"},
+            }
+            info = method_info.get(method, {"nom": method, "logo": "❓", "statut": "inconnu", "commission": "?"})
+            # Simule un paiement de test
+            ref = "TEST-" + secrets.token_hex(6).upper()
+            c = db()
+            c.execute("INSERT INTO paiements (user_id,montant,method,statut,reference,created_at) VALUES (?,?,?,?,?,?)",
+                      (0, montant, method, "test_success", ref, now()))
+            c.commit()
+            c.close()
+            log_sec(1, "test_paiement", f"Test {method} {ref}")
+            return self.send_json({
+                "ok": True,
+                "reference": ref,
+                "statut": "test_success",
+                "method": info,
+                "montant": montant,
+                "message": f"Paiement test {info['nom']} simulé — {montant} FCFA — {info['commission']} commission"
+            })
 
         if path == "/api/payment/confirm":
             """Confirmation sécurisée du paiement — activée seulement après vérification."""

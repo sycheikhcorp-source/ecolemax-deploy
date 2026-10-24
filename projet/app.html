@@ -182,6 +182,20 @@ input,textarea,select{font-family:inherit}
 .app-footer .logo-row{display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:6px}
 .app-footer .logo-text{font-size:14px;font-weight:900}
 .app-footer .logo-text span{color:var(--violet)}
+    .chat-photo-btn{flex-shrink:0;width:40px;height:40px;border:none;border-radius:10px;background:var(--violet-light);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+    .q-number{font-size:12px;color:var(--ink-soft);margin-bottom:8px}
+    .q-text{font-size:16px;font-weight:700;margin-bottom:8px;line-height:1.4}
+    .q-cat{display:inline-block;font-size:11px;padding:2px 8px;background:var(--violet-light);border-radius:8px;color:var(--violet);margin-bottom:12px}
+    .q-options{display:flex;flex-direction:column;gap:8px}
+    .q-option{padding:12px;border:1px solid var(--line);border-radius:10px;font-size:14px;cursor:pointer;background:var(--card);transition:all .15s}
+    .q-option:hover{border-color:var(--violet);background:var(--violet-light)}
+    .q-option.q-right{border-color:var(--ok);background:rgba(25,135,84,0.1)}
+    .q-option.q-wrong{border-color:var(--err);background:rgba(220,53,69,0.1)}
+    .q-option.q-dim{opacity:0.4}
+    .q-explication{margin-top:12px;padding:12px;border-radius:10px;font-size:13px}
+    .q-result{padding:12px;border-radius:10px;font-size:13px}
+    .q-result.q-right{background:rgba(25,135,84,0.1);border:1px solid var(--ok)}
+    .q-result.q-wrong{background:rgba(220,53,69,0.1);border:1px solid var(--err)}
 .app-footer p{margin-top:4px}
 
 @media(min-width:768px){
@@ -284,10 +298,12 @@ input,textarea,select{font-family:inherit}
       <div class="quick-btn" onclick="goToTab('chat')"><div class="ic">🤖</div><div class="lb">Professeur IA</div></div>
       <div class="quick-btn" onclick="goToTab('photo')"><div class="ic">📸</div><div class="lb">Scanner</div></div>
       <div class="quick-btn" onclick="goToTab('text')"><div class="ic">✍️</div><div class="lb">Correcteur</div></div>
+      <div class="quick-btn" onclick="goToTab('quiz')"><div class="ic">🎲</div><div class="lb">Quiz Universel</div></div>
     </div>
     <div class="section-title">Menu complet</div>
     <div class="more-grid">
       <div class="more-card" onclick="goToTab('exercises')"><div class="ic">📚</div><div class="lb">Exercices</div></div>
+      <div class="more-card" onclick="goToTab('quiz')"><div class="ic">🎲</div><div class="lb">Quiz</div></div>
       <div class="more-card" onclick="goToTab('matieres')"><div class="ic">🎨</div><div class="lb">Matières</div></div>
       <div class="more-card" onclick="goToTab('results')"><div class="ic">📊</div><div class="lb">Résultats</div></div>
       <div class="more-card" onclick="goToTab('history')"><div class="ic">🕒</div><div class="lb">Historique</div></div>
@@ -302,7 +318,7 @@ input,textarea,select{font-family:inherit}
         </svg>
         <div class="logo-text">École<span>Max</span></div>
       </div>
-      <p>Créé par SYCHEIKHCORP · Dakar, Sénégal</p>
+      <p>CREE PAR SYCHEIKHCORP · Dakar, Sénégal</p>
     </div>
   </div>
 
@@ -319,7 +335,9 @@ input,textarea,select{font-family:inherit}
       <div class="suggest-chip" onclick="askSuggest('Capitale du Sénégal ?')">Dakar</div>
     </div>
     <div class="chat-input-row">
-      <input type="text" id="chatInput" placeholder="Ta question..." onkeydown="if(event.key==='Enter')askIA()">
+      <button class="chat-photo-btn" onclick="document.getElementById('chatPhoto').click()" title="Envoyer une photo">📷</button>
+      <input type="file" id="chatPhoto" accept="image/*" capture="environment" style="display:none" onchange="onChatPhotoSelected(event)">
+      <input type="text" id="chatInput" placeholder="Ta question... ou envoie une photo" onkeydown="if(event.key==='Enter')askIA()">
       <button class="btn btn-primary" onclick="askIA()">➤</button>
     </div>
   </div>
@@ -368,6 +386,23 @@ input,textarea,select{font-family:inherit}
     <div id="exList"></div>
   </div>
 
+  <!-- QUIZ UNIVERSEL -->
+  <div class="screen" id="screen-quiz">
+    <div class="back-row"><button class="back-btn" onclick="goToTab('home')">←</button><div class="section-title" style="margin:0">🎲 Quiz Universel</div></div>
+    <div class="alert" id="quizAlert"></div>
+    <div class="section-title">Catégorie</div>
+    <div class="quick-grid" id="quizCats"></div>
+    <div class="section-title">Ton score</div>
+    <div class="stat-row">
+      <div class="stat-card"><div class="v" id="quizScore">0</div><div class="l">Bonne réponses</div></div>
+      <div class="stat-card"><div class="v" id="quizTotal">0</div><div class="l">Questions</div></div>
+    </div>
+    <div id="quizList"></div>
+    <div style="margin-top:12px">
+      <button class="btn btn-primary btn-block" onclick="loadQuiz()">🎲 Lancer un quiz</button>
+    </div>
+  </div>
+
   <!-- MATIERES -->
   <div class="screen" id="screen-matieres">
     <div class="back-row"><button class="back-btn" onclick="goToTab('home')">←</button><div class="section-title" style="margin:0">🎨 Matières & Cours</div></div>
@@ -391,6 +426,18 @@ input,textarea,select{font-family:inherit}
     <div class="back-row"><button class="back-btn" onclick="goToTab('home')">←</button><div class="section-title" style="margin:0">💎 Abonnement</div></div>
     <div class="alert" id="abAlert"></div>
     <div class="card" id="myPlan"></div>
+    <div class="section-title">🔄 Changer de plan</div>
+    <div class="card" style="padding:14px">
+      <p style="font-size:13px;color:var(--ink-soft);margin-bottom:12px">Tu peux changer de plan à tout moment. Le nouveau plan s'active après confirmation du paiement.</p>
+      <div class="field"><label>Choisis ton nouveau plan</label>
+        <select id="changePlanSelect" onchange="updateChangePlanPreview()">
+          <option value="">— Sélectionne un plan —</option>
+        </select>
+      </div>
+      <div id="changePlanPreview" style="font-size:13px;margin-top:8px;color:var(--ink-soft)"></div>
+      <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="changePlan()">🔄 Valider le changement</button>
+      <div class="alert" id="changePlanAlert"></div>
+    </div>
     <div class="section-title">Choisis ton abonnement</div>
     <div id="plansList"></div>
   </div>
@@ -404,7 +451,7 @@ input,textarea,select{font-family:inherit}
     </div>
     <div class="card">
       <div class="prof-card" onclick="goToTab('more')"><div class="ic">⚙️</div><div class="lb">Paramètres</div><div class="val">→</div></div>
-      <div class="prof-card" onclick="goToTab('abonnement')"><div class="ic">💎</div><div class="lb">Abonnement actuel</div><div class="val" id="profPlan">—</div></div>
+      <div class="prof-card" onclick="goToTab('abonnement')"><div class="ic">💎</div><div class="lb">Abonnement / Changer de plan</div><div class="val" id="profPlan">—</div></div>
       <div class="prof-card" onclick="goToTab('history')"><div class="ic">🕒</div><div class="lb">Historique</div><div class="val">→</div></div>
       <div class="prof-card" onclick="goToTab('results')"><div class="ic">📊</div><div class="lb">Résultats</div><div class="val">→</div></div>
       <div class="prof-card" onclick="goToTab('notifs')"><div class="ic">🔔</div><div class="lb">Notifications</div><div class="val" id="profNotif">0</div></div>
@@ -442,7 +489,7 @@ input,textarea,select{font-family:inherit}
         </svg>
         <div class="logo-text">École<span>Max</span></div>
       </div>
-      <p>Créé par SYCHEIKHCORP · Dakar, Sénégal</p>
+      <p>CREE PAR SYCHEIKHCORP · Dakar, Sénégal</p>
     </div>
   </div>
 
@@ -456,8 +503,8 @@ input,textarea,select{font-family:inherit}
   <nav class="tabbar">
     <button onclick="goToTab('home')" data-tab="home"><span class="ic">🏠</span>Accueil</button>
     <button onclick="goToTab('chat')" data-tab="chat"><span class="ic">🤖</span>IA</button>
+    <button onclick="goToTab('quiz')" data-tab="quiz"><span class="ic">🎲</span>Quiz</button>
     <button onclick="goToTab('exercises')" data-tab="exercises"><span class="ic">📚</span>Exercices</button>
-    <button onclick="goToTab('more')" data-tab="more"><span class="ic">⚙️</span>Plus</button>
     <button onclick="goToTab('profile')" data-tab="profile"><span class="ic">👤</span>Profil</button>
   </nav>
 </div>
@@ -524,7 +571,7 @@ function logout(){localStorage.removeItem("em_token");localStorage.removeItem("e
 
 // ── Navigation ──
 const TABS={home:"screen-home",chat:"screen-chat",photo:"screen-photo",text:"screen-text",exercises:"screen-exercises",
-  matieres:"screen-matieres",results:"screen-results",history:"screen-history",abonnement:"screen-abonnement",
+  quiz:"screen-quiz",matieres:"screen-matieres",results:"screen-results",history:"screen-history",abonnement:"screen-abonnement",
   profile:"screen-profile",more:"screen-more",notifs:"screen-notifs"};
 function goToTab(tab){
   Object.values(TABS).forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove("active");});
@@ -549,6 +596,7 @@ function goToTab(tab){
 
 // ── Init ──
 async function initApp(){
+  try { loadQuizCats(); } catch(e){}
   if(!TOKEN||!USER){logout();return;}
   document.getElementById("screen-auth").style.display="none";
   document.getElementById("appMain").style.display="block";
@@ -591,18 +639,32 @@ function addMsg(text,who,src){
   d.innerHTML=(who==="bot"&&src?`${text}<span class="src">📡 ${src}</span>`:text);
   m.appendChild(d);m.scrollTop=m.scrollHeight;
 }
+let CHAT_PHOTO="";
+function onChatPhotoSelected(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{CHAT_PHOTO=ev.target.result.split(",")[1];
+    addMsg("📷 Envoi d'une photo pour analyse","user");};
+  reader.readAsDataURL(file);
+  e.target.value="";
+}
 function askIA(){
   const q=document.getElementById("chatInput").value.trim();
-  if(!q) return;
+  const hasPhoto=CHAT_PHOTO;
+  if(!q && !hasPhoto) return;
   document.getElementById("chatInput").value="";
-  addMsg(q,"user");
-  const loading=document.createElement("div");loading.className="msg loading";loading.textContent="🤖 Professeur IA réfléchit...";
+  const displayQ=q||"📷 Envoi d'une photo pour analyse";
+  addMsg(displayQ,"user");
+  CHAT_PHOTO="";
+  const loading=document.createElement("div");loading.className="msg loading";loading.textContent="🤖 Professeur IA réfléchit... (Qwen2.5-VL-72B)";
   document.getElementById("chatMsgs").appendChild(loading);
-  fetch(API+"/api/ai/ask",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+TOKEN},body:JSON.stringify({question:q})})
+  const body={question:q||"Analyse et répond à cette image de manière pédagogique."};
+  if(hasPhoto) body.image=hasPhoto;
+  fetch(API+"/api/ai/ask",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+TOKEN},body:JSON.stringify(body)})
     .then(r=>r.json()).then(d=>{loading.remove();
       if(d.erreur){addMsg("⚠️ "+d.erreur,"bot");}
       else{const src=d.source||"IA";addMsg(d.reponse||"(pas de réponse)","bot",src);}})
-    .catch(()=>{loading.remove();addMsg("⚠️ Erreur réseau","bot");});
+    .catch(err=>{loading.remove();addMsg("⚠️ Erreur réseau: "+err.message,"bot");});
 }
 function askSuggest(q){document.getElementById("chatInput").value=q;askIA();}
 
@@ -655,6 +717,73 @@ async function loadExerciseFilters(){
   }
   await loadExercises();
 }
+// ── Quiz Universel ──
+let QUIZ_DATA=[];
+let QUIZ_SCORE=0;
+let QUIZ_TOTAL=0;
+let QUIZ_CURRENT=0;
+
+async function loadQuizCats(){
+  const cats=["Toutes","Géographie","Sciences","Histoire","Maths","Français","Anglais","Physique","Chimie","SVT","Informatique","Économie","Philosophie"];
+  const el=document.getElementById("quizCats");
+  el.innerHTML=cats.map(c=>`<div class="quick-btn" onclick="loadQuiz('${c}')"><div class="ic">🎯</div><div class="lb">${c}</div></div>`).join("");
+}
+
+async function loadQuiz(categorie) {
+  const q=document.getElementById("quizAlert");
+  try {
+    const params=new URLSearchParams();
+    if(categorie && categorie!=="Toutes") params.set("categorie",categorie);
+    const r=await fetch(API+"/api/quiz?"+params,{headers:{"Authorization":"Bearer "+TOKEN}});
+    const d=await r.json();
+    QUIZ_DATA=d.quiz||[];
+    if(QUIZ_DATA.length===0){showAlert("quizAlert","🎲 Pas de questions dans cette catégorie",false);return;}
+    QUIZ_SCORE=0;QUIZ_TOTAL=0;QUIZ_CURRENT=0;
+    document.getElementById("quizScore").textContent="0";
+    document.getElementById("quizTotal").textContent="0";
+    renderQuizQuestion();
+  } catch(err){showAlert("quizAlert","⚠️ Erreur réseau: "+err.message,false);}
+}
+
+function renderQuizQuestion(){
+  if(QUIZ_CURRENT>=QUIZ_DATA.length){
+    document.getElementById("quizList").innerHTML=`<div class="card"><h3>🎯 Quiz terminé !</h3><p>Bonne réponses : <strong>${QUIZ_SCORE}</strong> / ${QUIZ_TOTAL} (${Math.round(QUIZ_SCORE/QUIZ_TOTAL*100)}%)</p></div>`;
+    document.getElementById("quizScore").textContent=QUIZ_SCORE;
+    document.getElementById("quizTotal").textContent=QUIZ_TOTAL;
+    return;
+  }
+  const q=QUIZ_DATA[QUIZ_CURRENT];
+  const options=JSON.parse(q.options||"[]");
+  document.getElementById("quizList").innerHTML=`
+    <div class="card">
+      <div class="q-number">Question ${QUIZ_CURRENT+1} / ${QUIZ_DATA.length}</div>
+      <div class="q-text">${q.question}</div>
+      <div class="q-cat">${q.categorie}</div>
+      <div class="q-options">
+        ${options.map((o,i)=>`<div class="q-option" onclick="answerQuiz(${i})">${o}</div>`).join("")}
+      </div>
+      <div class="q-explication" id="quizExpl"></div>
+    </div>`;
+  QUIZ_TOTAL++;
+  document.getElementById("quizTotal").textContent=QUIZ_TOTAL;
+}
+
+async function answerQuiz(idx){
+  const q=QUIZ_DATA[QUIZ_CURRENT];
+  const correct=idx===q.reponse;
+  const opts=document.querySelectorAll(".q-option");
+  opts.forEach((o,i)=>{o.style.pointerEvents="none";o.classList.add(i===q.reponse?"q-right":i===idx?"q-wrong":"q-dim");});
+  if(correct){QUIZ_SCORE++;document.getElementById("quizScore").textContent=QUIZ_SCORE;}
+  document.getElementById("quizExpl").innerHTML=`<div class="q-result ${correct?"q-right":"q-wrong"}">${correct?"✅ Correct!":"❌ Non"} — ${q.explication}</div>`;
+  // Sauvegarde côté serveur
+  try {
+    const r=await fetch(API+"/api/quiz/reponse",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+TOKEN},body:JSON.stringify({quiz_id:q.id,reponse:idx})});
+    await r.json();
+  } catch(e){}
+  setTimeout(()=>{QUIZ_CURRENT++;renderQuizQuestion();},2500);
+}
+
+// ── Exercices ──
 async function loadExercises(){
   const sujet=document.getElementById("exSujet").value;
   const niveau=document.getElementById("exNiveau").value;
@@ -761,6 +890,15 @@ async function loadHistory(){
 
 // ── Abonnement ──
 async function loadAbonnement(){
+  // Initialiser le select de changement de plan
+  try {
+    const pr=await fetch(API+"/api/plans");
+    const pd=await pr.json();
+    const sel=document.getElementById("changePlanSelect");
+    if(sel && sel.options.length<=1){
+      pd.forEach(p=>{if(p.code!=="gratuit"){const o=document.createElement("option");o.value=p.code;o.textContent=p.nom+" ("+p.prix+" FCFA)";sel.appendChild(o);}});
+    }
+  } catch(e){}
   try{
     const r=await fetch(API+"/api/me",{headers:{"Authorization":"Bearer "+TOKEN}});
     const d=await r.json();
@@ -790,6 +928,31 @@ async function loadAbonnement(){
     list.appendChild(c);
   });
 }
+async function updateChangePlanPreview(){
+  const sel=document.getElementById("changePlanSelect");
+  if(!sel||!sel.value) return;
+  const plan=PLANS.find(p=>p.code===sel.value);
+  if(!plan){document.getElementById("changePlanPreview").textContent="";return;}
+  document.getElementById("changePlanPreview").innerHTML=`<strong>${plan.nom}</strong> — ${plan.prix} FCFA — ${plan.duree_jours} jours<br>IA: ${plan.limite_ia_jour}/jour · Photos: ${plan.photo_jour}/jour`;
+}
+
+async function changePlan(){
+  const newCode=document.getElementById("changePlanSelect").value;
+  if(!newCode){showAlert("changePlanAlert","Sélectionne un plan",false);return;}
+  if(newCode==="gratuit"){showAlert("changePlanAlert","Impossible de revenir à l'essai gratuit",false);return;}
+  const method="wave";
+  const plan=PLANS.find(p=>p.code===newCode);
+  try {
+    const r=await fetch(API+"/api/change_plan",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+TOKEN},body:JSON.stringify({plan:newCode,method})});
+    const d=await r.json();
+    if(d.erreur){showAlert("changePlanAlert",d.erreur,false);return;}
+    showAlert("changePlanAlert",`✅ Changement de plan: ${d.plan} — Réf: ${d.reference} — ${d.montant} FCFA. Attends la confirmation admin.`,true);
+    document.getElementById("changePlanSelect").value="";
+    document.getElementById("changePlanPreview").innerHTML="";
+    await loadAbonnement();
+  } catch(err){showAlert("changePlanAlert","⚠️ Erreur réseau: "+err.message,false);}
+}
+
 async function subscribe(plan,montant){
   const method=prompt("Choisis le mode de paiement :\n1 = Wave\n2 = Orange Money\n3 = Carte bancaire\n\nEntre 1, 2 ou 3 :","1");
   if(!method) return;
