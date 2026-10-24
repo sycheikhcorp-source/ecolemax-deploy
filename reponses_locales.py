@@ -540,7 +540,7 @@ BASE = [
         "mots": ["anglais", "grammaire", "present", "passed", "verbe", "present perfect"],
         "titre": "Grammaire anglaise de base",
         "reponse": "En anglais, le **present** décrit une habitude, le **past** une action terminée, le **present perfect** une action passée avec lien au présent.",
-        "explication": ""I have eaten" (present perfect) = j'ai mangé (lien au présent). "I ate" (past simple) = j'ai mangé (action terminée).",
+        "explication": "\"I have eaten\" (present perfect) = j'ai mangé (lien au présent). \"I ate\" (past simple) = j'ai mangé (action terminée).",
         "etapes": [
             "Present simple : I eat (habitude)",
             "Past simple : I ate (action terminée)",
@@ -607,9 +607,7 @@ BASE = [
             "URL : adresse d'une page web (ex: https://site.com)",
             "Email : courrier électronique (ex: user@domaine.com)",
         ],
-    },
-    },
-]    },
+    }
 ]
 
 
