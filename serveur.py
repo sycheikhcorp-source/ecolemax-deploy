@@ -197,7 +197,7 @@ def init_db():
         ('annuel',    'Pack Annuel',        10000,  365,  500,  30, '1 an · 500 questions IA/jour · 30 photos/jour · tous niveaux', 'mensuel', 10),
     ]
     for p in plans:
-        c.execute("INSERT OR IGNORE INTO plans (code,nom,prix,duree_jours,limite_ia_jour,photo_jour,description) VALUES (?,?,?,?,?,?,?)", p)
+        c.execute("INSERT OR IGNORE INTO plans (code,nom,prix,duree_jours,limite_ia_jour,photo_jour,description,paiement_tranche,nb_tranches) VALUES (?,?,?,?,?,?,?,?,?)", p)
     sujets = [
         ('maths','Mathématiques','sciences',1),('fr','Français','langues',2),('phys','Physique','sciences',3),
         ('chim','Chimie','sciences',4),('hist','Histoire','sociales',5),('geo','Géographie','sociales',6),
