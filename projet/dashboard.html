@@ -197,17 +197,19 @@ let AUTO_REFRESH=null;
 
 // ── Auth admin ──
 function doAdminLogin(e){e.preventDefault();
-  const mdp=document.getElementById("adminMdp").value;
-  if(mdp===ADMIN_PW){ADMIN=mdp;sessionStorage.setItem("em_admin",mdp);
-    document.getElementById("adminAuth").style.display="none";
-    document.getElementById("adminDash").style.display="flex";
-    initDashboard();
-  } else {showAlert("authAlert","Mot de passe incorrect",false);}
+  try{
+    const mdp=document.getElementById("adminMdp").value;
+    if(mdp===ADMIN_PW){ADMIN=mdp;sessionStorage.setItem("em_admin",mdp);
+      document.getElementById("adminAuth").style.display="none";
+      document.getElementById("adminDash").style.display="flex";
+      initDashboard();
+    } else {showAlert("authAlert","Mot de passe incorrect",false);}
+  }catch(err){showAlert("authAlert","⚠️ Erreur : "+err.message,false);}
 }
 function logoutAdmin(){ADMIN="";sessionStorage.removeItem("em_admin");
   document.getElementById("adminDash").style.display="none";
   document.getElementById("adminAuth").style.display="flex";}
-function showAlert(id,text,ok){const e=document.getElementById(id);e.textContent=text;e.className="alert "+(ok?"ok":"err");}
+function showAlert(id,text,ok){const e=document.getElementById(id);if(!e)return;e.textContent=text;e.className="alert "+(ok?"ok":"err");}
 
 // ── Thème ──
 function toggleTheme(){

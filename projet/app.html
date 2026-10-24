@@ -482,23 +482,27 @@ if(localStorage.getItem("em_theme")==="sombre"){toggleTheme();}
 // ── Auth ──
 function showRegister(){document.getElementById("authForm").style.display="none";document.getElementById("authRegister").style.display="block";}
 function showLogin(){document.getElementById("authForm").style.display="block";document.getElementById("authRegister").style.display="none";}
-function showAlert(id,text,ok){const e=document.getElementById(id);e.textContent=text;e.className="alert "+(ok?"ok":"err");}
+function showAlert(id,text,ok){const e=document.getElementById(id);if(!e)return;e.textContent=text;e.className="alert "+(ok?"ok":"err");}
 
 async function doLogin(e){e.preventDefault();
-  const r=await fetch(API+"/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo:document.getElementById("lPseudo").value.trim(),mot_de_passe:document.getElementById("lMdp").value})});
-  const d=await r.json();
-  if(d.ok){TOKEN=d.token;USER={pseudo:d.user.pseudo,id:d.user.id};localStorage.setItem("em_token",TOKEN);localStorage.setItem("em_user",JSON.stringify(USER));
-    enterApp();}
-  else showAlert("authAlert",d.erreur||"Échec",false);
+  try{
+    const r=await fetch(API+"/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo:document.getElementById("lPseudo").value.trim(),mot_de_passe:document.getElementById("lMdp").value})});
+    const d=await r.json();
+    if(d.ok){TOKEN=d.token;USER={pseudo:d.user.pseudo,id:d.user.id};localStorage.setItem("em_token",TOKEN);localStorage.setItem("em_user",JSON.stringify(USER));
+      enterApp();}
+    else showAlert("authAlert",d.erreur||"Échec",false);
+  }catch(err){showAlert("authAlert","⚠️ Erreur réseau : "+err.message,false);}
 }
 async function doRegister(e){e.preventDefault();
-  const r=await fetch(API+"/api/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
-    pseudo:document.getElementById("rPseudo").value.trim(),email:document.getElementById("rEmail").value.trim(),
-    mot_de_passe:document.getElementById("rMdp").value,niveau:document.getElementById("rNiveau").value})});
-  const d=await r.json();
-  if(d.ok){TOKEN=d.token;USER={pseudo:d.user.pseudo,id:d.user.id};localStorage.setItem("em_token",TOKEN);localStorage.setItem("em_user",JSON.stringify(USER));
-    enterApp();}
-  else showAlert("authAlert",d.erreur||"Échec",false);
+  try{
+    const r=await fetch(API+"/api/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+      pseudo:document.getElementById("rPseudo").value.trim(),email:document.getElementById("rEmail").value.trim(),
+      mot_de_passe:document.getElementById("rMdp").value,niveau:document.getElementById("rNiveau").value})});
+    const d=await r.json();
+    if(d.ok){TOKEN=d.token;USER={pseudo:d.user.pseudo,id:d.user.id};localStorage.setItem("em_token",TOKEN);localStorage.setItem("em_user",JSON.stringify(USER));
+      enterApp();}
+    else showAlert("authAlert",d.erreur||"Échec",false);
+  }catch(err){showAlert("authAlert","⚠️ Erreur réseau : "+err.message,false);}
 }
 async function doReset(){
   const pseudo=prompt("Entre ton pseudo pour récupérer un nouveau mot de passe :");

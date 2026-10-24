@@ -389,6 +389,10 @@ def update_usage(uid, field):
 
 def check_quota(u, plan, field):
     if not plan: return False, "Essai gratuit de 48 h terminé — abonne-toi pour continuer."
+    # Plan gratuit : IA sans limite pour le test
+    if plan["code"] == "gratuit" and field in ("ia", "correct"):
+        update_usage(u["id"], field)
+        return True, ""
     update_usage(u["id"], field)
     c = db()
     today = datetime.datetime.now().strftime("%Y-%m-%d")

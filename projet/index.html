@@ -375,7 +375,7 @@ function openModal(type){
       <div class="alert" id="mAlert"></div>
       <form onsubmit="doLogin(event)">
         <div class="field"><label>Pseudo</label><input id="lPseudo" required placeholder="Ton pseudo"></div>
-        <div class="field"><label>Mot de passe</label><input id="lMdp" type="password" required placeholder="8+ caractères"></div>
+        <div class="field" style="position:relative"><label>Mot de passe</label><input id="lMdp" type="password" required placeholder="8+ caractères" style="padding-right:40px"><button type="button" onclick="togglePwd('lMdp',this)" style="position:absolute;right:8px;top:30px;background:none;border:none;cursor:pointer;font-size:18px;color:var(--ink-soft)">👁️</button></div>
         <button class="btn btn-primary" type="submit">Se connecter</button>
       </form>
       <p style="text-align:center;margin-top:14px;font-size:13px;color:var(--ink-soft)">Pas encore inscrit ? <a href="#" onclick="openModal('inscription');return false">S'inscrire gratuitement</a></p>`;
@@ -385,9 +385,9 @@ function openModal(type){
       <form onsubmit="doRegister(event)">
         <div class="field"><label>Pseudo</label><input id="rPseudo" required placeholder="3+ caractères"></div>
         <div class="field"><label>Email (optionnel)</label><input id="rEmail" type="email"></div>
-        <div class="field"><label>Mot de passe</label><input id="rMdp" type="password" required placeholder="8+ caractères, lettre + chiffre"></div>
+        <div class="field" style="position:relative"><label>Mot de passe</label><input id="rMdp" type="password" required placeholder="8+ caractères, lettre + chiffre" style="padding-right:40px"><button type="button" onclick="togglePwd('rMdp',this)" style="position:absolute;right:8px;top:30px;background:none;border:none;cursor:pointer;font-size:18px;color:var(--ink-soft)">👁️</button></div>
         <div class="field"><label>Niveau</label>
-          <select id="rNiveau"><option>CP</option><option>CE1</option><option>CE2</option><option>CM1</option><option>CM2</option><option>6ème</option><option>5ème</option><option>4ème</option><option>3ème</option><option>2nde</option><option>1ère</option><option>Terminale</option></select>
+          <select id="rNiveau"><option>CM1</option><option>CM2</option><option>6ème</option><option>5ème</option><option>4ème</option><option>3ème</option><option>2nde</option><option>1ère</option><option>Terminale</option><option>Université L1</option><option>Université L2</option><option>Université L3</option><option>Université S1</option><option>Université S2</option></select>
         </div>
         <button class="btn btn-primary" type="submit">Créer mon compte — Essai 48 H gratuit</button>
       </form>
@@ -399,28 +399,38 @@ function closeModal(){document.getElementById("modalOverlay").classList.remove("
 
 function showMsg(id,text,ok){
   const e=document.getElementById(id);
+  if(!e) return;
   e.textContent=text;e.className="alert "+(ok?"ok":"err");
+}
+function togglePwd(inputId, btn){
+  const inp=document.getElementById(inputId);
+  if(inp.type==="password"){inp.type="text";btn.textContent="🙈";}
+  else{inp.type="password";btn.textContent="👁️";}
 }
 
 async function doLogin(e){e.preventDefault();
-  const pseudo=document.getElementById("lPseudo").value.trim();
-  const mdp=document.getElementById("lMdp").value;
-  const r=await fetch(API+"/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo,mot_de_passe:mdp})});
-  const d=await r.json();
-  if(d.ok){TOKEN=d.token;USER={pseudo:d.user.pseudo,id:d.user.id};localStorage.setItem("em_token",TOKEN);localStorage.setItem("em_user",JSON.stringify(USER));
-    closeModal();window.location="/app.html";}
-  else showMsg("mAlert",d.erreur||"Échec de connexion",false);
+  try{
+    const pseudo=document.getElementById("lPseudo").value.trim();
+    const mdp=document.getElementById("lMdp").value;
+    const r=await fetch(API+"/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo,mot_de_passe:mdp})});
+    const d=await r.json();
+    if(d.ok){TOKEN=d.token;USER={pseudo:d.user.pseudo,id:d.user.id};localStorage.setItem("em_token",TOKEN);localStorage.setItem("em_user",JSON.stringify(USER));
+      closeModal();window.location="/app.html";}
+    else showMsg("mAlert",d.erreur||"Échec de connexion",false);
+  }catch(err){showMsg("mAlert","⚠️ Erreur réseau : "+err.message,false);}
 }
 async function doRegister(e){e.preventDefault();
-  const pseudo=document.getElementById("rPseudo").value.trim();
-  const email=document.getElementById("rEmail").value.trim();
-  const mdp=document.getElementById("rMdp").value;
-  const niveau=document.getElementById("rNiveau").value;
-  const r=await fetch(API+"/api/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo,email,mot_de_passe:mdp,niveau})});
-  const d=await r.json();
-  if(d.ok){TOKEN=d.token;USER={pseudo:d.user.pseudo,id:d.user.id};localStorage.setItem("em_token",TOKEN);localStorage.setItem("em_user",JSON.stringify(USER));
-    closeModal();window.location="/app.html";}
-  else showMsg("mAlert",d.erreur||"Échec d'inscription",false);
+  try{
+    const pseudo=document.getElementById("rPseudo").value.trim();
+    const email=document.getElementById("rEmail").value.trim();
+    const mdp=document.getElementById("rMdp").value;
+    const niveau=document.getElementById("rNiveau").value;
+    const r=await fetch(API+"/api/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo,email,mot_de_passe:mdp,niveau})});
+    const d=await r.json();
+    if(d.ok){TOKEN=d.token;USER={pseudo:d.user.pseudo,id:d.user.id};localStorage.setItem("em_token",TOKEN);localStorage.setItem("em_user",JSON.stringify(USER));
+      closeModal();window.location="/app.html";}
+    else showMsg("mAlert",d.erreur||"Échec d'inscription",false);
+  }catch(err){showMsg("mAlert","⚠️ Erreur réseau : "+err.message,false);}
 }
 
 // ── Matières ──
