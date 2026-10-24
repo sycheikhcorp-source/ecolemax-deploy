@@ -1,2 +1,0 @@
-/home/user/deploy/apk-build/src/sn/ecolemax/app/MainActivity.java
-/home/user/deploy/apk-build/sortie/gen/sn/ecolemax/app/R.java

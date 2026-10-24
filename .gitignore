@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+apk-build/sortie/
+apk-build/assets/
+*.db
+*.db-shm
+*.db-wal
+.github/
