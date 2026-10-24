@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#15a05a">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%2315a05a'/%3E%3Ctext x='50' y='72' font-size='52' text-anchor='middle' fill='white' font-family='Arial' font-weight='bold'%3EEM%3C/text%3E%3C/svg%3E">
 <title>ÉcoleMax — App élève</title>
-<link rel="stylesheet" href="css/style.css">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{
@@ -17,7 +18,6 @@
   --purple:#8b5cf6;--purple-l:#f3e8ff;
   --red:#ef4444;--red-l:#fee2e2;
   --grad:linear-gradient(135deg,#15a05a 0%,#2dd4bf 100%);
-  --grad-soft:linear-gradient(135deg,rgba(21,160,90,.08),rgba(45,212,191,.05));
   --shadow:0 2px 12px rgba(0,0,0,.06);
   --shadow-lg:0 8px 30px rgba(0,0,0,.1);
 }
@@ -27,20 +27,24 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
 .screen.active{display:block}
 @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
+/* ===== LOGO ===== */
+.logo-svg{width:72px;height:72px;margin-bottom:12px}
+.logo-text{font-size:28px;font-weight:900;letter-spacing:-.5px}
+
 /* ===== AUTH ===== */
 .auth-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px;background:linear-gradient(180deg,#f0fdf4 0%,#f8f9fc 100%)}
-.auth-logo{font-size:56px;margin-bottom:8px}
-.auth-title{font-size:28px;font-weight:900;margin-bottom:4px;text-align:center}
 .auth-sub{color:var(--ink-soft);font-size:14px;margin-bottom:24px;text-align:center}
 .auth-tabs{display:flex;gap:8px;margin-bottom:20px;width:100%;max-width:340px}
 .auth-tab{flex:1;padding:12px;text-align:center;border-radius:12px;font-weight:700;font-size:14px;background:#fff;color:var(--ink-soft);cursor:pointer;border:2px solid var(--line);transition:.2s}
 .auth-tab.active{background:var(--grad);color:#fff;border-color:rgba(255,255,255,.2)}
 .auth-form{width:100%;max-width:340px;display:flex;flex-direction:column;gap:12px}
-.field{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px;transition:.2s}
+.field{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px;transition:.2s;position:relative}
 .field:focus-within{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-l)}
 .field label{display:block;font-size:12px;color:var(--ink-soft);margin-bottom:4px;font-weight:600}
 .field input,.field select{width:100%;background:none;border:none;outline:none;color:var(--ink);font-size:15px;font-family:inherit}
 .field input::placeholder{color:var(--ink-soft);opacity:.6}
+.pwd-toggle{position:absolute;right:14px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:18px;user-select:none;opacity:.6;padding:4px}
+.pwd-toggle:active{opacity:1}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px 20px;border-radius:12px;font-weight:700;font-size:15px;border:none;cursor:pointer;transition:.2s;text-decoration:none;width:100%}
 .btn-primary{background:var(--grad);color:#fff}
 .btn-primary:active{transform:scale(.97)}
@@ -50,12 +54,12 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
 .auth-err.show{display:block}
 .auth-ok{color:var(--primary);font-size:13px;text-align:center;padding:8px;background:var(--primary-l);border-radius:8px;display:none}
 .auth-ok.show{display:block}
+.auth-note{font-size:11px;color:var(--ink-soft);text-align:center;margin-top:12px}
 
 /* ===== HOME ===== */
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:8px 0 16px}
 .topbar .greet{font-size:20px;font-weight:800}
 .topbar .sub{font-size:13px;color:var(--ink-soft)}
-.lang-toggle{background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer;color:var(--ink)}
 .banner{border-radius:14px;padding:16px;margin-bottom:20px;border:1px solid}
 .banner.gratuit{background:var(--orange-l);border-color:rgba(245,158,11,.2)}
 .banner.payant{background:var(--primary-l);border-color:rgba(21,160,90,.2)}
@@ -76,7 +80,7 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
 .quick-btn .ic{font-size:24px;margin-bottom:4px}
 .quick-btn .lb{font-size:12px;font-weight:600}
 
-/* ===== PLAN DIFFERENCES ===== */
+/* ===== PLAN DIFF ===== */
 .plan-diff{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:16px;box-shadow:var(--shadow)}
 .plan-diff .pd-title{font-size:13px;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:6px}
 .plan-diff .pd-row{display:flex;justify-content:space-between;font-size:12px;padding:3px 0}
@@ -114,8 +118,6 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
 .photo-btn .lb{font-size:14px;font-weight:600;color:var(--ink-soft)}
 .photo-preview{width:100%;max-width:300px;margin:16px auto;display:none;border-radius:12px;border:2px solid var(--line)}
 .photo-preview.show{display:block}
-.photo-controls{display:flex;gap:10px;margin-bottom:16px}
-.photo-controls .btn{flex:1}
 
 /* ===== PROFILE ===== */
 .prof-header{text-align:center;padding:20px 0}
@@ -151,12 +153,19 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
 .plan-card .pf{font-size:12px;color:var(--ink-soft);line-height:1.5}
 .plan-card .ptag{display:inline-block;background:var(--grad);color:#fff;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;margin-bottom:6px}
 
-.hidden{display:none!important}
-
-/* ===== RESET SCREEN ===== */
+/* ===== RESET ===== */
 .reset-steps{display:flex;gap:8px;margin-bottom:20px;width:100%;max-width:340px}
 .reset-step{flex:1;text-align:center;font-size:12px;font-weight:600;color:var(--ink-soft);padding:8px;background:#fff;border-radius:8px;border:1px solid var(--line)}
 .reset-step.active{background:var(--primary-l);color:var(--primary);border-color:var(--primary)}
+
+/* ===== DASHBOARD LINK ===== */
+.dash-link{background:var(--blue-l);border:1px solid rgba(59,130,246,.2);border-radius:14px;padding:14px;margin-bottom:16px;display:flex;align-items:center;gap:12px;cursor:pointer}
+.dash-link .ic{font-size:24px}
+.dash-link .tx{flex:1}
+.dash-link .tx .t{font-size:14px;font-weight:700}
+.dash-link .tx .s{font-size:12px;color:var(--ink-soft)}
+
+.hidden{display:none!important}
 </style>
 </head>
 <body>
@@ -164,8 +173,12 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
 
 <!-- ==================== AUTH ==================== -->
 <div class="auth-wrap screen active" id="screen-auth">
-  <div class="auth-logo">📚</div>
-  <div class="auth-title">ÉcoleMax</div>
+  <svg class="logo-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="100" rx="22" fill="#15a05a"/>
+    <path d="M25 70 L50 30 L75 70 L50 55 Z" fill="white" opacity="0.95"/>
+    <rect x="38" y="70" width="24" height="8" rx="2" fill="white" opacity="0.9"/>
+  </svg>
+  <div class="logo-text">ÉcoleMax</div>
   <div class="auth-sub">L'app scolaire du Sénégal — IA intégrée</div>
   <div class="auth-tabs">
     <div class="auth-tab active" onclick="switchAuth('register')">S'inscrire</div>
@@ -175,48 +188,35 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
   <div class="auth-ok" id="authOk"></div>
   <form class="auth-form" onsubmit="return false" id="authForm">
     <div id="regFields">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div class="field"><label>Prénom</label><input type="text" id="prenom" placeholder="Ex: Aminata"></div>
-        <div class="field"><label>Nom</label><input type="text" id="nom" placeholder="Ex: Diallo"></div>
-      </div>
       <div class="field"><label>Pseudo</label><input type="text" id="pseudo" placeholder="3+ caractères"></div>
-      <div class="field"><label>Mot de passe</label><input type="password" id="mdp" placeholder="8+ lettre + chiffre"></div>
-      <div class="field"><label>Email</label><input type="email" id="email" placeholder="aminata@gmail.com"></div>
-      <div class="field"><label>Téléphone / WhatsApp</label><input type="tel" id="telephone" placeholder="+221 770 00 00 00"></div>
+      <div class="field"><label>Mot de passe</label><input type="password" id="mdp" placeholder="8+ lettre + chiffre"><span class="pwd-toggle" onclick="togglePwd('mdp',this)">👁️</span></div>
       <div class="field"><label>Niveau</label>
-        <select id="niveau"><option value="Primaire">Primaire</option><option value="Collège">Collège</option><option value="Lycée" selected>Lycée</option></select>
-      </div>
-      <div class="field"><label>Ville / Région</label>
-        <select id="ville">
-          <option value="Dakar" selected>Dakar</option><option>Thiès</option><option>Diourbel</option><option>Saint-Louis</option>
-          <option>Kaolack</option><option>Matam</option><option>Tambacounda</option><option>Kedougou</option>
-          <option>Ziguinchor</option><option>Lodéve</option><option>Fatick</option><option>Kolda</option>
-          <option>Sédhiou</option><option>Vélingara</option><option>Pikine</option><option>Rufisque</option>
-          <option>Touba</option><option>Mbacké</option><option>Nioro</option>
-        </select>
-      </div>
-      <div class="field"><label>Langue</label>
-        <select id="langue">
-          <option value="fr" selected>Français</option><option value="wo">Wolof</option><option value="en">Anglais</option>
-          <option value="es">Espagnol</option><option value="ar">Arabe</option><option value="pt">Portugais</option><option value="de">Allemand</option>
+        <select id="niveau">
+          <option value="Terminale">Terminale</option>
+          <option value="Bac">Bac (1ère/2ème)</option>
+          <option value="Université">Université</option>
         </select>
       </div>
     </div>
     <div id="loginFields" class="hidden">
       <div class="field"><label>Pseudo</label><input type="text" id="loginPseudo" placeholder="Ex: Aminata"></div>
-      <div class="field"><label>Mot de passe</label><input type="password" id="loginMdp" placeholder="Mot de passe"></div>
+      <div class="field"><label>Mot de passe</label><input type="password" id="loginMdp" placeholder="Mot de passe"><span class="pwd-toggle" onclick="togglePwd('loginMdp',this)">👁️</span></div>
       <button class="btn btn-ghost" style="font-size:13px;padding:8px" onclick="showReset()">🔑 Mot de passe oublié ?</button>
     </div>
     <button class="btn btn-primary" id="authBtn" onclick="doAuth()">S'inscrire</button>
   </form>
-  <p style="margin-top:16px;font-size:11px;color:var(--ink-soft);text-align:center">Essai gratuit 24 h — tout débloqué. Aucun paiement requis.</p>
-  <p style="margin-top:8px;font-size:10px;color:var(--ink-soft);text-align:center">Créé par <strong>SycheikhCorp</strong> © 2026</p>
+  <p class="auth-note">Essai gratuit 24 h — tout débloqué. Aucun paiement requis.</p>
+  <p class="auth-note">Créé par <strong>SycheikhCorp</strong> © 2026</p>
 </div>
 
 <!-- ==================== RESET ==================== -->
 <div class="auth-wrap screen" id="screen-reset">
-  <div class="auth-logo">🔐</div>
-  <div class="auth-title">Réinitialisation</div>
+  <svg class="logo-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="100" rx="22" fill="#15a05a"/>
+    <path d="M25 70 L50 30 L75 70 L50 55 Z" fill="white" opacity="0.95"/>
+    <rect x="38" y="70" width="24" height="8" rx="2" fill="white" opacity="0.9"/>
+  </svg>
+  <div class="logo-text">ÉcoleMax</div>
   <div class="auth-sub">Mot de passe oublié ?</div>
   <div class="reset-steps">
     <div class="reset-step active" id="rs1">1. Code</div>
@@ -236,7 +236,7 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
     <div class="auth-ok" id="resetOk2"></div>
     <form class="auth-form" onsubmit="return false">
       <div class="field"><label>Code (6 chiffres)</label><input type="text" id="resetCode" placeholder="Code reçu" maxlength="6"></div>
-      <div class="field"><label>Nouveau mot de passe</label><input type="password" id="resetMdp" placeholder="8+ lettre + chiffre"></div>
+      <div class="field"><label>Nouveau mot de passe</label><input type="password" id="resetMdp" placeholder="8+ lettre + chiffre"><span class="pwd-toggle" onclick="togglePwd('resetMdp',this)">👁️</span></div>
       <button class="btn btn-primary" onclick="resetVerify()">✅ Réinitialiser</button>
     </form>
   </div>
@@ -247,12 +247,15 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
 <div class="screen" id="screen-home">
   <div class="topbar">
     <div><div class="greet" id="greetName">👋</div><div class="sub" id="greetSub">—</div></div>
-    <div class="lang-toggle" onclick="toggleLang()" id="langBtn">🌍 FR</div>
   </div>
   <div class="banner" id="planBanner">
     <div class="b-title" id="bannerTitle">—</div>
     <div class="b-sub" id="bannerSub">—</div>
     <div class="b-cta" id="bannerCta"></div>
+  </div>
+  <div class="dash-link" onclick="openDashboard()">
+    <div class="ic">📊</div>
+    <div class="tx"><div class="t">Tableau de bord</div><div class="s">Voir les abonnés en temps réel</div></div>
   </div>
   <div class="plan-diff" id="planDiff">
     <div class="pd-title" id="pdTitle">📊 Ton plan</div>
@@ -314,6 +317,7 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
   <div class="prof-card">
     <div class="sec-title">💳 Abonnement</div>
     <div class="prof-row"><span class="k">Plan</span><span class="v" id="planName">—</span></div>
+    <div class="prof-row"><span class="k">Niveau</span><span class="v" id="profNiveau">—</span></div>
     <div class="prof-row"><span class="k">Expiration</span><span class="v" id="planExp">—</span></div>
     <div class="prof-row"><span class="k">Statut</span><span class="v" id="planStatus">—</span></div>
     <div style="margin-top:12px"><button class="btn btn-ghost" onclick="showPlans()">🔍 Voir les plans</button></div>
@@ -345,11 +349,7 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
 const API = (window.__ECOLEMAX_API__||"").replace(/\/$/,"");
 let token = localStorage.getItem("ecolemax_token")||"";
 let user = null;
-let currentLang = "fr";
 let currentPlan = null;
-let chatHistory = [];
-const langs = {fr:"Français",wo:"Wolof",en:"English",es:"Español",ar:"العربية",pt:"Português",de:"Deutsch"};
-
 const SUBJECTS = [
   {ic:"🧮",nm:"Maths",nb:"23 chap"},{ic:"🇫🇷",nm:"Français",nb:"18 chap"},{ic:"🔬",nm:"Physique",nb:"19 chap"},
   {ic:"🧬",nm:"SVT",nb:"14 chap"},{ic:"🌍",nm:"Hist-Géo",nb:"21 chap"},{ic:"🇬🇧",nm:"Anglais",nb:"12 chap"},
@@ -387,8 +387,14 @@ const PLANS = [
   {id:6,nom:"Pack Bac",prix:3000,ia:1000,photo:100,redaction:"oui",download:"illimité",desc:"Tout illimité · 6 mois + annales",tag:""},
 ];
 
+function togglePwd(inputId,btn){
+  var el=document.getElementById(inputId);
+  if(el.type==="password"){el.type="text";btn.textContent="🙈";}
+  else{el.type="password";btn.textContent="👁️";}
+}
+
 function switchAuth(mode){
-  document.querySelectorAll(".auth-tab").forEach(t=>t.classList.remove("active"));
+  document.querySelectorAll(".auth-tab").forEach(function(t){t.classList.remove("active");});
   document.querySelectorAll(".auth-tab")[mode==="register"?0:1].classList.add("active");
   document.getElementById("regFields").classList.toggle("hidden",mode!=="register");
   document.getElementById("loginFields").classList.toggle("hidden",mode==="register");
@@ -396,43 +402,36 @@ function switchAuth(mode){
   document.getElementById("authErr").classList.remove("show");
   document.getElementById("authOk").classList.remove("show");
 }
+
 async function doAuth(){
-  const mode = document.getElementById("regFields").classList.contains("hidden")?"login":"register";
-  const errEl = document.getElementById("authErr");
-  const okEl = document.getElementById("authOk");
+  var mode = document.getElementById("regFields").classList.contains("hidden")?"login":"register";
+  var errEl = document.getElementById("authErr");
+  var okEl = document.getElementById("authOk");
   errEl.classList.remove("show"); okEl.classList.remove("show");
   if(mode==="register"){
-    const prenom=document.getElementById("prenom").value.trim();
-    const nom=document.getElementById("nom").value.trim();
-    const pseudo=document.getElementById("pseudo").value.trim();
-    const mdp=document.getElementById("mdp").value;
-    const email=document.getElementById("email").value.trim();
-    const telephone=document.getElementById("telephone").value.trim();
-    const niveau=document.getElementById("niveau").value;
-    const ville=document.getElementById("ville").value;
-    const langue=document.getElementById("langue").value;
-    if(!prenom){errEl.textContent="Veuillez saisir votre prénom";errEl.classList.add("show");return;}
-    if(!pseudo||pseudo.length<3){errEl.textContent="Pseudo : 3+ caractères";errEl.classList.add("show");return;}
+    var pseudo=document.getElementById("pseudo").value.trim();
+    var mdp=document.getElementById("mdp").value;
+    var niveau=document.getElementById("niveau").value;
+    if(!pseudo||pseudo.length<3){errEl.textContent="Veuillez saisir un pseudo (3+ caractères)";errEl.classList.add("show");return;}
     if(mdp.length<8||!/[a-zA-Z]/.test(mdp)||!/[0-9]/.test(mdp)){errEl.textContent="MDP : 8+ lettre + chiffre";errEl.classList.add("show");return;}
     try{
-      const r=await fetch(API+"/api/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo,prenom,nom,mot_de_passe:mdp,email,telephone,niveau,ville,langue})});
-      const d=await r.json();
+      var r=await fetch(API+"/api/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo,mot_de_passe:mdp,niveau})});
+      var d=await r.json();
       if(!r.ok){errEl.textContent=d.erreur||"Erreur";errEl.classList.add("show");return;}
       token=d.token;user=d.user;
       localStorage.setItem("ecolemax_token",token);
       localStorage.setItem("ecolemax_pseudo",pseudo);
-      localStorage.setItem("ecolemax_prenom",prenom);
-      localStorage.setItem("ecolemax_nom",nom);
-      okEl.textContent="✅ Inscription réussie ! Bienvenue "+prenom+".";okEl.classList.add("show");
-      setTimeout(()=>enterApp(),500);
+      localStorage.setItem("ecolemax_niveau",niveau);
+      okEl.textContent="✅ Inscription réussie ! Bienvenue "+pseudo+".";okEl.classList.add("show");
+      setTimeout(function(){enterApp();},500);
     }catch(e){errEl.textContent="Serveur inaccessible";errEl.classList.add("show");}
   }else{
-    const pseudo=document.getElementById("loginPseudo").value.trim();
-    const mdp=document.getElementById("loginMdp").value;
+    var pseudo=document.getElementById("loginPseudo").value.trim();
+    var mdp=document.getElementById("loginMdp").value;
     if(!pseudo||!mdp){errEl.textContent="Remplissez tous les champs";errEl.classList.add("show");return;}
     try{
-      const r=await fetch(API+"/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo,mot_de_passe:mdp})});
-      const d=await r.json();
+      var r=await fetch(API+"/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo,mot_de_passe:mdp})});
+      var d=await r.json();
       if(!r.ok){errEl.textContent=d.erreur||"Identifiants invalides";errEl.classList.add("show");return;}
       token=d.token;user=d.user;
       localStorage.setItem("ecolemax_token",token);
@@ -441,38 +440,37 @@ async function doAuth(){
     }catch(e){errEl.textContent="Serveur inaccessible";errEl.classList.add("show");}
   }
 }
+
 function logout(){
   token="";user=null;
   localStorage.removeItem("ecolemax_token");
   localStorage.removeItem("ecolemax_pseudo");
-  localStorage.removeItem("ecolemax_prenom");
-  localStorage.removeItem("ecolemax_nom");
-  chatHistory=[];
+  localStorage.removeItem("ecolemax_niveau");
   document.getElementById("screen-auth").classList.add("active");
   document.getElementById("tabbar").classList.add("hidden");
-  document.querySelectorAll(".screen").forEach(s=>{if(s.id!=="screen-auth")s.classList.remove("active");});
+  document.querySelectorAll(".screen").forEach(function(s){if(s.id!=="screen-auth")s.classList.remove("active");});
 }
+
 async function enterApp(){
   document.getElementById("screen-auth").classList.remove("active");
   document.getElementById("tabbar").classList.remove("hidden");
   goToTab("home");
   await refreshSubscription();
 }
+
 async function refreshSubscription(){
   try{
-    const r=await fetch(API+"/api/subscription/me",{headers:{"Authorization":"Bearer "+token}});
-    const d=await r.json();
-    const prenom=localStorage.getItem("ecolemax_prenom")||"";
-    const nom=localStorage.getItem("ecolemax_nom")||"";
-    const pseudo=localStorage.getItem("ecolemax_pseudo")||"";
-    const fullName=(prenom+" "+nom).trim()||pseudo;
-    document.getElementById("greetName").textContent="👋 "+fullName;
-    document.getElementById("profName").textContent=fullName;
+    var r=await fetch(API+"/api/subscription/me",{headers:{"Authorization":"Bearer "+token}});
+    var d=await r.json();
+    var pseudo=localStorage.getItem("ecolemax_pseudo")||"";
+    var niveau=localStorage.getItem("ecolemax_niveau")||"";
+    document.getElementById("greetName").textContent="👋 "+pseudo;
+    document.getElementById("profName").textContent=pseudo;
+    document.getElementById("profNiveau").textContent=niveau||"—";
     currentPlan=d.abonne&&d.plan?d.plan:null;
     if(currentPlan){
-      const planCode=(currentPlan.code||"").toLowerCase();
-      const banner=document.getElementById("planBanner");
-      const planDiff=document.getElementById("planDiff");
+      var planCode=(currentPlan.code||"").toLowerCase();
+      var banner=document.getElementById("planBanner");
       if(planCode==="gratuit"){
         banner.className="banner gratuit";
         document.getElementById("bannerTitle").textContent="⏳ Essai gratuit 24 h";
@@ -497,14 +495,10 @@ async function refreshSubscription(){
       document.getElementById("quotaIA").textContent=currentPlan.limite_ia_jour+"/jour";
       document.getElementById("quotaPhoto").textContent=currentPlan.photo_jour+"/jour";
       document.getElementById("quotaBar").style.width="50%";
-      const pdIA=document.getElementById("pdIA");
-      const pdPhoto=document.getElementById("pdPhoto");
-      const pdRedaction=document.getElementById("pdRedaction");
-      const pdDownload=document.getElementById("pdDownload");
-      pdIA.textContent=currentPlan.limite_ia_jour+"/jour"; pdIA.className="v ok";
-      pdPhoto.textContent=currentPlan.photo_jour+"/jour"; pdPhoto.className=currentPlan.photo_jour>0?"v ok":"v lock";
-      pdRedaction.textContent="Oui"; pdRedaction.className="v ok";
-      pdDownload.textContent=currentPlan.telechargement?"Oui":"Non"; pdDownload.className=currentPlan.telechargement?"v ok":"v lock";
+      document.getElementById("pdIA").textContent=currentPlan.limite_ia_jour+"/jour"; document.getElementById("pdIA").className="v ok";
+      document.getElementById("pdPhoto").textContent=currentPlan.photo_jour+"/jour"; document.getElementById("pdPhoto").className=currentPlan.photo_jour>0?"v ok":"v lock";
+      document.getElementById("pdRedaction").textContent="Oui"; document.getElementById("pdRedaction").className="v ok";
+      document.getElementById("pdDownload").textContent=currentPlan.telechargement?"Oui":"Non"; document.getElementById("pdDownload").className=currentPlan.telechargement?"v ok":"v lock";
     }else{
       document.getElementById("greetSub").textContent="Essai gratuit 24 h";
       document.getElementById("planBanner").className="banner gratuit";
@@ -525,79 +519,96 @@ async function refreshSubscription(){
     }
   }catch(e){document.getElementById("greetSub").textContent="Connexion...";}
 }
+
 function goToTab(tab){
-  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
-  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
-  const tabs={home:"screen-home",chat:"screen-chat",photo:"screen-photo",profile:"screen-profile"};
+  document.querySelectorAll(".screen").forEach(function(s){s.classList.remove("active");});
+  document.querySelectorAll(".tab").forEach(function(t){t.classList.remove("active");});
+  var tabs={home:"screen-home",chat:"screen-chat",photo:"screen-photo",profile:"screen-profile"};
   document.getElementById(tabs[tab]).classList.add("active");
   document.querySelectorAll(".tab")[{home:0,chat:1,photo:2,profile:3}[tab]].classList.add("active");
   if(tab==="home"){renderSubjects();refreshSubscription();}
   if(tab==="chat"){document.getElementById("chatInput").focus();}
 }
-function renderSubjects(){document.getElementById("subjGrid").innerHTML=SUBJECTS.map(s=>`<div class="subj-card" onclick="openSubject('${s.nm}')"><div class="ic">${s.ic}</div><div class="nm">${s.nm}</div><div class="nb">${s.nb}</div></div>`).join("");}
-function openSubject(name){document.getElementById("subjTitle").textContent=name;const chapters=CHAPTERS[name]||["Chapitre 1","Chapitre 2","Chapitre 3"];document.getElementById("chapList").innerHTML=chapters.map(c=>`<div class="chap-item" style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="goToTab('chat')"><div style="font-size:20px;width:40px;height:40px;background:var(--primary-l);border-radius:10px;display:grid;place-items:center">📖</div><div style="flex:1"><div style="font-size:14px;font-weight:600">${c}</div><div style="font-size:12px;color:var(--ink-soft)">${Math.floor(Math.random()*30)+5} exercices</div></div></div>`).join("");document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));document.getElementById("screen-subject").classList.add("active");document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));}
+
+function renderSubjects(){document.getElementById("subjGrid").innerHTML=SUBJECTS.map(function(s){return '<div class="subj-card" onclick="openSubject(\''+s.nm+'\')"><div class="ic">'+s.ic+'</div><div class="nm">'+s.nm+'</div><div class="nb">'+s.nb+'</div></div>';}).join("");}
+
+function openSubject(name){
+  document.getElementById("subjTitle").textContent=name;
+  var chapters=CHAPTERS[name]||["Chapitre 1","Chapitre 2","Chapitre 3"];
+  document.getElementById("chapList").innerHTML=chapters.map(function(c){return '<div class="chap-item" style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="goToTab(\'chat\')"><div style="font-size:20px;width:40px;height:40px;background:var(--primary-l);border-radius:10px;display:grid;place-items:center">📖</div><div style="flex:1"><div style="font-size:14px;font-weight:600">'+c+'</div><div style="font-size:12px;color:var(--ink-soft)">'+(Math.floor(Math.random()*30)+5)+' exercices</div></div></div>';}).join("");
+  document.querySelectorAll(".screen").forEach(function(s){s.classList.remove("active");});
+  document.getElementById("screen-subject").classList.add("active");
+  document.querySelectorAll(".tab").forEach(function(t){t.classList.remove("active");});
+}
+
 async function sendChat(){
-  const input=document.getElementById("chatInput");
-  const question=input.value.trim();
+  var input=document.getElementById("chatInput");
+  var question=input.value.trim();
   if(!question)return;
   input.value="";
   addMsg(question,"user");
   addMsg("","bot","loading");
   try{
-    const r=await fetch(API+"/api/ai/ask",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({question})});
-    const d=await r.json();
+    var r=await fetch(API+"/api/ai/ask",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({question})});
+    var d=await r.json();
     if(!r.ok){throw new Error(d.erreur||"Erreur");}
     removeLastLoading();
-    const src=d.source==="IA"?"🤖 IA":"📚 Base";
+    var src=d.source==="IA"?"🤖 IA":"📚 Base";
     addMsg(d.reponse||"Pas de réponse.","bot",null,src);
   }catch(e){removeLastLoading();addMsg(e.message,"err");}
 }
+
 function askSuggest(q){document.getElementById("chatInput").value=q;sendChat();}
+
 function addMsg(text,type,loading,src){
-  const msgs=document.getElementById("chatMsgs");
+  var msgs=document.getElementById("chatMsgs");
   if(loading==="loading"){msgs.insertAdjacentHTML("beforeend",'<div class="msg loading"><span class="dot">●</span> <span class="dot" style="animation-delay:.2s">●</span> <span class="dot" style="animation-delay:.4s">●</span></div>');msgs.scrollTop=msgs.scrollHeight;return;}
-  let html=`<div class="msg ${type}">${escapeHtml(text)}`;
-  if(src)html+=`<span class="src">${src}</span>`;
+  var html='<div class="msg '+type+'">'+escapeHtml(text);
+  if(src)html+='<span class="src">'+src+'</span>';
   html+='</div>';
   msgs.insertAdjacentHTML("beforeend",html);
   msgs.scrollTop=msgs.scrollHeight;
 }
-function removeLastLoading(){const m=document.getElementById("chatMsgs").querySelector(".msg.loading");if(m)m.remove();}
-function escapeHtml(s){const d=document.createElement("div");d.textContent=s;return d.innerHTML;}
 
-let photoData=null;
+function removeLastLoading(){var m=document.getElementById("chatMsgs").querySelector(".msg.loading");if(m)m.remove();}
+function escapeHtml(s){var d=document.createElement("div");d.textContent=s;return d.innerHTML;}
+
+var photoData=null;
 function onPhotoSelected(event){
-  const file=event.target.files[0];if(!file)return;
-  const reader=new FileReader();
+  var file=event.target.files[0];if(!file)return;
+  var reader=new FileReader();
   reader.onload=function(e){document.getElementById("photoPreview").src=e.target.result;document.getElementById("photoPreview").classList.add("show");photoData=e.target.result.split(",")[1];document.getElementById("photoBtnSend").disabled=false;};
   reader.readAsDataURL(file);
 }
+
 async function sendPhoto(){
   if(!photoData)return;
-  const question=document.getElementById("photoQuestion").value.trim();
-  const btn=document.getElementById("photoBtnSend");const result=document.getElementById("photoResult");
+  var question=document.getElementById("photoQuestion").value.trim();
+  var btn=document.getElementById("photoBtnSend");var result=document.getElementById("photoResult");
   btn.disabled=true;btn.textContent="⏳ Analyse...";
   result.innerHTML='<div class="msg loading"><span class="dot">●</span> <span class="dot" style="animation-delay:.2s">●</span> <span class="dot" style="animation-delay:.4s">●</span> Correction...</div>';
   try{
-    const r=await fetch(API+"/api/ai/photo",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({question:question||"Explique et corrige.",image_b64:photoData})});
-    const d=await r.json();
+    var r=await fetch(API+"/api/ai/photo",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({question:question||"Explique et corrige.",image_b64:photoData})});
+    var d=await r.json();
     if(!r.ok){throw new Error(d.erreur||"Erreur");}
-    const src=d.source==="IA"?"🤖 IA Vision":"📷 Base";
-    result.innerHTML=`<div class="msg bot" style="max-width:100%">${escapeHtml(d.reponse||"Pas de réponse.")}<span class="src">${src}</span></div>`;
-  }catch(e){result.innerHTML=`<div class="msg err">${escapeHtml(e.message)}</div>`;}
+    var src=d.source==="IA"?"🤖 IA Vision":"📷 Base";
+    result.innerHTML='<div class="msg bot" style="max-width:100%">'+escapeHtml(d.reponse||"Pas de réponse.")+'<span class="src">'+src+'</span></div>';
+  }catch(e){result.innerHTML='<div class="msg err">'+escapeHtml(e.message)+'</div>';}
   btn.disabled=false;btn.textContent="🔍 Analyser";
 }
 
 function showPlans(){
-  document.getElementById("planList").innerHTML=PLANS.map(p=>`<div class="plan-card"><div class="ptag">${p.tag}</div><div class="pn">${p.nom}</div><div class="pp">${p.prix===0?"Gratuit":p.prix+" FCFA / mois"}</div><div class="pf">${p.desc}</div><div class="pf" style="margin-top:6px">IA: ${p.ia}/jour · Photo: ${p.photo}/jour · Rédaction: ${p.redaction} · Téléchargement: ${p.download}</div>${p.prix>0?`<div style="margin-top:10px"><button class="btn btn-primary" style="width:auto;padding:8px 16px" onclick="subscribePlan(${p.id})">Subscriber</button></div>`:""}</div>`).join("");
+  document.getElementById("planList").innerHTML=PLANS.map(function(p){return '<div class="plan-card"><div class="ptag">'+p.tag+'</div><div class="pn">'+p.nom+'</div><div class="pp">'+(p.prix===0?"Gratuit":p.prix+" FCFA / mois")+'</div><div class="pf">'+p.desc+'</div><div class="pf" style="margin-top:6px">IA: '+p.ia+'/jour · Photo: '+p.photo+'/jour · Rédaction: '+p.redaction+' · Téléchargement: '+p.download+'</div>'+(p.prix>0?'<div style="margin-top:10px"><button class="btn btn-primary" style="width:auto;padding:8px 16px" onclick="subscribePlan('+p.id+')">Subscriber</button></div>':'')+'</div>';}).join("");
   document.getElementById("planSheet").classList.add("show");
 }
+
 function closePlans(){document.getElementById("planSheet").classList.remove("show");}
+
 async function subscribePlan(planId){
-  const canal="Orange Money";
+  var canal="Orange Money";
   try{
-    const r=await fetch(API+"/api/subscribe",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({plan_id:planId,canal:canal})});
-    const d=await r.json();
+    var r=await fetch(API+"/api/subscribe",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({plan_id:planId,canal:canal})});
+    var d=await r.json();
     if(!r.ok){alert(d.erreur||"Erreur");return;}
     closePlans();
     alert("Paiement "+canal+" initié.\nRéf: "+d.reference+"\nMontant: "+d.montant+" FCFA\n\nURL: "+d.checkout_url);
@@ -618,15 +629,16 @@ function showReset(){
   document.getElementById("resetErr2").classList.remove("show");
   document.getElementById("resetOk2").classList.remove("show");
 }
+
 async function resetRequest(){
-  const pseudo=document.getElementById("resetPseudo").value.trim();
-  const contact=document.getElementById("resetContact").value.trim();
-  const errEl=document.getElementById("resetErr");const okEl=document.getElementById("resetOk");
+  var pseudo=document.getElementById("resetPseudo").value.trim();
+  var contact=document.getElementById("resetContact").value.trim();
+  var errEl=document.getElementById("resetErr");var okEl=document.getElementById("resetOk");
   errEl.classList.remove("show");okEl.classList.remove("show");
   if(!pseudo||!contact){errEl.textContent="Remplissez pseudo + contact";errEl.classList.add("show");return;}
   try{
-    const r=await fetch(API+"/api/reset-password/request",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo,contact})});
-    const d=await r.json();
+    var r=await fetch(API+"/api/reset-password/request",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo,contact})});
+    var d=await r.json();
     if(!r.ok){errEl.textContent=d.erreur||"Erreur";errEl.classList.add("show");return;}
     okEl.innerHTML="✅ "+d.message+"<br><br>Code: <strong style='font-size:20px;color:var(--primary)'>"+d.code+"</strong><br><span style='font-size:11px'>"+d.note+"</span>";
     okEl.classList.add("show");
@@ -636,32 +648,32 @@ async function resetRequest(){
     document.getElementById("rs2").classList.add("active");
   }catch(e){errEl.textContent="Serveur inaccessible";errEl.classList.add("show");}
 }
+
 async function resetVerify(){
-  const pseudo=document.getElementById("resetPseudo").value.trim();
-  const code=document.getElementById("resetCode").value.trim();
-  const mdp=document.getElementById("resetMdp").value;
-  const errEl=document.getElementById("resetErr2");const okEl=document.getElementById("resetOk2");
+  var pseudo=document.getElementById("resetPseudo").value.trim();
+  var code=document.getElementById("resetCode").value.trim();
+  var mdp=document.getElementById("resetMdp").value;
+  var errEl=document.getElementById("resetErr2");var okEl=document.getElementById("resetOk2");
   errEl.classList.remove("show");okEl.classList.remove("show");
   if(!code||!mdp){errEl.textContent="Remplissez code + MDP";errEl.classList.add("show");return;}
   if(mdp.length<8||!/[a-zA-Z]/.test(mdp)||!/[0-9]/.test(mdp)){errEl.textContent="MDP : 8+ lettre + chiffre";errEl.classList.add("show");return;}
   try{
-    const r=await fetch(API+"/api/reset-password/verify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo,code,mot_de_passe:mdp})});
-    const d=await r.json();
+    var r=await fetch(API+"/api/reset-password/verify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo,code,mot_de_passe:mdp})});
+    var d=await r.json();
     if(!r.ok){errEl.textContent=d.erreur||"Erreur";errEl.classList.add("show");return;}
     okEl.textContent="✅ Mot de passe réinitialisé ! Connectez-vous.";okEl.classList.add("show");
-    setTimeout(()=>{switchAuth("login");},1500);
+    setTimeout(function(){switchAuth("login");},1500);
   }catch(e){errEl.textContent="Serveur inaccessible";errEl.classList.add("show");}
 }
-function toggleLang(){
-  const order=["fr","wo","en","es","ar","pt","de"];
-  const idx=order.indexOf(currentLang);
-  currentLang=order[(idx+1)%order.length];
-  document.getElementById("langBtn").textContent="🌍 "+langs[currentLang];
+
+function openDashboard(){
+  window.open(API+"/dashboard.html","_blank");
 }
+
 (async function init(){
   if(token){
     try{
-      const r=await fetch(API+"/api/subscription/me",{headers:{"Authorization":"Bearer "+token}});
+      var r=await fetch(API+"/api/subscription/me",{headers:{"Authorization":"Bearer "+token}});
       if(r.ok){await enterApp();return;}
     }catch(e){}
     logout();

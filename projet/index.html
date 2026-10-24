@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#15a05a">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%2315a05a'/%3E%3Cpath d='M25 70 L50 30 L75 70 L50 55 Z' fill='white'/%3E%3Crect x='38' y='70' width='24' height='8' rx='2' fill='white'/%3E%3C/svg%3E">
 <title>ÉcoleMax — Le tuteur IA du Sénégal</title>
-<link rel="stylesheet" href="css/style.css">
 <style>
 :root{
   --bg:#f8f9fc; --card:#ffffff; --text:#1a1a2e; --soft:#6b7280;
@@ -24,7 +25,7 @@ a{text-decoration:none;color:inherit}
 nav{background:rgba(255,255,255,.95);backdrop-filter:blur(10px);position:sticky;top:0;z-index:100;border-bottom:1px solid var(--line)}
 nav .container{display:flex;align-items:center;justify-content:space-between;height:64px}
 .brand{font-size:22px;font-weight:900;display:flex;align-items:center;gap:8px}
-.brand .logo-box{font-size:28px}
+.brand svg{width:32px;height:32px}
 .nav-links{display:flex;gap:24px;align-items:center}
 .nav-links a{font-size:14px;font-weight:600;color:var(--soft);transition:.2s}
 .nav-links a:hover{color:var(--primary)}
@@ -50,7 +51,6 @@ nav .container{display:flex;align-items:center;justify-content:space-between;hei
 .hero-stats .stat .v{font-size:22px;font-weight:800;color:var(--primary)}
 .hero-stats .stat .l{font-size:12px;color:var(--soft)}
 
-/* Hero illustration */
 .hero-illust{display:flex;align-items:center;justify-content:center}
 .illust-card{background:#fff;border-radius:24px;padding:30px;box-shadow:var(--shadow-lg);width:340px;text-align:center}
 .illust-card .icons{font-size:48px;margin-bottom:16px}
@@ -58,6 +58,32 @@ nav .container{display:flex;align-items:center;justify-content:space-between;hei
 .illust-card p{font-size:13px;color:var(--soft)}
 .illust-card .feat-row{display:flex;justify-content:center;gap:12px;margin-top:16px;flex-wrap:wrap}
 .illust-card .feat-chip{background:var(--primary-l);color:var(--primary-d);padding:4px 12px;border-radius:8px;font-size:12px;font-weight:600}
+
+/* ===== AUTH FORM (sur site) ===== */
+.auth-section{padding:60px 0}
+.auth-card{background:#fff;border-radius:20px;padding:36px;box-shadow:var(--shadow-lg);max-width:480px;margin:0 auto;border:1px solid var(--line)}
+.auth-card .logo-row{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:8px}
+.auth-card .logo-row svg{width:48px;height:48px}
+.auth-card .logo-row .lt{font-size:26px;font-weight:900}
+.auth-card h2{text-align:center;font-size:22px;margin-bottom:4px}
+.auth-card .sub{text-align:center;color:var(--soft);font-size:14px;margin-bottom:24px}
+.auth-tabs{display:flex;gap:8px;margin-bottom:20px}
+.auth-tab{flex:1;padding:12px;text-align:center;border-radius:12px;font-weight:700;font-size:14px;background:var(--bg);color:var(--soft);cursor:pointer;border:2px solid var(--line);transition:.2s}
+.auth-tab.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.field{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:14px 16px;transition:.2s;position:relative;margin-bottom:12px}
+.field:focus-within{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-l);background:#fff}
+.field label{display:block;font-size:12px;color:var(--soft);margin-bottom:4px;font-weight:600}
+.field input,.field select{width:100%;background:none;border:none;outline:none;color:var(--text);font-size:15px;font-family:inherit}
+.field input::placeholder{color:var(--soft);opacity:.6}
+.pwd-toggle{position:absolute;right:14px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:18px;user-select:none;opacity:.6;padding:4px}
+.auth-err{color:var(--red);font-size:13px;text-align:center;padding:8px;background:#fee2e2;border-radius:8px;display:none;margin-bottom:12px}
+.auth-err.show{display:block}
+.auth-ok{color:var(--primary);font-size:13px;text-align:center;padding:8px;background:var(--primary-l);border-radius:8px;display:none;margin-bottom:12px}
+.auth-ok.show{display:block}
+.auth-reset{text-align:center;margin-top:12px}
+.auth-reset a{font-size:13px;color:var(--blue);cursor:pointer}
+.auth-reset a:hover{text-decoration:underline}
+.auth-note{text-align:center;font-size:11px;color:var(--soft);margin-top:16px}
 
 /* ===== FEATURES ===== */
 .section{padding:50px 0}
@@ -91,7 +117,7 @@ nav .container{display:flex;align-items:center;justify-content:space-between;hei
 .plan-card .pfeatures li .cross{color:#ef4444;font-weight:800;flex-shrink:0}
 .plan-card .btn{width:100%}
 
-/* ===== CTA SECTION ===== */
+/* ===== CTA ===== */
 .cta-section{background:linear-gradient(135deg,var(--primary),var(--accent));padding:50px 0;text-align:center;color:#fff}
 .cta-section h2{font-size:28px;font-weight:900;margin-bottom:12px}
 .cta-section p{font-size:16px;opacity:.9;margin-bottom:24px}
@@ -120,13 +146,15 @@ footer .ft-links a:hover{color:#fff}
 <!-- NAVBAR -->
 <nav>
   <div class="container">
-    <a href="index.html" class="brand"><span class="logo-box">📚</span> ÉcoleMax</a>
+    <a href="index.html" class="brand">
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="22" fill="#15a05a"/><path d="M25 70 L50 30 L75 70 L50 55 Z" fill="white"/><rect x="38" y="70" width="24" height="8" rx="2" fill="white"/></svg>
+      ÉcoleMax
+    </a>
     <div class="nav-links">
-      <a href="index.html">Accueil</a>
-      <a href="index.html#fonctions">Fonctions</a>
-      <a href="index.html#langues">Langues</a>
-      <a href="index.html#tarifs">Tarifs</a>
-      <a href="app.html#connecter" class="nav-cta">Se connecter</a>
+      <a href="#fonctions">Fonctions</a>
+      <a href="#langues">Langues</a>
+      <a href="#tarifs">Tarifs</a>
+      <a href="#inscrire" class="nav-cta">Se connecter</a>
     </div>
   </div>
 </nav>
@@ -166,10 +194,10 @@ footer .ft-links a:hover{color:#fff}
     <div class="hero-text">
       <span class="badge">🇰🇳 Pour les élèves du Sénégal · IA intégrée</span>
       <h1>Toutes les matières,<br><span class="grad">le tutorat IA dans une seule appli.</span></h1>
-      <p>ÉcoleMax accompagne chaque élève du Sénégal — du primaire au bac — avec des exercices, une correction photo par IA, une recherche internet par IA et une aide à la rédaction. Léger, rapide, fonctionne même hors ligne.</p>
+      <p>ÉcoleMax accompagne chaque élève du Sénégal — du primaire à l'université — avec des exercices, une correction photo par IA, une recherche internet par IA et une aide à la rédaction. Léger, rapide, fonctionne même hors ligne.</p>
       <div class="hero-cta">
-        <a href="app.html" class="btn btn-primary">🚀 S'inscrire — Essai gratuit 24 h</a>
-        <a href="app.html#connecter" class="btn btn-ghost">🔑 Se connecter</a>
+        <a href="#inscrire" class="btn btn-primary">🚀 S'inscrire — Essai gratuit 24 h</a>
+        <a href="app.html" class="btn btn-ghost">📱 Télécharger l'app</a>
       </div>
       <div class="hero-stats">
         <div class="stat"><div class="v">18</div><div class="l">matières</div></div>
@@ -193,6 +221,49 @@ footer .ft-links a:hover{color:#fff}
     </div>
   </div>
 </header>
+
+<!-- AUTH FORM ===== -->
+<section class="auth-section" id="inscrire">
+  <div class="container">
+    <div class="auth-card">
+      <div class="logo-row">
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="22" fill="#15a05a"/><path d="M25 70 L50 30 L75 70 L50 55 Z" fill="white"/><rect x="38" y="70" width="24" height="8" rx="2" fill="white"/></svg>
+        <span class="lt">ÉcoleMax</span>
+      </div>
+      <h2>Bienvenue</h2>
+      <p class="sub">Inscrivez-vous ou connectez-vous pour commencer</p>
+      <div class="auth-tabs">
+        <div class="auth-tab active" onclick="switchAuth('register')">S'inscrire</div>
+        <div class="auth-tab" onclick="switchAuth('login')">Se connecter</div>
+      </div>
+      <div class="auth-err" id="authErr"></div>
+      <div class="auth-ok" id="authOk"></div>
+      <form onsubmit="return false" id="authForm">
+        <div id="regFields">
+          <div class="field"><label>Pseudo</label><input type="text" id="pseudo" placeholder="3+ caractères"></div>
+          <div class="field"><label>Mot de passe</label><input type="password" id="mdp" placeholder="8+ lettre + chiffre"><span class="pwd-toggle" onclick="togglePwd('mdp',this)">👁️</span></div>
+          <div class="field"><label>Niveau</label>
+            <select id="niveau">
+              <option value="Terminale">Terminale</option>
+              <option value="Bac">Bac (1ère/2ème)</option>
+              <option value="Université">Université</option>
+            </select>
+          </div>
+        </div>
+        <div id="loginFields" style="display:none">
+          <div class="field"><label>Pseudo</label><input type="text" id="loginPseudo" placeholder="Ex: Aminata"></div>
+          <div class="field"><label>Mot de passe</label><input type="password" id="loginMdp" placeholder="Mot de passe"><span class="pwd-toggle" onclick="togglePwd('loginMdp',this)">👁️</span></div>
+        </div>
+        <button class="btn btn-primary" id="authBtn" onclick="doAuth()" style="width:100%;margin-top:8px">S'inscrire</button>
+      </form>
+      <div class="auth-reset" id="resetLink">
+        <a onclick="showReset()">🔑 Mot de passe oublié ?</a>
+      </div>
+      <p class="auth-note">Essai gratuit 24 h — tout débloqué. Aucun paiement requis.</p>
+      <p class="auth-note">Créé par <strong>SycheikhCorp</strong> © 2026</p>
+    </div>
+  </div>
+</section>
 
 <!-- FEATURES -->
 <section class="section" id="fonctions">
@@ -268,7 +339,7 @@ footer .ft-links a:hover{color:#fff}
           <li><span class="check">✓</span> 7 langues</li>
           <li><span class="check">✓</span> Aucun paiement requis</li>
         </ul>
-        <a href="app.html" class="btn btn-ghost">Commencer l'essai</a>
+        <a href="#inscrire" class="btn btn-ghost">Commencer l'essai</a>
       </div>
       <div class="plan-card featured">
         <div class="tag">POPULAIRE</div>
@@ -306,7 +377,7 @@ footer .ft-links a:hover{color:#fff}
   <div class="container">
     <h2>Prêt à réviser ?</h2>
     <p>Inscrivez-vous gratuitement et profitez de 24 heures d'essai complet.</p>
-    <a href="app.html" class="btn">🚀 S'inscrire gratuitement</a>
+    <a href="#inscrire" class="btn">🚀 S'inscrire gratuitement</a>
   </div>
 </section>
 
@@ -315,7 +386,66 @@ footer .ft-links a:hover{color:#fff}
   <div class="ft-brand">📚 ÉcoleMax</div>
   <p>Application scolaire pour le Sénégal.</p>
   <p>Créé par <strong style="color:#fff">SycheikhCorp</strong> © 2026</p>
+  <div class="ft-links">
+    <a href="index.html">Accueil</a>
+    <a href="#fonctions">Fonctions</a>
+    <a href="#tarifs">Tarifs</a>
+    <a href="dashboard.html">Dashboard</a>
+  </div>
 </footer>
 
+<script>
+const API = (window.__ECOLEMAX_API__||"").replace(/\/$/,"");
+function togglePwd(inputId,btn){
+  var el=document.getElementById(inputId);
+  if(el.type==="password"){el.type="text";btn.textContent="🙈";}
+  else{el.type="password";btn.textContent="👁️";}
+}
+function switchAuth(mode){
+  document.querySelectorAll(".auth-tab").forEach(function(t){t.classList.remove("active");});
+  document.querySelectorAll(".auth-tab")[mode==="register"?0:1].classList.add("active");
+  document.getElementById("regFields").style.display = mode==="register"?"block":"none";
+  document.getElementById("loginFields").style.display = mode==="login"?"block":"none";
+  document.getElementById("authBtn").textContent = mode==="register"?"S'inscrire":"Se connecter";
+  document.getElementById("authErr").classList.remove("show");
+  document.getElementById("authOk").classList.remove("show");
+  document.getElementById("resetLink").style.display = mode==="login"?"block":"none";
+}
+async function doAuth(){
+  var mode = document.getElementById("regFields").style.display==="none"?"login":"register";
+  var errEl = document.getElementById("authErr");
+  var okEl = document.getElementById("authOk");
+  errEl.classList.remove("show"); okEl.classList.remove("show");
+  if(mode==="register"){
+    var pseudo=document.getElementById("pseudo").value.trim();
+    var mdp=document.getElementById("mdp").value;
+    var niveau=document.getElementById("niveau").value;
+    if(!pseudo||pseudo.length<3){errEl.textContent="Veuillez saisir un pseudo (3+ caractères)";errEl.classList.add("show");return;}
+    if(mdp.length<8||!/[a-zA-Z]/.test(mdp)||!/[0-9]/.test(mdp)){errEl.textContent="MDP : 8+ lettre + chiffre";errEl.classList.add("show");return;}
+    try{
+      var r=await fetch(API+"/api/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo,mot_de_passe:mdp,niveau})});
+      var d=await r.json();
+      if(!r.ok){errEl.textContent=d.erreur||"Erreur";errEl.classList.add("show");return;}
+      okEl.textContent="✅ Inscription réussie ! Cliquez sur « Se connecter » pour vous connecter.";okEl.classList.add("show");
+      switchAuth("login");
+      document.getElementById("loginPseudo").value=pseudo;
+    }catch(e){errEl.textContent="Serveur inaccessible";errEl.classList.add("show");}
+  }else{
+    var pseudo=document.getElementById("loginPseudo").value.trim();
+    var mdp=document.getElementById("loginMdp").value;
+    if(!pseudo||!mdp){errEl.textContent="Remplissez tous les champs";errEl.classList.add("show");return;}
+    try{
+      var r=await fetch(API+"/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo,mot_de_passe:mdp})});
+      var d=await r.json();
+      if(!r.ok){errEl.textContent=d.erreur||"Identifiants invalides";errEl.classList.add("show");return;}
+      okEl.textContent="✅ Connexion réussie ! Ouvrant l'application...";okEl.classList.add("show");
+      setTimeout(function(){window.location.href="app.html";},1000);
+    }catch(e){errEl.textContent="Serveur inaccessible";errEl.classList.add("show");}
+  }
+}
+function showReset(){
+  alert("Pour réinitialiser votre mot de passe :\n\n1. Ouvrez l'application (app.html)\n2. Cliquez sur « Mot de passe oublié ? »\n3. Suivez les étapes\n\nVous pouvez aussi contacter l'administrateur.");
+}
+</script>
 </body>
 </html>
