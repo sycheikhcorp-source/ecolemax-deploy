@@ -7,7 +7,7 @@ Backend : auth, IA (Professeur/Scanner/Correcteur), exercices, abonnements,
 Stack : Python 3 / SQLite (WAL) / Pollinations AI (gratuit) + calculateur local.
 Par SYCHEIKHCORP
 """
-import os, json, sqlite3, hashlib, hmac, secrets, re, base64, datetime, urllib.request, urllib.error
+import os, json, sqlite3, hashlib, hmac, secrets, re, base64, datetime, urllib.request, urllib.error, threading, time
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 
 HOST = "0.0.0.0"
@@ -367,6 +367,34 @@ REPONSES_LOCALES = {
     "newton": ("La loi de Newton (F=ma) dit que la force F est égale au produit de la masse m et de l'accélération a. Plus la masse est grande, plus la force nécessaire est grande pour obtenir la même accélération.", "Physique"),
 }
 
+# File d'attente simple pour contourner le rate-limit Pollinations (1 réq/30s par IP)
+_pollinations_lock = threading.Lock()
+_last_pollinations_call = 0
+_POLLINATIONS_MIN_INTERVAL = 30  # secondes entre deux appels
+
+def _pollinations_call(messages, max_tokens=600, timeout=25):
+    """Appel Pollinations avec retry + backoff + rate-limiter."""
+    global _last_pollinations_call
+    for attempt in range(4):
+        try:
+            with _pollinations_lock:
+                now_ts = time.time()
+                if now_ts - _last_pollinations_call < _POLLINATIONS_MIN_INTERVAL:
+                    wait = _POLLINATIONS_MIN_INTERVAL - (now_ts - _last_pollinations_call)
+                    time.sleep(min(wait, 35))
+                _last_pollinations_call = time.time()
+            req = urllib.request.Request(
+                POLLINATIONS_URL,
+                data=json.dumps({"messages": messages, "model": "openai", "max_tokens": max_tokens}).encode(),
+                headers={"Content-Type": "application/json", "Referer": POLLINATIONS_REFERER})
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                data = json.loads(r.read().decode())
+            return data["choices"][0]["message"]["content"]
+        except Exception as e:
+            if attempt < 3:
+                time.sleep(2 * (attempt + 1))  # backoff: 2s, 4s, 6s
+    return None
+
 def reponse_ia(question, plan=None):
     """Assistant IA réel : calculateur local → bibliothèque → Pollinations /openai → repli."""
     # 1. Calcul local
@@ -378,41 +406,27 @@ def reponse_ia(question, plan=None):
         if key in ql:
             return {"reponse": rep, "explication": rep, "confiance": 0.85, "source": "Bibliothèque locale",
                     "etapes": ["Recherche dans la bibliothèque de cours ÉcoleMax"]}
-    # 3. Pollinations IA
-    try:
-        messages = [{"role":"system","content":"Tu es Professeur IA d'ÉcoleMax, pédagogue, bref et clair. Réponds en français. Structure : réponse directe, puis Explication, puis Étapes si nécessaire."},
-                    {"role":"user","content":question}]
-        req = urllib.request.Request(
-            POLLINATIONS_URL,
-            data=json.dumps({"messages": messages, "model": "openai", "max_tokens": 600}).encode(),
-            headers={"Content-Type": "application/json", "Referer": POLLINATIONS_REFERER})
-        with urllib.request.urlopen(req, timeout=25) as r:
-            data = json.loads(r.read().decode())
-        content = data["choices"][0]["message"]["content"]
+    # 3. Pollinations IA avec retry
+    messages = [{"role":"system","content":"Tu es Professeur IA d'ÉcoleMax, pédagogue, bref et clair. Réponds en français. Structure : réponse directe, puis Explication, puis Étapes si nécessaire."},
+                {"role":"user","content":question}]
+    content = _pollinations_call(messages, max_tokens=600, timeout=25)
+    if content:
         return {"reponse": content, "source": "IA"}
-    except Exception as e:
-        return {"reponse": "⚠️ IA momentanément hors ligne. Essaye un calcul (2+2), ou demande un sujet du cours. Réessaille dans 30 secondes.",
+    return {"reponse": "⚠️ IA momentanément saturée (trop d'élèves en même temps). Essaye un calcul (2+2), ou demande un sujet du cours. Réessaille dans 30 secondes.",
                 "source": "hors ligne"}
 
 def reponse_ia_photo(question, image_b64, plan=None):
     """Correction photo : OCR + résolution via Pollinations vision."""
     question = question or "Lis cet énoncé, reconnais-le et résous-le étape par étape en français."
-    try:
-        messages = [{"role":"system","content":"Tu es Professeur IA d'ÉcoleMax. Reconnaît l'énoncé dans l'image, résous-le, explique chaque étape en français pédagogique. Si l'image est illisible, dis-le et demande une nouvelle photo."},
-                    {"role":"user","content":[
-                        {"type":"text","text":question},
-                        {"type":"image_url","image_url":{"url":f"data:image/jpeg;base64,{image_b64}"}}
-                    ]}]
-        req = urllib.request.Request(
-            POLLINATIONS_URL,
-            data=json.dumps({"messages": messages, "model": "openai", "max_tokens": 700}).encode(),
-            headers={"Content-Type": "application/json", "Referer": POLLINATIONS_REFERER})
-        with urllib.request.urlopen(req, timeout=30) as r:
-            data = json.loads(r.read().decode())
-        content = data["choices"][0]["message"]["content"]
+    messages = [{"role":"system","content":"Tu es Professeur IA d'ÉcoleMax. Reconnaît l'énoncé dans l'image, résous-le, explique chaque étape en français pédagogique. Si l'image est illisible, dis-le et demande une nouvelle photo."},
+                {"role":"user","content":[
+                    {"type":"text","text":question},
+                    {"type":"image_url","image_url":{"url":f"data:image/jpeg;base64,{image_b64}"}}
+                ]}]
+    content = _pollinations_call(messages, max_tokens=700, timeout=30)
+    if content:
         return {"reponse": content, "source": "IA Vision"}
-    except Exception as e:
-        return {"reponse": "⚠️ IA Vision hors ligne. Vérifie la luminosité et reprends une photo claire, ou envoie l'énoncé en texte.", "source": "hors ligne"}
+    return {"reponse": "⚠️ IA Vision momentanément saturée. Vérifie la luminosité et reprends une photo claire, ou envoie l'énoncé en texte. Réessaille dans 30 secondes.", "source": "hors ligne"}
 
 # ─────────────────────────────────────────────
 # HTTP Handler
@@ -821,6 +835,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_json({"ok":True})
 
         if path == "/api/me":
+            u = get_user_by_token(self)
             if not u: return self.send_json({"erreur":"Authentification requise"}, 401)
             p = plan_actif(u)
             c = db()
