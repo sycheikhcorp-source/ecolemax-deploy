@@ -427,7 +427,7 @@ def _calculer(question):
     import re
     q = question.lower()
     # Expression: nombre op nombre (op: + - * / × ÷)
-    m = re.search(r'(\d+(?:[.,]\d+)?)\s*([+\-*/×÷])\s*(\d+(?:[.,]\d+)?)', q)
+    m = re.search(r'(\d+(?:[.,]\d+)?)\s*([+\-*/×÷xX])\s*(\d+(?:[.,]\d+)?)', q)
     if m:
         try:
             a = float(m.group(1).replace(',', '.'))
