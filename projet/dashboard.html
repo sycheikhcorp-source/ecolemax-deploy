@@ -264,6 +264,7 @@ function api(path, opts){
 function doLogin(){
   const p=document.getElementById("passInput").value.trim();
   if(!p)return;
+  adminPass = p;  // ← FIX: set before API call
   api("/api/admin/stats").then(()=>{
     setAdmin(p);
     document.getElementById("login").classList.add("hidden");
