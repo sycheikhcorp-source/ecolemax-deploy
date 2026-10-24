@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ÉcoleMax — Sécurité</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .sec-hero {
+    background:
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(16, 185, 129, .3), transparent 60%),
+      linear-gradient(180deg, #0b0e24 0%, #161b40 60%, var(--bg) 100%);
+    color: #fff; padding: 80px 0 64px; text-align: center;
+  }
+  .lock-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+  @media (max-width: 900px) { .lock-grid { grid-template-columns: 1fr; } }
+  .wm-demo {
+    background: #fff; border: 1px solid var(--line); border-radius: 18px; padding: 22px;
+    position: relative; overflow: hidden; margin-top: 16px;
+  }
+  .wm-demo .wm-content { padding: 20px; background: var(--gradient-soft); border-radius: 14px; position: relative; z-index: 2; }
+  .wm-overlay {
+    position: absolute; inset: 0; pointer-events: none; z-index: 1;
+    background-image: repeating-linear-gradient(45deg, rgba(124,58,237,.07) 0, rgba(124,58,237,.07) 2px, transparent 2px, transparent 50px);
+    display: grid; place-items: center;
+    font-size: 20px; font-weight: 900; color: rgba(124,58,237,.2); letter-spacing: 4px;
+  }
+  .input-demo {
+    background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px;
+    font-size: 15px; width: 240px; outline: none; margin-top: 10px;
+  }
+  .check-list { list-style: none; }
+  .check-list li { display: flex; gap: 10px; padding: 9px 0; font-size: 15px; border-bottom: 1px dashed var(--line); }
+  .check-list li:last-child { border-bottom: none; }
+  .check-list li .ic { font-size: 19px; }
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="brand"><span class="logo-box">📚</span> ÉcoleMax</div>
+  <div class="nav-links">
+    <a href="index.html">Présentation</a>
+    <a href="app.html">Application</a>
+    <a href="dashboard.html">Tableau de bord</a>
+    <a href="securite.html">Sécurité</a>
+  </div>
+</nav>
+
+<header class="sec-hero">
+  <div class="container">
+    <span class="badge">🛡️ Sécurité totale</span>
+    <h1 style="font-size:46px;font-weight:900;letter-spacing:-1px;margin-top:16px;">Contenu protégé, élèves sereins</h1>
+    <p style="color:rgba(255,255,255,.82);font-size:18px;max-width:680px;margin:16px auto 0;">Anti-plagiat · anti-capture d'écran · anti-partage · anti-téléchargement hors ligne. Chaque contenu est chiffré, watermarké et traçable.</p>
+  </div>
+</header>
+
+<!-- DEMO WATERMARK -->
+<section>
+  <div class="container">
+    <div class="lock-grid">
+      <div class="lock-card">
+        <h3>🎭 Watermark dynamique — démo</h3>
+        <p style="color:var(--ink-soft);font-size:14.5px;">Chaque cours, correction et écran porte le pseudo de l'élève + date/heure. Un partage est toujours traçable.</p>
+        <div class="wm-demo">
+          <div class="wm-content">
+            <strong>Cours : Fonction exponentielle</strong>
+            <p style="font-size:14px;color:var(--ink-soft);margin-top:6px;">f(x) = 2·3<sup>x</sup> — Correction d'exercice</p>
+          </div>
+          <div class="wm-overlay" id="wmOverlay">Aminata · 23/10/26 · 20:15</div>
+        </div>
+        <div style="margin-top:14px;">
+          <input class="input-demo" id="wmInput" placeholder="Entre ton pseudo…" value="Aminata">
+          <button class="btn btn-primary btn-sm" style="margin-left:8px;" onclick="updateWm()">Mettre à jour</button>
+        </div>
+        <div style="margin-top:12px;background:var(--green-bg);border:1px solid #bbf7d0;border-radius:12px;padding:12px;font-size:13.5px;">
+          ✅ Si ce cours est partagé en ligne, le watermark permet d'identifier <strong>immédiatement</strong> qui l'a partagé.
+        </div>
+      </div>
+
+      <div class="lock-card">
+        <h3>🚫 Démo anti-plagiat — dissertation</h3>
+        <p style="color:var(--ink-soft);font-size:14.5px;">L'IA vérifie la rédaction contre internet et signale les similitudes.</p>
+        <div class="wm-demo">
+          <div class="wm-content">
+            <p style="font-size:13.5px;"><strong>Thème :</strong> La démocratie au Sénégal</p>
+            <p style="font-size:13.5px;color:var(--ink-soft);margin-top:4px;">« La démocratie sénégalaise repose sur… »</p>
+            <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
+              <span class="badge badge-red">Similarité 78 %</span>
+              <span class="badge badge-blue">Source web identifiée</span>
+              <span class="badge badge-orange">Citation manquante</span>
+            </div>
+          </div>
+          <div class="wm-overlay" style="font-size:15px;letter-spacing:2px;">Aminata · vérification</div>
+        </div>
+        <div style="margin-top:12px;background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:12px;font-size:13.5px;">
+          ⚠️ <strong>Alerte :</strong> l'extrait est similaire à un texte trouvé en ligne. L'élève doit reformuler et citer la source.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROTECTIONS -->
+<section style="background:var(--gradient-soft);">
+  <div class="container">
+    <div class="center">
+      <div class="section-title">Les 5 protections actives</div>
+      <div class="section-sub">Tout est pensé pour que les contenus payants ne soient ni copiés, ni partagés, ni téléchargés.</div>
+    </div>
+    <div class="grid grid-3 mt-40">
+      <div class="card">
+        <div class="icon">📸</div>
+        <h3>1 · Anti-capture d'écran</h3>
+        <ul class="check-list">
+          <li><span class="ic">🚫</span> Screenshots & enregistrement d'écran bloqués (FLAG_SECURE Android / iOS)</li>
+          <li><span class="ic">🎭</span> Watermark dynamique sur chaque écran</li>
+          <li><span class="ic">🔔</span> Notification d'alerte à l'administrateur</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="icon">🤝</div>
+        <h3>2 · Anti-partage</h3>
+        <ul class="check-list">
+          <li><span class="ic">🎭</span> Watermark unique par utilisateur (traçable)</li>
+          <li><span class="ic">📋</span> Copier-coller désactivé (SecureView)</li>
+          <li><span class="ic">🔗</span> Aucun lien public : authentification obligatoire</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="icon">📵</div>
+        <h3>3 · Anti-téléchargement</h3>
+        <ul class="check-list">
+          <li><span class="ic">🔒</span> Pas de téléchargement pour les plans 250/500</li>
+          <li><span class="ic">🔑</span> Pour les plans Illimité : contenu <strong>chiffré AES-256</strong></li>
+          <li><span class="ic">⏳</span> Suppression automatique après expiration</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="icon">🚫</div>
+        <h3>4 · Anti-plagiat</h3>
+        <ul class="check-list">
+          <li><span class="ic">🔍</span> Vérification des rédactions & dissertations</li>
+          <li><span class="ic">⚠️</span> Similarité affichée + source identifiée</li>
+          <li><span class="ic">📚</span> Détection des contenus partagés en ligne</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="icon">🛡️</div>
+        <h3>5 · Droits serveur</h3>
+        <ul class="check-list">
+          <li><span class="ic">✅</span> Vérification plan + expiration à chaque accès</li>
+          <li><span class="ic">🧾</span> Logs d'accès détaillés</li>
+          <li><span class="ic">🔐</span> 2FA pour l'administrateur + rôles</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="icon">⚙️</div>
+        <h3>Stack technique</h3>
+        <ul class="check-list">
+          <li><span class="ic">📦</span> react-native-screenshot-proof</li>
+          <li><span class="ic">👁️</span> SecureView custom (watermark + copier désactivé)</li>
+          <li><span class="ic">🔓</span> TLS 1.3 · AES-256 · JWT</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="background:var(--bg-dark);color:#fff;text-align:center;">
+  <div class="container">
+    <h2 style="font-size:32px;font-weight:900;">Contenu protégé = contenu valorisé</h2>
+    <p style="color:rgba(255,255,255,.75);margin-top:14px;font-size:17px;max-width:640px;margin-left:auto;margin-right:auto;">Les élèves révisent sereinement, les abonnés payent pour un contenu réel, et les parts de marché sont protégées.</p>
+    <div class="hero-cta" style="justify-content:center;">
+      <a class="btn btn-primary" href="app.html">Explorer l'application</a>
+      <a class="btn btn-ghost" href="dashboard.html">Voir le tableau de bord</a>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="ft-brand">📚 ÉcoleMax</div>
+  <p>Page dédiée à la sécurité — projet en développement.</p>
+</footer>
+
+<script>
+  function updateWm() {
+    const name = document.getElementById('wmInput').value || 'Élève';
+    const d = new Date();
+    const date = d.getDate() + '/' + (d.getMonth()+1) + '/' + d.getFullYear().slice(-2);
+    const time = d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+    document.getElementById('wmOverlay').textContent = name + ' · ' + date + ' · ' + time;
+  }
+</script>
+</body>
+</html>

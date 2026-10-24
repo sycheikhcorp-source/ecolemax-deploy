@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: ecolemax
+    runtime: python
+    plan: free
+    autoDeploy: true
+    buildCommand: echo "Python standard — pas de dépendances"
+    startCommand: python serveur.py
+    healthCheckPath: /
+    envVars:
+      - key: ADMIN_PASSWORD
+        value: ecolemax2026
+      - key: PYTHONUNBUFFERED
+        value: "1"

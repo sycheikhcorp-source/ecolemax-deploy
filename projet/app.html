@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ÉcoleMax — Application élève</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .app-layout { display: flex; gap: 48px; align-items: flex-start; flex-wrap: wrap; justify-content: center; }
+  .app-side { width: 380px; }
+  .app-side h2 { font-size: 24px; margin-bottom: 12px; }
+  .app-side p { color: var(--ink-soft); margin-bottom: 16px; }
+  .feature-list { list-style: none; }
+  .feature-list li { display: flex; gap: 10px; padding: 9px 0; font-size: 15px; border-bottom: 1px dashed var(--line); }
+  .feature-list li .fic { font-size: 18px; }
+  .screen-scroll { padding-bottom: 80px; }
+  .screen-section { display: none; }
+  .screen-section.active { display: block; }
+  .greet { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
+  .sub-banner .btn { width: 100%; margin-top: 10px; }
+  .progress-row { display: flex; gap: 10px; margin: 14px 0; }
+  .progress-row .pr { flex: 1; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 12px; text-align: center; }
+  .progress-row .pr .v { font-size: 20px; font-weight: 900; }
+  .progress-row .pr .l { font-size: 11px; color: var(--ink-soft); }
+  .qcm-q { font-weight: 700; font-size: 15px; margin-bottom: 10px; }
+  .qcm-opt { display: flex; gap: 10px; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 8px; font-size: 14px; }
+  .qcm-opt .letter { width: 26px; height: 26px; border-radius: 8px; background: var(--gradient-soft); color: var(--primary); display: grid; place-items: center; font-weight: 700; font-size: 13px; flex-shrink: 0; }
+  .chat-input-row { position: absolute; bottom: 64px; left: 12px; right: 12px; display: flex; gap: 8px; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 8px; }
+  .chat-input-row input { flex: 1; border: none; outline: none; font-size: 14px; padding: 6px; }
+  .chat-input-row button { background: var(--gradient); color: #fff; border: none; border-radius: 10px; padding: 6px 14px; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="brand"><span class="logo-box">📚</span> ÉcoleMax</div>
+  <div class="nav-links">
+    <a href="index.html">Présentation</a>
+    <a href="app.html">Application</a>
+    <a href="dashboard.html">Tableau de bord</a>
+    <a href="index.html#tarifs">Tarifs</a>
+  </div>
+</nav>
+
+<section>
+  <div class="container">
+    <div class="app-layout">
+      <!-- Phone -->
+      <div class="phone">
+        <div class="screen">
+          <!-- STATUS BAR -->
+          <div class="statusbar"><span>9:41</span><span>📶 🔋</span></div>
+
+          <!-- HOME -->
+          <div class="screen-section active">
+            <div class="topbar">
+              <div style="font-size:15px;opacity:.85;">Bonjour Aminata 👋</div>
+              <div style="font-size:22px;font-weight:800;margin-top:2px;">Prête à réviser ?</div>
+              <div style="font-size:13px;opacity:.85;margin-top:6px;">Niveau : Lycée · Terminale B</div>
+              <div style="font-size:12px;opacity:.9;margin-top:8px;">🌍 FR · WO · EN · ES · DE · PT · 🔁 Traduction</div>
+            </div>
+            <div class="screen-body">
+              <div class="sub-banner">
+                <div>⭐ Accès total à débloquer</div>
+                <div class="price2">500 FCFA / mois · 1 500 FCFA Illimité</div>
+                <button class="btn btn-primary" style="font-size:14px;padding:8px 16px;">Voir les plans</button>
+              </div>
+              <div class="progress-row">
+                <div class="pr"><div class="v">7</div><div class="l">Jours de streak</div></div>
+                <div class="pr"><div class="v">184</div><div class="l">Points</div></div>
+                <div class="pr"><div class="v">12</div><div class="l">Badges</div></div>
+              </div>
+              <div style="font-size:15px;font-weight:800;margin:14px 0 8px;">📚 Mes matières (15+)</div>
+              <div class="mat-card"><div class="m-icon">🧮</div><div><div class="m-title">Mathématiques</div><div class="m-sub">23 chapitres · 156 exercices</div></div></div>
+              <div class="mat-card"><div class="m-icon">🇫🇷</div><div><div class="m-title">Français</div><div class="m-sub">18 chapitres · 120 exercices</div></div></div>
+              <div class="mat-card"><div class="m-icon">🔬</div><div><div class="m-title">Physique-Chimie</div><div class="m-sub">19 chapitres · 98 exercices</div></div></div>
+              <div class="mat-card"><div class="m-icon">🧬</div><div><div class="m-title">SVT</div><div class="m-sub">14 chapitres · 76 exercices</div></div></div>
+              <div class="mat-card"><div class="m-icon">🌍</div><div><div class="m-title">Histoire-Géographie</div><div class="m-sub">21 chapitres · 110 exercices</div></div></div>
+              <div class="mat-card"><div class="m-icon">🇬🇧</div><div><div class="m-title">Anglais</div><div class="m-sub">12 chapitres · 64 exercices</div></div></div>
+              <div class="mat-card"><div class="m-icon">🇳🇪</div><div><div class="m-title">Espagnol</div><div class="m-sub">8 chapitres · 42 exercices</div></div></div>
+              <div class="mat-card"><div class="m-icon">🕌</div><div><div class="m-title">Arabe</div><div class="m-sub">10 chapitres · 38 exercices</div></div></div>
+              <div class="mat-card"><div class="m-icon">🗣️</div><div><div class="m-title">Wolof</div><div class="m-sub">6 chapitres · 30 exercices</div></div></div>
+              <div class="mat-card"><div class="m-icon">🎓</div><div><div class="m-title">Philosophie</div><div class="m-sub">15 chapitres · 70 exercices</div></div></div>
+              <div class="mat-card"><div class="m-icon">📜</div><div><div class="m-title">Latin (LCA)</div><div class="m-sub">9 chapitres · 36 exercices</div></div></div>
+              <div class="mat-card"><div class="m-icon">💰</div><div><div class="m-title">Économie</div><div class="m-sub">11 chapitres · 52 exercices</div></div></div>
+              <div class="mat-card"><div class="m-icon">🏫</div><div><div class="m-title">+ 7 autres matières</div><div class="m-sub">Tech, Arts, EPS, EMC, Peul, Sèrer…</div></div></div>
+            </div>
+          </div>
+
+          <!-- EXERCICE -->
+          <div class="screen-section">
+            <div class="topbar" style="padding:14px 20px 16px;">
+              <div style="font-size:13px;opacity:.85;">🧮 Mathématiques · Chapitre 3</div>
+              <div style="font-size:18px;font-weight:800;margin-top:2px;">Fonction exponentielle</div>
+            </div>
+            <div class="screen-body">
+              <div class="qcm-q">Q1. Soit f(x) = 2·3<sup>x</sup>. Calculer f(2).</div>
+              <div class="qcm-opt"><span class="letter">A</span> 6</div>
+              <div class="qcm-opt"><span class="letter">B</span> 9</div>
+              <div class="qcm-opt"><span class="letter">C</span> 18  ✅</div>
+              <div class="qcm-opt"><span class="letter">D</span> 36</div>
+              <div style="background:var(--green-bg);border:1px solid #bbf7d0;border-radius:12px;padding:12px;margin-top:10px;font-size:14px;">
+                ✅ Réponse correcte !<br>
+                <strong>Explication (IA) :</strong> f(2) = 2·3² = 2·9 = 18.<br>
+                <em>« En wolof : f(2) melni 2 moom 3 nosé 2, di 2 moom 9, di 18. »</em>
+              </div>
+              <div style="font-size:15px;font-weight:800;margin:18px 0 8px;">Exercice suivant</div>
+              <div class="qcm-q">Q2. Résoudre 3<sup>x</sup> = 81.</div>
+              <div class="qcm-opt"><span class="letter">A</span> x = 2</div>
+              <div class="qcm-opt"><span class="letter">B</span> x = 3</div>
+              <div class="qcm-opt"><span class="letter">C</span> x = 4  ✅</div>
+              <div class="qcm-opt"><span class="letter">D</span> x = 81</div>
+              <div style="font-size:13px;color:var(--ink-soft);margin-top:14px;">💡 Besoin d'aide ? Utilise l'assistant IA.</div>
+            </div>
+          </div>
+
+          <!-- AI ASSISTANT -->
+          <div class="screen-section">
+            <div class="topbar" style="padding:14px 20px 16px;">
+              <div style="font-size:13px;opacity:.85;">🤖 Mon Tuteur IA · Correction ✅</div>
+              <div style="font-size:18px;font-weight:800;margin-top:2px;">Assistant ultra-performant</div>
+              <div style="font-size:12px;opacity:.9;margin-top:6px;">FR · WO · EN · ES · DE · PT · 🔁 Traduction</div>
+            </div>
+            <div class="screen-body">
+              <div class="chat-msg bot">Salut Aminata ! Je suis ton tuteur IA. Je corrige tes exercices avec vérification, je t'explique en pas-à-pas, je fais des recherches sur internet, je t'aide à rédiger (avec anti-plagiat) et je traduis dans toutes les langues. 📚</div>
+              <div class="chat-msg user">Explique-moi la différence entre exclusif et inclusif.</div>
+              <div class="chat-msg bot">
+                📌 <strong>En mathématiques (ensembles) :</strong><br>
+                • <strong>Exclusif</strong> : on ne compte que les éléments dans A <em>ou</em> dans B, mais pas les deux à la fois (A∪B − A∩B).<br>
+                • <strong>Inclusif</strong> : on compte tout, y compris les éléments communs (A∪B).<br><br>
+                ✅ <strong>Vérification :</strong> pour A={1,2,3} et B={3,4,5} : union inclusive = 5 éléments, exclusive = 4 éléments.<br>
+                💡 <strong>En wolof :</strong> exclusif melni nit ci A walla B, waaye su nekk ci biir biir walla. Inclusif melni su nekk ci A walla B walla biir biir.<br><br>
+                <em>Tu veux un exercice pour tester ?</em>
+              </div>
+              <div class="chat-msg user">Oui, un exercice s'il te plaît.</div>
+              <div class="chat-msg bot">Voici un QCM rapide :<br>
+                1) Soit A = {1,2,3} et B = {3,4,5}. Combien d'éléments dans l'union <em>inclusive</em> ?<br>
+                — Réponds : « 5 » ou « 6 », et je te corrige ✍️<br><br>
+                🌐 <strong>Besoin d'autre chose ?</strong> « Traduis cette phrase en espagnol », « Qui était Cheikh Anta Diop ? », « Aide-moi à rédiger une dissertation sur la démocratie » — je peux tout faire.</div>
+            </div>
+            <div class="chat-input-row">
+              <input placeholder="Poser une question…">
+              <button>➤</button>
+            </div>
+          </div>
+
+          <!-- PROFILE -->
+          <div class="screen-section">
+            <div class="topbar" style="padding:18px 20px 22px;">
+              <div style="display:flex;align-items:center;gap:14px;">
+                <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#fbbf24);display:grid;place-items:center;font-size:26px;font-weight:900;">A</div>
+                <div><div style="font-size:18px;font-weight:800;">Aminata Diallo</div><div style="font-size:13px;opacity:.85;">Lycée · Terminale B · Dakar</div></div>
+              </div>
+            </div>
+            <div class="screen-body">
+              <div class="sub-banner">
+                <div>🔓 Abonnement actuel : <strong>Gratuit</strong></div>
+                <div class="price2">250/15j · 500/mois · 1 500 Illimité · packs 3 mois & Bac</div>
+                <button class="btn btn-primary" style="font-size:14px;padding:8px 16px;">S'abonner</button>
+              </div>
+              <div class="progress-row">
+                <div class="pr"><div class="v">7</div><div class="l">Streak</div></div>
+                <div class="pr"><div class="v">184</div><div class="l">Points</div></div>
+                <div class="pr"><div class="v">B</div><div class="l">Niveau</div></div>
+              </div>
+              <div style="font-size:15px;font-weight:800;margin:16px 0 8px;">🏆 Mes badges</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;">
+                <div style="font-size:24px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px;">⭐</div>
+                <div style="font-size:24px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px;">🔥</div>
+                <div style="font-size:24px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px;">🧮</div>
+                <div style="font-size:24px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px;">🌍</div>
+                <div style="font-size:24px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px;">🌙</div>
+              </div>
+              <div style="font-size:15px;font-weight:800;margin:8px 0;">📉 Historique</div>
+              <div style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;font-size:14px;margin-bottom:10px;">📖 23 exercices ce mois</div>
+              <div style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;font-size:14px;">🤖 41 questions à l'IA</div>
+            </div>
+          </div>
+
+          <!-- SECURITY OVERLAY -->
+          <div class="watermark">Aminata · 23/10/26 · 20:15</div>
+          <div class="secure-pill">🔒 Sécurisé</div>
+
+          <!-- TAB BAR -->
+          <div class="tabbar">
+            <div class="tab active" data-tab="home"><span class="ico">🏠</span>Accueil</div>
+            <div class="tab" data-tab="exo"><span class="ico">📝</span>Exercice</div>
+            <div class="tab" data-tab="ai"><span class="ico">🤖</span>IA</div>
+            <div class="tab" data-tab="me"><span class="ico">👤</span>Profil</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Explanation side -->
+      <div class="app-side">
+        <h2>📱 Application élève</h2>
+        <p>Prototype interactif : clique sur les onglets du bas de l'écran (<strong>Accueil / Exercice / IA / Profil</strong>) pour naviguer.</p>
+        <ul class="feature-list">
+          <li><span class="fic">🏠</span><div><strong>Accueil</strong> — 15+ matières du programme sénégalais/français, progression, streak, badges.</div></li>
+          <li><span class="fic">📝</span><div><strong>Exercices</strong> — QCM, problèmes, dictées, correction instantanée en FR/WO/EN/ES/DE/PT.</div></li>
+          <li><span class="fic">🤖</span><div><strong>Mon Tuteur IA</strong> — corrections vérifiées (peu d'erreurs), pas-à-pas, recherche internet.</div></li>
+          <li><span class="fic">✍️</span><div><strong>Rédaction / dissertation</strong> — plan, idées, reformulation, <strong>anti-plagiat</strong>.</div></li>
+          <li><span class="fic">📷</span><div><strong>Correction photo du cahier</strong> — l'IA lit le devoir (OCR) et corrige.</div></li>
+          <li><span class="fic">🌍</span><div><strong>Traduction</strong> — cours, exercices et textes dans 6 langues.</div></li>
+          <li><span class="fic">🎧</span><div><strong>Hors ligne + audio</strong> — télécharge les chapitres, écoute les leçons.</div></li>
+          <li><span class="fic">🔐</span><div><strong>Profil & abonnement</strong> — packs 250/15j, 500/mois, 1 200/3 mois, 3 000 pack Bac.</div></li>
+        </ul>
+        <div class="card" style="margin-top:18px;">
+          <h3>🚀 Ce que l'IA peut faire</h3>
+          <p>• Corriger un exercice (texte ou photo via OCR)<br>• Expliquer une notion en FR / WO / EN / ES / DE / PT<br>• Résumer un sujet trouvé sur internet (avec sources)<br>• Aider à rédiger une dissertation (anti-plagiat)<br>• Traduire un cours ou un texte<br>• Générer des exercices personnalisés</p>
+        </div>
+        <div class="card" style="margin-top:18px;border:1px solid #bbf7d0;background:var(--green-bg);">
+          <h3>🔒 Sécurité intégrée</h3>
+          <p>• **Anti-capture** : screenshots bloqués + watermark dynamique (pseudo + date + heure)<br>• **Anti-partage** : watermark unique, copier-coller désactivé<br>• **Anti-téléchargement** : hors ligne réservé aux plans Illimité, contenu chiffré<br>• **Anti-plagiat** : vérification des rédactions<br>• Droits vérifiés côté serveur à chaque accès</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="ft-brand">📚 ÉcoleMax</div>
+  <p>Prototype d'interface — projet en développement.</p>
+</footer>
+
+<script>
+  // Tab navigation
+  document.querySelectorAll('.tabbar .tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.dataset.tab;
+      document.querySelectorAll('.tabbar .tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      document.querySelectorAll('.screen-section').forEach(s => s.classList.remove('active'));
+      document.querySelector('[data-section="' + target + '"]').classList.add('active');
+      const screen = document.querySelector('.screen');
+      if (screen) screen.scrollTop = 0;
+    });
+  });
+  // Add data-section attributes
+  document.querySelectorAll('.screen-section').forEach((s, i) => {
+    s.setAttribute('data-section', ['home','exo','ai','me'][i]);
+  });
+</script>
+</body>
+</html>

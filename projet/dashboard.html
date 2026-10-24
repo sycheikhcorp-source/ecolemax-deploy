@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<title>ÉcoleMax — Tableau de bord</title>
+<style>
+:root{--bg:#0f1420;--card:#1a2030;--card2:#1e2836;--border:#2a3040;--text:#e0e0e0;--soft:#888;--green:#15a05a;--green-d:#0d6e3e;--blue:#3b82f6;--orange:#f59e0b;--red:#ef4444;--radius:12px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:15px;line-height:1.5}
+.hidden{display:none!important}
+
+/* LOGIN */
+#login{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+.login-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:40px 32px;width:100%;max-width:400px;text-align:center}
+.login-card .logo{font-size:48px;margin-bottom:12px}
+.login-card h1{font-size:22px;margin-bottom:6px}
+.login-card p{color:var(--soft);font-size:14px;margin-bottom:24px}
+.login-card input{width:100%;padding:12px 16px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;margin-bottom:12px;outline:none}
+.login-card input:focus{border-color:var(--green)}
+.btn{padding:12px 24px;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;transition:.2s}
+.btn-primary{background:var(--green);color:#fff}
+.btn-primary:hover{background:var(--green-d)}
+.btn-blue{background:var(--blue);color:#fff}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text)}
+.erreur{color:var(--red);font-size:13px;margin-bottom:12px}
+
+/* DASHBOARD */
+#dash{display:block}
+.topbar{position:sticky;top:0;z-index:100;background:rgba(15,20,32,.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.topbar .brand{font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px}
+.topbar .live{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--soft)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+.container{max-width:1200px;margin:0 auto;padding:20px}
+
+/* Stats cards */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.stat-card .icon{font-size:28px;margin-bottom:8px}
+.stat-card .label{font-size:12px;color:var(--soft);text-transform:uppercase;letter-spacing:.5px}
+.stat-card .value{font-size:28px;font-weight:800;margin-top:4px}
+.stat-card .delta{font-size:12px;margin-top:4px}
+.stat-card .delta.up{color:var(--green)}
+.stat-card .delta.down{color:var(--red)}
+
+/* Section */
+.section{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:20px;overflow:hidden}
+.section-header{padding:16px 20px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
+.section-header h2{font-size:16px;font-weight:600}
+.section-header .arrow{font-size:12px;color:var(--soft);transition:.2s}
+.section-body{padding:0 20px 20px}
+
+/* Subscribers table */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;padding:10px 12px;color:var(--soft);font-size:12px;text-transform:uppercase;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap}
+tr:hover td{background:var(--card2)}
+.badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:600}
+.badge.green{background:rgba(21,160,90,.15);color:var(--green)}
+.badge.orange{background:rgba(245,158,11,.15);color:var(--orange)}
+.badge.red{background:rgba(239,68,68,.15);color:var(--red)}
+.badge.blue{background:rgba(59,130,246,.15);color:var(--blue)}
+
+/* Payment config */
+.pay-config{display:grid;gap:16px}
+.pay-block{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:16px}
+.pay-block h3{font-size:14px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.pay-block .field{margin-bottom:12px}
+.pay-block .field label{display:block;font-size:12px;color:var(--soft);margin-bottom:4px}
+.pay-block .field input{width:100%;padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;outline:none}
+.pay-block .field input:focus{border-color:var(--blue)}
+.pay-block .hint{font-size:11px;color:var(--soft);margin-top:2px}
+
+/* Toast */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--green);color:#fff;padding:12px 20px;border-radius:8px;font-size:14px;z-index:200;animation:slidein .3s}
+.toast.err{background:var(--red)}
+@keyframes slidein{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* Mobile */
+@media(max-width:768px){
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  .stat-card .value{font-size:22px}
+  .topbar .brand{font-size:15px}
+  .topbar .live{font-size:11px}
+  .container{padding:12px}
+  th,td{padding:8px}
+}
+@media(max-width:480px){
+  .stats-grid{grid-template-columns:1fr}
+  th{display:none}
+  td{display:block}
+  td::before{content:attr(data-label);color:var(--soft);font-size:11px;margin-right:8px}
+  td{border-bottom:none;padding:4px 0}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login">
+  <div class="login-card">
+    <div class="logo">📚</div>
+    <h1>ÉcoleMax</h1>
+    <p>Tableau de bord administrateur</p>
+    <div class="erreur" id="loginErr"></div>
+    <input type="password" id="passInput" placeholder="Mot de passe admin" autocomplete="current-password">
+    <button class="btn btn-primary" style="width:100%" onclick="doLogin()">🔐 Accéder</button>
+    <p style="margin-top:16px;font-size:11px;color:var(--soft)">Mot de passe par défaut : ecolemax2026</p>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dash" class="hidden">
+  <div class="topbar">
+    <div class="brand">📚 ÉcoleMax — <span style="color:var(--soft);font-weight:400">Tableau de bord</span></div>
+    <div class="live"><span class="dot"></span> <span id="liveCount">—</span> abonnés · <span id="liveTime">—</span></div>
+  </div>
+
+  <div class="container">
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="icon">👥</div>
+        <div class="label">Abonnés actifs</div>
+        <div class="value" id="statAbonnes">—</div>
+        <div class="delta up" id="statAbonnesDelta">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="icon">✨</div>
+        <div class="label">Nouveaux aujourd'hui</div>
+        <div class="value" id="statNouveaux">—</div>
+        <div class="delta up"> registrations aujourd'hui</div>
+      </div>
+      <div class="stat-card">
+        <div class="icon">📊</div>
+        <div class="label">Total utilisateurs</div>
+        <div class="value" id="statTotal">—</div>
+        <div class="delta up"> tous les comptes</div>
+      </div>
+      <div class="stat-card">
+        <div class="icon">💰</div>
+        <div class="label">Chiffre d'affaires</div>
+        <div class="value" id="statCA">—</div>
+        <div class="delta up"> FCFA validés</div>
+      </div>
+    </div>
+
+    <!-- Subscribers -->
+    <div class="section">
+      <div class="section-header" onclick="this.parentElement.classList.toggle('collapsed')">
+        <h2>👥 Abonnés (temps réel)</h2>
+        <span class="arrow">▼</span>
+      </div>
+      <div class="section-body" id="subsBody">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Pseudo</th><th>Plan</th><th>Ville</th><th>Langue</th><th>Expiration</th><th>Statut</th></tr></thead>
+            <tbody id="subsTable"><tr><td colspan="6" style="color:var(--soft);padding:20px;text-align:center">Chargement…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Payment links -->
+    <div class="section">
+      <div class="section-header" onclick="this.parentElement.classList.toggle('collapsed')">
+        <h2>🔗 Liens de paiement</h2>
+        <span class="arrow">▼</span>
+      </div>
+      <div class="section-body">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Réf.</th><th>Canal</th><th>Montant</th><th>Statut</th></tr></thead>
+            <tbody id="payTable"><tr><td colspan="4" style="color:var(--soft);padding:20px;text-align:center">Aucun lien…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Payment config -->
+    <div class="section">
+      <div class="section-header" onclick="this.parentElement.classList.toggle('collapsed')">
+        <h2>⚙️ Paramétrage paiements</h2>
+        <span class="arrow">▼</span>
+      </div>
+      <div class="section-body">
+        <div class="pay-config">
+          <!-- Wave -->
+          <div class="pay-block">
+            <h3>🌊 Wave</h3>
+            <div class="field">
+              <label>API Key</label>
+              <input id="cfg_WAVE_API_KEY" placeholder="wsk_...">
+            </div>
+            <div class="field">
+              <label>Webhook Secret</label>
+              <input id="cfg_WAVE_WEBHOOK_SECRET" placeholder="secret">
+            </div>
+            <div class="hint">Clés depuis dashboard.wave.com → Paramètres → Developer</div>
+          </div>
+          <!-- Orange Money -->
+          <div class="pay-block">
+            <h3>📶 Orange Money</h3>
+            <div class="field">
+              <label>Client ID</label>
+              <input id="cfg_ORANGE_CLIENT_ID" placeholder="client_id">
+            </div>
+            <div class="field">
+              <label>Client Secret</label>
+              <input id="cfg_ORANGE_CLIENT_SECRET" placeholder="client_secret">
+            </div>
+            <div class="field">
+              <label>Merchant Key</label>
+              <input id="cfg_ORANGE_MERCHANT_KEY" placeholder="merchant_key">
+            </div>
+            <div class="hint">Clés depuis Orange Developer Portal</div>
+          </div>
+          <!-- PayDunya -->
+          <div class="pay-block">
+            <h3>💳 PayDunya</h3>
+            <div class="field">
+              <label>API Key</label>
+              <input id="cfg_PAYDUNYA_API_KEY" placeholder="api_key">
+            </div>
+            <div class="field">
+              <label>API Token</label>
+              <input id="cfg_PAYDUNYA_API_TOKEN" placeholder="api_token">
+            </div>
+            <div class="hint">Clés depuis app.paydunya.com</div>
+          </div>
+          <!-- URL publique -->
+          <div class="pay-block">
+            <h3>🌐 URL publique</h3>
+            <div class="field">
+              <label>PUBLIC_BASE_URL</label>
+              <input id="cfg_PUBLIC_BASE_URL" placeholder="https://ecolemax.onrender.com">
+            </div>
+            <button class="btn btn-primary" onclick="saveConfig()">💾 Enregistrer la configuration</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let adminPass = localStorage.getItem("ecolemax_admin") || "";
+let pollTimer = null;
+
+function setAdmin(p){adminPass=p; if(p)localStorage.setItem("ecolemax_admin",p); else localStorage.removeItem("ecolemax_admin");}
+
+function api(path, opts){
+  opts=opts||{};
+  opts.headers=Object.assign({"Content-Type":"application/json","X-Admin-Password":adminPass},opts.headers||{});
+  return fetch(path,opts).then(r=>{
+    if(r.status===401){logout();throw new Error("401");}
+    return r.json();
+  });
+}
+
+function doLogin(){
+  const p=document.getElementById("passInput").value.trim();
+  if(!p)return;
+  api("/api/admin/stats").then(()=>{
+    setAdmin(p);
+    document.getElementById("login").classList.add("hidden");
+    document.getElementById("dash").classList.remove("hidden");
+    startPolling();
+  }).catch(e=>{
+    document.getElementById("loginErr").textContent="Mot de passe incorrect";
+  });
+}
+
+function logout(){
+  setAdmin("");
+  document.getElementById("login").classList.remove("hidden");
+  document.getElementById("dash").classList.add("hidden");
+  if(pollTimer){clearInterval(pollTimer);pollTimer=null;}
+}
+
+function startPolling(){
+  if(pollTimer)clearInterval(pollTimer);
+  fetchAll();
+  pollTimer=setInterval(fetchAll,3000);
+}
+
+function fetchAll(){
+  fetchStats();
+  fetchSubscribers();
+  fetchPayments();
+}
+
+function fetchStats(){
+  api("/api/admin/stats").then(s=>{
+    document.getElementById("statAbonnes").textContent=s.abonnes_actifs||0;
+    document.getElementById("statNouveaux").textContent=s.nouveaux_aujourdhui||0;
+    document.getElementById("statTotal").textContent=s.total_users||0;
+    document.getElementById("statCA").textContent=Math.round(s.ca||0).toLocaleString()+" FCFA";
+    document.getElementById("liveCount").textContent=s.abonnes_actifs||0;
+    document.getElementById("liveTime").textContent=new Date().toLocaleTimeString("fr-FR");
+  }).catch(()=>{});
+}
+
+function fetchSubscribers(){
+  api("/api/admin/subscribers").then(d=>{
+    const t=document.getElementById("subsTable");
+    if(!d.abonnes||d.abonnes.length===0){t.innerHTML='<tr><td colspan="6" style="color:var(--soft);padding:20px;text-align:center">Aucun abonné…</td></tr>';return;}
+    t.innerHTML=d.abonnes.map(s=>{
+      const exp=new Date(s.date_expiration);
+      const now=new Date();
+      const jours=Math.ceil((exp-now)/(1000*60*60*24));
+      const badge=jours>0?'<span class="badge green">Actif</span>':'<span class="badge red">Expiré</span>';
+      const planBadge=s.prix>0?'<span class="badge blue">'+s.plan+'</span>':'<span class="badge orange">Gratuit</span>';
+      return `<tr>
+        <td data-label="Pseudo"><strong>${s.pseudo}</strong></td>
+        <td data-label="Plan">${planBadge}</td>
+        <td data-label="Ville">${s.ville||'—'}</td>
+        <td data-label="Langue">${s.langue||'fr'}</td>
+        <td data-label="Expiration">${s.date_expiration||'—'}</td>
+        <td data-label="Statut">${badge}</td>
+      </tr>`;
+    }).join("");
+  }).catch(()=>{});
+}
+
+function fetchPayments(){
+  api("/api/admin/payment-links").then(d=>{
+    const t=document.getElementById("payTable");
+    if(!d.liens||d.liens.length===0){t.innerHTML='<tr><td colspan="4" style="color:var(--soft);padding:20px;text-align:center">Aucun lien…</td></tr>';return;}
+    t.innerHTML=d.liens.slice(0,10).map(l=>{
+      const badge=l.statut==='valide'?'<span class="badge green">Validé</span>':l.statut==='en_attente'?'<span class="badge orange">En attente</span>':'<span class="badge red">'+(l.statut||'?')+'</span>';
+      return `<tr><td data-label="Réf.">${l.reference||l.id}</td><td data-label="Canal">${l.canal}</td><td data-label="Montant">${Math.round(l.montant||0)} FCFA</td><td data-label="Statut">${badge}</td></tr>`;
+    }).join("");
+  }).catch(()=>{});
+}
+
+function saveConfig(){
+  const keys=["WAVE_API_KEY","WAVE_WEBHOOK_SECRET","ORANGE_CLIENT_ID","ORANGE_CLIENT_SECRET","ORANGE_MERCHANT_KEY","PAYDUNYA_API_KEY","PAYDUNYA_API_TOKEN","PUBLIC_BASE_URL"];
+  const cfg={};
+  keys.forEach(k=>{const v=document.getElementById("cfg_"+k).value.trim(); if(v)cfg[k]=v;});
+  api("/api/admin/config",{method:"POST",body:JSON.stringify({config:cfg})}).then(()=>{
+    toast("✅ Configuration enregistrée");
+  }).catch(()=>{
+    toast("Erreur: "+adminPass?"":"authentification","err");
+  });
+}
+
+function toast(msg,type){
+  const t=document.createElement("div");
+  t.className="toast"+(type==="err"?" err":"");
+  t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),3000);
+}
+
+// Auto-login si password en mémoire
+if(adminPass){
+  api("/api/admin/stats").then(()=>{
+    document.getElementById("login").classList.add("hidden");
+    document.getElementById("dash").classList.remove("hidden");
+    startPolling();
+  }).catch(()=>{});
+}
+document.getElementById("passInput").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});
+</script>
+</body>
+</html>
