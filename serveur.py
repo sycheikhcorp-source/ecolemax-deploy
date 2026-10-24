@@ -562,6 +562,18 @@ class Handler(BaseHTTPRequestHandler):
             rows = c.execute("SELECT * FROM notifications ORDER BY date DESC LIMIT 100").fetchall()
             c.close()
             return self.send_json({"notifications":[dict(r) for r in rows]})
+        if path == "/api/me":
+            u = get_user_by_token(self)
+            if not u: return self.send_json({"erreur":"Authentification requise"}, 401)
+            p = plan_actif(u)
+            c = db()
+            usage = c.execute("SELECT * FROM usages WHERE user_id=? AND date=?", (u["id"], datetime.datetime.now().strftime("%Y-%m-%d"))).fetchone()
+            nb_notif = c.execute("SELECT COUNT(*) as n FROM notifications WHERE user_id=? AND lu=0", (u["id"],)).fetchone()["n"]
+            nb_fav = c.execute("SELECT COUNT(*) as n FROM favoris WHERE user_id=?", (u["id"],)).fetchone()["n"]
+            c.close()
+            return self.send_json({"user":{"id":u["id"],"pseudo":u["pseudo"],"email":u["email"],"niveau":u["niveau"],"role":u["role"]},
+                                   "plan":p,"usage":dict(usage) if usage else None,
+                                   "notifications_non_lues":nb_notif,"favoris":nb_fav})
         if path.startswith("/api/"):
             return self.send_json({"erreur":"Méthode non autorisée"}, 405)
         # Fichiers statiques
@@ -833,19 +845,6 @@ class Handler(BaseHTTPRequestHandler):
             c.commit()
             c.close()
             return self.send_json({"ok":True})
-
-        if path == "/api/me":
-            u = get_user_by_token(self)
-            if not u: return self.send_json({"erreur":"Authentification requise"}, 401)
-            p = plan_actif(u)
-            c = db()
-            usage = c.execute("SELECT * FROM usages WHERE user_id=? AND date=?", (u["id"], datetime.datetime.now().strftime("%Y-%m-%d"))).fetchone()
-            nb_notif = c.execute("SELECT COUNT(*) as n FROM notifications WHERE user_id=? AND lu=0", (u["id"],)).fetchone()["n"]
-            nb_fav = c.execute("SELECT COUNT(*) as n FROM favoris WHERE user_id=?", (u["id"],)).fetchone()["n"]
-            c.close()
-            return self.send_json({"user":{"id":u["id"],"pseudo":u["pseudo"],"email":u["email"],"niveau":u["niveau"],"role":u["role"]},
-                                   "plan":p,"usage":dict(usage) if usage else None,
-                                   "notifications_non_lues":nb_notif,"favoris":nb_fav})
 
         if path.startswith("/api/"):
             return self.send_json({"erreur":"Route non trouvée"}, 404)
