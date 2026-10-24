@@ -13,6 +13,7 @@ import secrets
 import sqlite3
 import sys
 import hashlib
+import random
 import time
 import urllib.request
 import urllib.parse
@@ -75,6 +76,15 @@ def db():
 
 def init_db():
     c = db()
+    # Migration: ajouter colonnes email/telephone/bloque si elles n'existent pas
+    cols = [r["name"] for r in c.execute("PRAGMA table_info(users)").fetchall()]
+    if "email" not in cols:
+        c.execute("ALTER TABLE users ADD COLUMN email TEXT")
+    if "telephone" not in cols:
+        c.execute("ALTER TABLE users ADD COLUMN telephone TEXT")
+    if "bloque" not in cols:
+        c.execute("ALTER TABLE users ADD COLUMN bloque INTEGER DEFAULT 0")
+    c.commit()
     c.executescript("""
     CREATE TABLE IF NOT EXISTS plans (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -95,7 +105,17 @@ def init_db():
         niveau TEXT, ville TEXT, langue TEXT DEFAULT 'fr',
         plan_id INTEGER, date_expiration TEXT,
         token TEXT UNIQUE, date_creation TEXT,
-        parrain_id INTEGER
+        parrain_id INTEGER,
+        email TEXT,
+        telephone TEXT,
+        bloque INTEGER DEFAULT 0
+    );
+    CREATE TABLE IF NOT EXISTS password_reset (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        pseudo TEXT NOT NULL,
+        code TEXT NOT NULL,
+        date_creation TEXT,
+        date_expiration TEXT
     );
     CREATE TABLE IF NOT EXISTS payment_links (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -692,6 +712,32 @@ class Handler(BaseHTTPRequestHandler):
                 c.close()
                 return self.send_json({"config": cfg})
 
+            if path == "/api/admin/users":
+                if not is_admin(self):
+                    return self.send_json({"erreur": "Authentification admin requise"}, 401)
+                c = db()
+                rows = c.execute("SELECT id, pseudo, niveau, ville, langue, plan_id, date_expiration, date_creation, email, telephone, bloque FROM users ORDER BY date_creation DESC").fetchall()
+                plans_cache = {r["id"]: (r["nom"], r["prix"]) for r in c.execute("SELECT id, nom, prix FROM plans").fetchall()}
+                c.close()
+                users = []
+                for r in rows:
+                    p = plans_cache.get(r["plan_id"], ("—", 0))
+                    users.append({
+                        "id": r["id"],
+                        "pseudo": r["pseudo"],
+                        "niveau": r["niveau"],
+                        "ville": r["ville"],
+                        "langue": r["langue"],
+                        "plan": p[0],
+                        "plan_prix": p[1],
+                        "date_expiration": r["date_expiration"],
+                        "date_creation": r["date_creation"],
+                        "email": r["email"] or "",
+                        "telephone": r["telephone"] or "",
+                        "bloque": bool(r["bloque"])
+                    })
+                return self.send_json({"users": users, "total": len(users)})
+
             return self.send_json({"erreur": "NotFound"}, 404)
 
         # Static
@@ -712,16 +758,19 @@ class Handler(BaseHTTPRequestHandler):
                 c.close()
                 return self.send_json({"erreur": "Pseudo déjà pris"}, 409)
             pid_gratuit = c.execute("SELECT id FROM plans WHERE code='gratuit'").fetchone()[0]
-            c.execute("""INSERT INTO users (pseudo, mot_de_passe, niveau, ville, langue, plan_id, date_expiration, token, date_creation)
-                         VALUES (?,?,?,?,?,?,?,?,datetime('now'))""",
+            c.execute("""INSERT INTO users (pseudo, mot_de_passe, niveau, ville, langue, plan_id, date_expiration, token, date_creation, email, telephone)
+                         VALUES (?,?,?,?,?,?,?,?,datetime('now'),?,?)""",
                       (pseudo, hash_mdp(data.get("mot_de_passe", "")), data.get("niveau", ""),
                        data.get("ville", ""), data.get("langue", "fr"), pid_gratuit,
                        (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d"),
-                       secrets.token_hex(16)))
+                       secrets.token_hex(16),
+                       data.get("email", "").strip(),
+                       data.get("telephone", "").strip()))
             c.commit()
             uid = c.execute("SELECT last_insert_rowid()").fetchone()[0]
             tok = c.execute("SELECT token FROM users WHERE id=?", (uid,)).fetchone()[0]
             c.close()
+            log_sec(uid, "inscription", "Nouveau compte")
             return self.send_json({"ok": True, "user": {"id": uid, "pseudo": pseudo}, "token": tok})
 
         if path == "/api/login":
@@ -730,6 +779,9 @@ class Handler(BaseHTTPRequestHandler):
             if not row or row["mot_de_passe"] != hash_mdp(data.get("mot_de_passe", "")):
                 c.close()
                 return self.send_json({"erreur": "Identifiants invalides"}, 401)
+            if row["bloque"]:
+                c.close()
+                return self.send_json({"erreur": "Ce compte est bloqué. Contactez le support."}, 403)
             c.close()
             return self.send_json({"ok": True, "user": {"id": row["id"], "pseudo": row["pseudo"]}, "token": row["token"]})
 
@@ -889,6 +941,122 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json({"erreur": "Authentification requise"}, 401)
             log_sec(u["id"], data.get("type", "autre"), data.get("detail", ""))
             return self.send_json({"ok": True})
+
+        # --- Reset mot de passe ---
+        if path == "/api/reset-password/request":
+            pseudo = data.get("pseudo", "").strip()
+            contact = data.get("contact", "").strip()
+            c = db()
+            row = c.execute("SELECT * FROM users WHERE pseudo=?", (pseudo,)).fetchone()
+            if not row:
+                c.close()
+                return self.send_json({"erreur": "Pseudo introuvable"}, 404)
+            if not contact:
+                contact = row["telephone"] or row["email"] or ""
+            if not contact:
+                c.close()
+                return self.send_json({"erreur": "Aucun numéro de téléphone ou email enregistré. Contactez le support."}, 400)
+            # Vérifier que le contact correspond
+            if row["telephone"] and contact in row["telephone"]:
+                ok_contact = True
+            elif row["email"] and contact in row["email"]:
+                ok_contact = True
+            else:
+                c.close()
+                return self.send_json({"erreur": "Le numéro ou email ne correspond pas au compte"}, 400)
+            # Générer code 6 chiffres
+            code = str(random.randint(100000, 999999))
+            c.execute("DELETE FROM password_reset WHERE pseudo=?", (pseudo,))
+            c.execute("INSERT INTO password_reset (pseudo, code, date_creation, date_expiration) VALUES (?,?,datetime('now'),datetime('now','+15 minutes'))",
+                      (pseudo, code))
+            c.commit()
+            c.close()
+            # Retourner le code (dans la vraie vie, on l'envoie par SMS/WhatsApp/email)
+            return self.send_json({"ok": True, "message": "Code de vérification envoyé",
+                                   "code": code,  # Démo: code retourné car pas de service SMS
+                                   "contact": contact,
+                                   "note": "Code valable 15 minutes. (Démo: code affiché car pas de service SMS/WhatsApp configuré)"})
+
+        if path == "/api/reset-password/verify":
+            pseudo = data.get("pseudo", "").strip()
+            code = data.get("code", "").strip()
+            nouveau_mdp = data.get("mot_de_passe", "")
+            c = db()
+            row = c.execute("SELECT * FROM password_reset WHERE pseudo=? ORDER BY id DESC", (pseudo,)).fetchone()
+            if not row:
+                c.close()
+                return self.send_json({"erreur": "Aucune demande de reset. Faites une demande d'abord."}, 400)
+            if row["code"] != code:
+                c.close()
+                return self.send_json({"erreur": "Code incorrect"}, 400)
+            if datetime.now() > datetime.strptime(row["date_expiration"], "%Y-%m-%d %H:%M:%S"):
+                c.close()
+                return self.send_json({"erreur": "Code expiré. Faites une nouvelle demande."}, 400)
+            if len(nouveau_mdp) < 8 or not re.search(r"[a-zA-Z]", nouveau_mdp) or not re.search(r"[0-9]", nouveau_mdp):
+                c.close()
+                return self.send_json({"erreur": "Mot de passe : 8+ caractères, lettre + chiffre"}, 400)
+            c.execute("UPDATE users SET mot_de_passe=? WHERE pseudo=?", (hash_mdp(nouveau_mdp), pseudo))
+            c.execute("DELETE FROM password_reset WHERE pseudo=?", (pseudo,))
+            c.commit()
+            uid = c.execute("SELECT id FROM users WHERE pseudo=?", (pseudo,)).fetchone()[0]
+            c.close()
+            log_sec(uid, "reset_mdp", "Mot de passe réinitialisé")
+            return self.send_json({"ok": True, "message": "Mot de passe réinitialisé. Vous pouvez vous connecter."})
+
+        # --- Admin: bloquer / supprimer / lister utilisateurs ---
+        if path == "/api/admin/block-user":
+            if not is_admin(self):
+                return self.send_json({"erreur": "Authentification admin requise"}, 401)
+            target_pseudo = data.get("pseudo", "").strip()
+            bloque = 1 if data.get("bloque") else 0
+            c = db()
+            row = c.execute("SELECT id FROM users WHERE pseudo=?", (target_pseudo,)).fetchone()
+            if not row:
+                c.close()
+                return self.send_json({"erreur": "Utilisateur introuvable"}, 404)
+            c.execute("UPDATE users SET bloque=? WHERE pseudo=?", (bloque, target_pseudo))
+            c.commit()
+            c.close()
+            log_sec(row["id"], "admin_block", f"Blocage={bloque}")
+            return self.send_json({"ok": True, "message": f"Utilisateur {target_pseudo} {'bloqué' if bloque else 'débloqué'}"})
+
+        if path == "/api/admin/delete-user":
+            if not is_admin(self):
+                return self.send_json({"erreur": "Authentification admin requise"}, 401)
+            target_pseudo = data.get("pseudo", "").strip()
+            c = db()
+            row = c.execute("SELECT id FROM users WHERE pseudo=?", (target_pseudo,)).fetchone()
+            if not row:
+                c.close()
+                return self.send_json({"erreur": "Utilisateur introuvable"}, 404)
+            uid = row["id"]
+            c.execute("DELETE FROM users WHERE id=?", (uid,))
+            c.execute("DELETE FROM payment_links WHERE user_id=?", (uid,))
+            c.execute("DELETE FROM ai_usage WHERE user_id=?", (uid,))
+            c.execute("DELETE FROM security_logs WHERE user_id=?", (uid,))
+            c.execute("DELETE FROM usage_journaliere WHERE user_id=?", (uid,))
+            c.execute("DELETE FROM password_reset WHERE pseudo=?", (target_pseudo,))
+            c.commit()
+            c.close()
+            return self.send_json({"ok": True, "message": f"Utilisateur {target_pseudo} supprimé"})
+
+        if path == "/api/admin/reset-user-password":
+            if not is_admin(self):
+                return self.send_json({"erreur": "Authentification admin requise"}, 401)
+            target_pseudo = data.get("pseudo", "").strip()
+            nouveau_mdp = data.get("mot_de_passe", "Motdepasse1")
+            if len(nouveau_mdp) < 8 or not re.search(r"[a-zA-Z]", nouveau_mdp) or not re.search(r"[0-9]", nouveau_mdp):
+                return self.send_json({"erreur": "Mot de passe : 8+ caractères, lettre + chiffre"}, 400)
+            c = db()
+            row = c.execute("SELECT id FROM users WHERE pseudo=?", (target_pseudo,)).fetchone()
+            if not row:
+                c.close()
+                return self.send_json({"erreur": "Utilisateur introuvable"}, 404)
+            c.execute("UPDATE users SET mot_de_passe=? WHERE pseudo=?", (hash_mdp(nouveau_mdp), target_pseudo))
+            c.commit()
+            c.close()
+            log_sec(row["id"], "admin_reset", "Admin a réinitialisé le mot de passe")
+            return self.send_json({"ok": True, "message": f"Mot de passe de {target_pseudo} réinitialisé"})
 
         return self.send_json({"erreur": "NotFound"}, 404)
 

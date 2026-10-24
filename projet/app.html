@@ -172,6 +172,14 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
         <input type="password" id="mdp" placeholder="8+ caractères, lettre + chiffre" autocomplete="new-password">
       </div>
       <div class="field">
+        <label>Email (optionnel)</label>
+        <input type="email" id="email" placeholder="Ex: aminata@gmail.com" autocomplete="email">
+      </div>
+      <div class="field">
+        <label>Téléphone / WhatsApp (recommandé)</label>
+        <input type="tel" id="telephone" placeholder="Ex: +221 770 00 00 00" autocomplete="tel">
+      </div>
+      <div class="field">
         <label>Niveau</label>
         <select id="niveau">
           <option value="Primaire">Primaire</option>
@@ -206,6 +214,7 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
         <label>Mot de passe</label>
         <input type="password" id="loginMdp" placeholder="Mot de passe" autocomplete="current-password">
       </div>
+      <button class="btn btn-ghost" style="font-size:13px;padding:8px" onclick="showReset()">🔑 Mot de passe oublié ?</button>
     </div>
 
     <button class="btn btn-primary" id="authBtn" onclick="doAuth()">
@@ -219,6 +228,47 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
   <p style="margin-top:8px;font-size:10px;color:var(--ink-soft);text-align:center">
     Créé par SycheikhCorp © 2026
   </p>
+</div>
+
+<!-- ==================== RESET PASSWORD SCREEN ==================== -->
+<div class="auth-wrap screen" id="screen-reset">
+  <div class="auth-logo">🔐</div>
+  <div class="auth-title">Réinitialisation</div>
+  <div class="auth-sub">Mot de passe oublié ?</div>
+
+  <div id="resetStep1">
+    <div class="auth-err" id="resetErr"></div>
+    <div class="auth-ok" id="resetOk"></div>
+    <form class="auth-form" onsubmit="return false">
+      <div class="field">
+        <label>Pseudo</label>
+        <input type="text" id="resetPseudo" placeholder="Ex: Aminata">
+      </div>
+      <div class="field">
+        <label>Téléphone ou email</label>
+        <input type="text" id="resetContact" placeholder="Téléphone ou email enregistré">
+      </div>
+      <button class="btn btn-primary" onclick="resetRequest()">📨 Envoyer le code</button>
+    </form>
+  </div>
+
+  <div id="resetStep2" class="hidden">
+    <div class="auth-err" id="resetErr2"></div>
+    <div class="auth-ok" id="resetOk2"></div>
+    <form class="auth-form" onsubmit="return false">
+      <div class="field">
+        <label>Code de vérification (6 chiffres)</label>
+        <input type="text" id="resetCode" placeholder="Code reçu par SMS/WhatsApp" maxlength="6">
+      </div>
+      <div class="field">
+        <label>Nouveau mot de passe</label>
+        <input type="password" id="resetMdp" placeholder="8+ caractères, lettre + chiffre">
+      </div>
+      <button class="btn btn-primary" onclick="resetVerify()">✅ Réinitialiser</button>
+    </form>
+  </div>
+
+  <button class="btn btn-ghost" style="margin-top:12px" onclick="switchAuth('login')">← Retour</button>
 </div>
 
 <!-- ==================== HOME SCREEN ==================== -->
@@ -436,13 +486,15 @@ async function doAuth(){
   if(mode==="register"){
     const pseudo = document.getElementById("pseudo").value.trim();
     const mdp = document.getElementById("mdp").value;
+    const email = document.getElementById("email").value.trim();
+    const telephone = document.getElementById("telephone").value.trim();
     const niveau = document.getElementById("niveau").value;
     const ville = document.getElementById("ville").value.trim();
     const langue = document.getElementById("langue").value;
     if(pseudo.length<3){errEl.textContent="Pseudo trop court (3+ caractères)";errEl.classList.add("show");return;}
     if(mdp.length<8||!/[a-zA-Z]/.test(mdp)||!/[0-9]/.test(mdp)){errEl.textContent="Mot de passe : 8+ caractères, lettre + chiffre";errEl.classList.add("show");return;}
     try{
-      const r = await fetch(API+"/api/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo,mot_de_passe:mdp,niveau,ville,langue})});
+      const r = await fetch(API+"/api/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo,mot_de_passe:mdp,email,telephone,niveau,ville,langue})});
       const d = await r.json();
       if(!r.ok){errEl.textContent=d.erreur||"Erreur inscription";errEl.classList.add("show");return;}
       token=d.token;user=d.user;
@@ -477,6 +529,55 @@ function logout(){
   document.querySelectorAll(".screen").forEach(s=>{if(s.id!=="screen-auth")s.classList.remove("active");});
 }
 
+// ==================== RESET PASSWORD ====================
+function showReset(){
+  document.getElementById("screen-auth").classList.remove("active");
+  document.getElementById("screen-reset").classList.add("active");
+  document.getElementById("resetStep1").classList.remove("hidden");
+  document.getElementById("resetStep2").classList.add("hidden");
+  document.getElementById("resetErr").classList.remove("show");
+  document.getElementById("resetOk").classList.remove("show");
+  document.getElementById("resetErr2").classList.remove("show");
+  document.getElementById("resetOk2").classList.remove("show");
+}
+
+async function resetRequest(){
+  const pseudo = document.getElementById("resetPseudo").value.trim();
+  const contact = document.getElementById("resetContact").value.trim();
+  const errEl = document.getElementById("resetErr");
+  const okEl = document.getElementById("resetOk");
+  errEl.classList.remove("show"); okEl.classList.remove("show");
+  if(!pseudo||!contact){errEl.textContent="Remplissez pseudo + contact";errEl.classList.add("show");return;}
+  try{
+    const r = await fetch(API+"/api/reset-password/request",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo,contact})});
+    const d = await r.json();
+    if(!r.ok){errEl.textContent=d.erreur||"Erreur";errEl.classList.add("show");return;}
+    okEl.innerHTML = `✅ ${d.message}<br><br>Code: <strong style="font-size:20px;color:#fff">${d.code}</strong><br><span style="font-size:11px">${d.note}</span>`;
+    okEl.classList.add("show");
+    document.getElementById("resetStep1").classList.add("hidden");
+    document.getElementById("resetStep2").classList.remove("hidden");
+  }catch(e){errEl.textContent="Serveur inaccessible";errEl.classList.add("show");}
+}
+
+async function resetVerify(){
+  const pseudo = document.getElementById("resetPseudo").value.trim();
+  const code = document.getElementById("resetCode").value.trim();
+  const mdp = document.getElementById("resetMdp").value;
+  const errEl = document.getElementById("resetErr2");
+  const okEl = document.getElementById("resetOk2");
+  errEl.classList.remove("show"); okEl.classList.remove("show");
+  if(!code||!mdp){errEl.textContent="Remplissez code + mot de passe";errEl.classList.add("show");return;}
+  if(mdp.length<8||!/[a-zA-Z]/.test(mdp)||!/[0-9]/.test(mdp)){errEl.textContent="Mot de passe : 8+ caractères, lettre + chiffre";errEl.classList.add("show");return;}
+  try{
+    const r = await fetch(API+"/api/reset-password/verify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo,code,mot_de_passe:mdp})});
+    const d = await r.json();
+    if(!r.ok){errEl.textContent=d.erreur||"Erreur";errEl.classList.add("show");return;}
+    okEl.textContent="✅ Mot de passe réinitialisé ! Connectez-vous.";
+    okEl.classList.add("show");
+    setTimeout(()=>{switchAuth("login");},1500);
+  }catch(e){errEl.textContent="Serveur inaccessible";errEl.classList.add("show");}
+}
+
 async function enterApp(){
   document.getElementById("screen-auth").classList.remove("active");
   document.getElementById("tabbar").classList.remove("hidden");
@@ -485,25 +586,35 @@ async function enterApp(){
 }
 
 // ==================== HOME ====================
+let currentPlan = null;
+
 async function refreshSubscription(){
   try{
     const r = await fetch(API+"/api/subscription/me",{headers:{"Authorization":"Bearer "+token}});
     const d = await r.json();
     const pseudo = localStorage.getItem("ecolemax_pseudo")||"";
     document.getElementById("greetName").textContent = "👋 "+pseudo;
-    if(d.abonne&&d.plan){
-      document.getElementById("greetSub").textContent = d.plan.nom+" · exp. "+d.plan.date_expiration;
-      document.getElementById("bannerSub").textContent = "Plan actif : "+d.plan.nom;
-      document.getElementById("planName").textContent = d.plan.nom;
-      document.getElementById("planExp").textContent = d.plan.date_expiration;
+    currentPlan = d.abonne && d.plan ? d.plan : null;
+    if(currentPlan){
+      document.getElementById("greetSub").textContent = currentPlan.nom+" · exp. "+currentPlan.date_expiration;
+      document.getElementById("bannerSub").textContent = "✅ Plan "+currentPlan.nom+" actif — "+currentPlan.limite_ia_jour+" questions IA/jour";
+      document.getElementById("planName").textContent = currentPlan.nom;
+      document.getElementById("planExp").textContent = currentPlan.date_expiration;
       document.getElementById("planStatus").textContent = "✅ Actif";
       document.getElementById("planStatus").className = "v ok";
+      document.getElementById("quotaIA").textContent = currentPlan.limite_ia_jour+"/jour";
+      document.getElementById("quotaPhoto").textContent = currentPlan.photo_jour+"/jour";
+      document.getElementById("quotaBar").style.width = "50%";
     }else{
       document.getElementById("greetSub").textContent = "Essai gratuit 24 h";
-      document.getElementById("planName").textContent = "Gratuit (essai)";
-      document.getElementById("planExp").textContent = "24 h";
+      document.getElementById("bannerSub").textContent = "Toutes les fonctions débloquées pendant 24 h. Passe au plan payant pour continuer.";
+      document.getElementById("planName").textContent = "Gratuit (essai 24h)";
+      document.getElementById("planExp").textContent = "24 heures";
       document.getElementById("planStatus").textContent = "⏳ Essai gratuit";
       document.getElementById("planStatus").className = "v warn";
+      document.getElementById("quotaIA").textContent = "24/jour";
+      document.getElementById("quotaPhoto").textContent = "1/jour";
+      document.getElementById("quotaBar").style.width = "100%";
     }
   }catch(e){
     document.getElementById("greetSub").textContent = "Connexion...";

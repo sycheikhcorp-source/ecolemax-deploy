@@ -67,6 +67,13 @@ tr:hover td{background:var(--card2)}
 /* Payment config */
 .pay-config{display:grid;gap:16px}
 .pay-block{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:16px}
+.btn-mini{background:var(--card2);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;cursor:pointer;color:var(--text);margin-right:4px;white-space:nowrap}
+.btn-mini:hover{background:var(--border)}
+.btn-block{background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.3);color:#fca5a5}
+.btn-unblock{background:rgba(34,197,94,.15);border-color:rgba(34,197,94,.3);color:#86efac}
+.btn-reset{background:rgba(59,130,246,.15);border-color:rgba(59,130,246,.3);color:#93c5fd}
+.btn-delete{background:rgba(239,68,68,.2);border-color:rgba(239,68,68,.4);color:#fca5a5}
+.dashboard-footer{text-align:center;padding:24px;font-size:12px;color:var(--soft);border-top:1px solid var(--border);margin-top:20px}
 .pay-block h3{font-size:14px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
 .pay-block .field{margin-bottom:12px}
 .pay-block .field label{display:block;font-size:12px;color:var(--soft);margin-bottom:4px}
@@ -164,6 +171,22 @@ tr:hover td{background:var(--card2)}
       </div>
     </div>
 
+    <!-- Users management -->
+    <div class="section">
+      <div class="section-header" onclick="this.parentElement.classList.toggle('collapsed')">
+        <h2>👤 Gérer les utilisateurs</h2>
+        <span class="arrow">▼</span>
+      </div>
+      <div class="section-body" id="usersBody">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Pseudo</th><th>Niveau</th><th>Ville</th><th>Plan</th><th>Contact</th><th>Statut</th><th>Actions</th></tr></thead>
+            <tbody id="usersTable"><tr><td colspan="7" style="color:var(--soft);padding:20px;text-align:center">Chargement…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- Payment links -->
     <div class="section">
       <div class="section-header" onclick="this.parentElement.classList.toggle('collapsed')">
@@ -244,6 +267,7 @@ tr:hover td{background:var(--card2)}
       </div>
     </div>
   </div>
+  <div class="dashboard-footer">📚 ÉcoleMax — Créé par <strong>SycheikhCorp</strong> © 2026</div>
 </div>
 
 <script>
@@ -292,6 +316,7 @@ function fetchAll(){
   fetchStats();
   fetchSubscribers();
   fetchPayments();
+  fetchUsers();
 }
 
 function fetchStats(){
@@ -325,6 +350,54 @@ function fetchSubscribers(){
       </tr>`;
     }).join("");
   }).catch(()=>{});
+}
+
+function fetchUsers(){
+  api("/api/admin/users").then(d=>{
+    const t=document.getElementById("usersTable");
+    if(!d.users||d.users.length===0){t.innerHTML='<tr><td colspan="7" style="color:var(--soft);padding:20px;text-align:center">Aucun utilisateur…</td></tr>';return;}
+    t.innerHTML=d.users.map(u=>{
+      const badge=u.bloque?'<span class="badge red">🚫 Bloqué</span>':'<span class="badge green">✅ Actif</span>';
+      const planBadge=u.plan_prix>0?'<span class="badge blue">'+u.plan+'</span>':'<span class="badge orange">Gratuit</span>';
+      const contact=u.telephone?('📱 '+u.telephone):(u.email?('📧 '+u.email):'—');
+      return `<tr>
+        <td data-label="Pseudo"><strong>${u.pseudo}</strong></td>
+        <td data-label="Niveau">${u.niveau||'—'}</td>
+        <td data-label="Ville">${u.ville||'—'}</td>
+        <td data-label="Plan">${planBadge}</td>
+        <td data-label="Contact">${contact}</td>
+        <td data-label="Statut">${badge}</td>
+        <td data-label="Actions">
+          <button class="btn-mini ${u.bloque?'btn-unblock':'btn-block'}" onclick="blockUser('${u.pseudo}',${!u.bloque})">${u.bloque?'Débloquer':'Bloquer'}</button>
+          <button class="btn-mini btn-reset" onclick="resetUserPwd('${u.pseudo}')">🔑</button>
+          <button class="btn-mini btn-delete" onclick="deleteUser('${u.pseudo}')">🗑️</button>
+        </td>
+      </tr>`;
+    }).join("");
+  }).catch(()=>{});
+}
+
+function blockUser(pseudo,bloque){
+  api("/api/admin/block-user",{method:"POST",body:JSON.stringify({pseudo,bloque})}).then(d=>{
+    toast(d.message||"✅ Mise à jour");
+    fetchUsers();
+  }).catch(()=>toast("Erreur","err"));
+}
+
+function deleteUser(pseudo){
+  if(!confirm("⚠️ Supprimer le compte « "+pseudo+" » ?\n\nCeci est irréversible."))return;
+  api("/api/admin/delete-user",{method:"POST",body:JSON.stringify({pseudo})}).then(d=>{
+    toast(d.message||"✅ Supprimé");
+    fetchUsers();
+  }).catch(()=>toast("Erreur","err"));
+}
+
+function resetUserPwd(pseudo){
+  const mdp=prompt("Nouveau mot de passe pour « "+pseudo+" »:\n(8+ caractères, lettre + chiffre)");
+  if(!mdp)return;
+  api("/api/admin/reset-user-password",{method:"POST",body:JSON.stringify({pseudo,mot_de_passe:mdp})}).then(d=>{
+    toast(d.message||"✅ Réinitialisé");
+  }).catch(()=>toast("Erreur","err"));
 }
 
 function fetchPayments(){
