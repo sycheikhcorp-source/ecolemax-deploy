@@ -15,6 +15,8 @@ PORT = int(os.environ.get("PORT", 8000))
 DB_PATH = os.environ.get("DB_PATH", os.path.join(os.path.dirname(os.path.abspath(__file__)), "ecolemax.db"))
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "ecolemax2026")
 POLLINATIONS_URL = "https://text.pollinations.ai/openai"
+OVH_AI_URL = "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/chat/completions"
+OVH_AI_MODEL = "meta-llama/Llama-3.3-70B-Instruct"
 POLLINATIONS_REFERER = "https://ecolemax.onrender.com"
 
 # ─────────────────────────────────────────────
@@ -449,16 +451,29 @@ _pollinations_lock = threading.Lock()
 _last_pollinations_call = 0
 _POLLINATIONS_MIN_INTERVAL = 5  # secondes entre deux appels (contourne rate-limit sans bloquer)
 
-def _pollinations_call(messages, max_tokens=600, timeout=25):
-    """Appel Pollinations avec retry + backoff + rate-limiter."""
+def _ai_call(messages, max_tokens=600, timeout=25):
+    """Appel IA : OVH AI (rapide, gratuit) → Pollinations /openai → repli."""
+    # ── 1. OVH AI (Llama 3.3 70B, gratuit, sans clé) ──
+    for attempt in range(3):
+        try:
+            req = urllib.request.Request(
+                OVH_AI_URL,
+                data=json.dumps({"model": OVH_AI_MODEL, "messages": messages, "max_tokens": max_tokens}).encode(),
+                headers={"Content-Type": "application/json"})
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                data = json.loads(r.read().decode())
+            return data["choices"][0]["message"]["content"]
+        except Exception as e:
+            if attempt < 2: time.sleep(1.5 * (attempt + 1))
+    # ── 2. Pollinations /openai (fallback) ──
     global _last_pollinations_call
-    for attempt in range(4):
+    for attempt in range(3):
         try:
             with _pollinations_lock:
                 now_ts = time.time()
                 if now_ts - _last_pollinations_call < _POLLINATIONS_MIN_INTERVAL:
                     wait = _POLLINATIONS_MIN_INTERVAL - (now_ts - _last_pollinations_call)
-                    time.sleep(min(wait, 35))
+                    time.sleep(min(wait, 10))
                 _last_pollinations_call = time.time()
             req = urllib.request.Request(
                 POLLINATIONS_URL,
@@ -468,8 +483,7 @@ def _pollinations_call(messages, max_tokens=600, timeout=25):
                 data = json.loads(r.read().decode())
             return data["choices"][0]["message"]["content"]
         except Exception as e:
-            if attempt < 3:
-                time.sleep(2 * (attempt + 1))  # backoff: 2s, 4s, 6s
+            if attempt < 2: time.sleep(2 * (attempt + 1))
     return None
 
 def reponse_ia(question, plan=None):
@@ -486,7 +500,7 @@ def reponse_ia(question, plan=None):
     # 3. Pollinations IA avec retry
     messages = [{"role":"system","content":"Tu es Professeur IA d'ÉcoleMax. Tu réponds en français, pédagogique, bref et clair. Adapte ton niveau à l'élève (CM1 à Université). Structure : 1) Réponse directe, 2) Explication, 3) Étapes ou exemple si nécessaire. Pour les maths : donne la méthode. Pour les langues : donne la traduction + usage. Pour les sciences : donne la définition + exemple concret. Sois concis (max 150 mots)."},
                 {"role":"user","content":question}]
-    content = _pollinations_call(messages, max_tokens=600, timeout=25)
+    content = _ai_call(messages, max_tokens=600, timeout=25)
     if content:
         return {"reponse": content, "source": "IA"}
     return {"reponse": "⚠️ IA momentanément saturée (trop d'élèves en même temps). Essaye un calcul (2+2), ou demande un sujet du cours. Réessaille dans 30 secondes.",
@@ -500,7 +514,7 @@ def reponse_ia_photo(question, image_b64, plan=None):
                     {"type":"text","text":question},
                     {"type":"image_url","image_url":{"url":f"data:image/jpeg;base64,{image_b64}"}}
                 ]}]
-    content = _pollinations_call(messages, max_tokens=700, timeout=30)
+    content = _ai_call(messages, max_tokens=700, timeout=30)
     if content:
         return {"reponse": content, "source": "IA Vision"}
     return {"reponse": "⚠️ IA Vision momentanément saturée. Vérifie la luminosité et reprends une photo claire, ou envoie l'énoncé en texte. Réessaille dans 30 secondes.", "source": "hors ligne"}
@@ -624,6 +638,79 @@ class Handler(BaseHTTPRequestHandler):
             ex = c.execute("SELECT * FROM exercises").fetchall()
             c.close()
             return self.send_json({"sujets":[dict(r) for r in sujets], "cours":[dict(r) for r in cours], "exercices":[dict(r) for r in ex]})
+        if path == "/api/admin/user/block":
+            if self.headers.get("X-Admin-Password","") != ADMIN_PASSWORD:
+                return self.send_json({"erreur":"Non autorisé"}, 403)
+            uid = data.get("user_id")
+            c = db()
+            u = c.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone()
+            if not u: c.close(); return self.send_json({"erreur":"Utilisateur non trouvé"}, 404)
+            c.execute("DELETE FROM sessions WHERE user_id=?", (uid,))
+            c.execute("UPDATE users SET role='bloque' WHERE id=?", (uid,))
+            c.commit(); c.close()
+            log_sec(1, "admin_action", f"Utilisateur {uid} bloqué")
+            return self.send_json({"ok":True, "message":"Utilisateur bloqué"})
+
+        if path == "/api/admin/user/delete":
+            if self.headers.get("X-Admin-Password","") != ADMIN_PASSWORD:
+                return self.send_json({"erreur":"Non autorisé"}, 403)
+            uid = data.get("user_id")
+            c = db()
+            u = c.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone()
+            if not u: c.close(); return self.send_json({"erreur":"Utilisateur non trouvé"}, 404)
+            c.execute("DELETE FROM sessions WHERE user_id=?", (uid,))
+            c.execute("DELETE FROM favoris WHERE user_id=?", (uid,))
+            c.execute("DELETE FROM notifications WHERE user_id=?", (uid,))
+            c.execute("DELETE FROM usages WHERE user_id=?", (uid,))
+            c.execute("DELETE FROM abonnements WHERE user_id=?", (uid,))
+            c.execute("DELETE FROM paiements WHERE user_id=?", (uid,))
+            c.execute("DELETE FROM results WHERE user_id=?", (uid,))
+            c.execute("DELETE FROM support WHERE user_id=?", (uid,))
+            c.execute("DELETE FROM users WHERE id=?", (uid,))
+            c.commit(); c.close()
+            log_sec(1, "admin_action", f"Utilisateur {uid} supprimé")
+            return self.send_json({"ok":True, "message":"Utilisateur supprimé"})
+
+        if path == "/api/admin/abonnement/control":
+            if self.headers.get("X-Admin-Password","") != ADMIN_PASSWORD:
+                return self.send_json({"erreur":"Non autorisé"}, 403)
+            c = db()
+            expired = c.execute("SELECT * FROM abonnements WHERE statut='actif' AND (expire='' OR date(expire)<date('now'))").fetchall()
+            pending = c.execute("SELECT * FROM abonnements WHERE statut='en_attente'").fetchall()
+            no_sub = c.execute("SELECT id,pseudo,email FROM users WHERE NOT EXISTS(SELECT 1 FROM abonnements a WHERE a.user_id=users.id AND a.statut='actif')").fetchall()
+            to_renew = c.execute("SELECT * FROM abonnements WHERE statut='actif' AND date(expire) BETWEEN date('now') AND date('now','+3 days')").fetchall()
+            c.close()
+            return self.send_json({
+                "expires":[dict(r) for r in expired],
+                "en_attente":[dict(r) for r in pending],
+                "sans_abonnement":[dict(r) for r in no_sub],
+                "a_renouveler":[dict(r) for r in to_renew],
+                "stats":{
+                    "expires_count":len(expired),
+                    "attente_count":len(pending),
+                    "sans_abonnement_count":len(no_sub),
+                    "renouvellement_count":len(to_renew)
+                }
+            })
+
+        
+        if path == "/api/admin/abonnement/confirm":
+            if self.headers.get("X-Admin-Password","") != ADMIN_PASSWORD:
+                return self.send_json({"erreur":"Non autorisé"}, 403)
+            uid = data.get("user_id")
+            plan_code = data.get("plan","")
+            c = db()
+            plan = c.execute("SELECT * FROM plans WHERE code=?", (plan_code,)).fetchone()
+            if not plan: c.close(); return self.send_json({"erreur":"Plan non trouvé"}, 404)
+            u = c.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone()
+            if not u: c.close(); return self.send_json({"erreur":"Utilisateur non trouvé"}, 404)
+            debut = datetime.datetime.now().isoformat()
+            expire = (datetime.datetime.now() + datetime.timedelta(days=plan["duree_jours"])).isoformat()
+            c.execute("UPDATE abonnements SET statut='actif', debut=?, expire=? WHERE user_id=?", (debut, expire, uid))
+            c.commit(); c.close()
+            log_sec(1, "admin_action", f"Admin a confirmé abonnement {plan_code} pour user {uid}")
+            return self.send_json({"ok":True, "message":f"Abonnement {plan['nom']} confirmé pour {u['pseudo']}"})
+
         if path == "/api/admin/supports":
             if self.headers.get("X-Admin-Password","") != ADMIN_PASSWORD:
                 return self.send_json({"erreur":"Non autorisé"}, 403)

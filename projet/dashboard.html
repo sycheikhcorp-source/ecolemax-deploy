@@ -160,6 +160,7 @@ tr:hover{background:var(--bg)}
       <div class="nav-item" data-view="supports" onclick="goView('supports')"><span class="ic">💬</span> Support</div>
       <div class="nav-item" data-view="rapports" onclick="goView('rapports')"><span class="ic">📋</span> Rapports</div>
       <div class="nav-item" data-view="admins" onclick="goView('admins')"><span class="ic">🛡️</span> Administrateurs</div>
+      <div class="nav-item" data-view="control" onclick="goView('control')"><span class="ic">🔔</span> Contrôle abonnements</div>
       <div class="nav-item" data-view="journaux" onclick="goView('journaux')"><span class="ic">📜</span> Journaux</div>
     </nav>
     <div class="sidebar-footer">
@@ -230,6 +231,7 @@ const VIEWS={
   supports:{title:"💬 Support",render:renderSupports},
   rapports:{title:"📋 Rapports",render:renderRapports},
   admins:{title:"🛡️ Administrateurs",render:renderAdmins},
+  control:{title:"🔔 Contrôle abonnements",render:renderControl},
   journaux:{title:"📜 Journaux",render:renderJournaux},
 };
 function goView(v){
@@ -335,7 +337,11 @@ async function renderUsers(){
   users.forEach(u=>{tb.innerHTML+=`<tr data-search="${u.pseudo} ${u.email||''} ${u.niveau}">
     <td>${u.id}</td><td>${u.pseudo}</td><td>${u.email||'—'}</td><td>${u.niveau}</td>
     <td><span class="badge ${u.role==='eleve'?'act':'ok'}">${u.role}</span></td>
-    <td>${(u.created_at||'').substring(0,10)}</td></tr>`;});
+    <td>${(u.created_at||'').substring(0,10)}</td>
+    <td>
+      <button class="btn btn-outline btn-sm" onclick="blockUser(${u.id},\'${u.pseudo}\')" title="Bloquer">🚫</button>
+      <button class="btn btn-outline btn-sm" style="color:var(--err);border-color:var(--err)" onclick="deleteUser(${u.id},\'${u.pseudo}\')" title="Supprimer">🗑️</button>
+    </td></tr>`;});
 }
 function filterUsers(q){
   q=q.toLowerCase();
@@ -593,6 +599,56 @@ async function renderJournaux(){
 
 // ── Init ──
 if(ADMIN){initDashboard();}
+
+// ── CONTRÔLE ABONNEMENTS ──
+async function renderControl(){
+  const c=document.getElementById("viewContent");c.innerHTML="<div style='color:var(--ink-soft)'>Chargement...</div>";
+  const d=await apiAdmin("/api/admin/abonnement/control");
+  const s=d.stats||{};
+  c.innerHTML=`
+    <div class="stat-grid">
+      <div class="stat-card" style="border-color:var(--err)"><div class="ic">❌</div><div class="v">${s.expires_count||0}</div><div class="l">Abonnements expirés</div></div>
+      <div class="stat-card" style="border-color:var(--amber)"><div class="ic">⏳</div><div class="v">${s.attente_count||0}</div><div class="l">Paiements en attente</div></div>
+      <div class="stat-card"><div class="ic">👤</div><div class="v">${s.sans_abonnement_count||0}</div><div class="l">Sans abonnement actif</div></div>
+      <div class="stat-card" style="border-color:var(--vert)"><div class="ic">🔄</div><div class="v">${s.renouvellement_count||0}</div><div class="l">À renouveler (3 jours)</div></div>
+    </div>
+    <div class="card"><h3>📋 Abonnements expirés</h3>${d.expires.length?'<div id="expList"></div>':'<p style="color:var(--ink-soft)">Aucun abonnement expiré.</p>'}</div>
+    <div class="card"><h3>⏳ Paiements en attente</h3>${d.en_attente.length?'<div id="attList"></div>':'<p style="color:var(--ink-soft)">Aucun paiement en attente.</p>'}</div>
+    <div class="card"><h3>🔄 À renouveler (3 jours)</h3>${d.a_renouveler.length?'<div id="renList"></div>':'<p style="color:var(--ink-soft)">Aucun abonnement à renouveler.</p>'}</div>
+    <div class="card"><h3>👤 Utilisateurs sans abonnement</h3>${d.sans_abonnement.length?'<div id="sansList"></div>':'<p style="color:var(--ink-soft)">Tous les utilisateurs ont un abonnement actif.</p>'}</div>
+    <div style="margin-top:16px"><button class="btn btn-primary" onclick="refreshCurrent()">🔄 Actualiser</button></div>
+  `;
+  // Remplir les listes
+  const fillList=(id,items,fmt)=>{if(!items.length)return;const el=document.getElementById(id);el.innerHTML=items.map(fmt).join("");};
+  fillList("expList",d.expires,(a)=>`<div style="padding:8px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center">
+    <span>${a.plan_code} — ${a.montant||0} FCFA</span><span style="font-size:12px;color:var(--err)">Expiré ${a.expire?a.expire.substring(0,10):"?"}</span></div>`);
+  fillList("attList",d.en_attente,(a)=>`<div style="padding:8px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center">
+    <span>${a.plan_code} — ${a.montant||0} FCFA</span><span style="font-size:12px;color:var(--amber)">En attente depuis ${a.debut?a.debut.substring(0,10):"?"}</span></div>`);
+  fillList("renList",d.a_renouveler,(a)=>`<div style="padding:8px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center">
+    <span>${a.plan_code} — ${a.montant||0} FCFA</span><span style="font-size:12px;color:var(--vert)">Expire ${a.expire?a.expire.substring(0,10):"?"}</span></div>`);
+  fillList("sansList",d.sans_abonnement,(u)=>`<div style="padding:8px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center">
+    <span>${u.pseudo} <span style="font-size:12px;color:var(--ink-soft)">${u.email||""}</span></span>
+    <button class="btn btn-primary btn-sm" onclick="abonneUser(${u.id})">Abonne</button></div>`);
+}
+async function blockUser(id,pseudo){
+  if(!confirm(`Bloquer l'utilisateur "${pseudo}" (id:${id})? Les sessions seront supprimées.`))return;
+  const r=await fetch(API+"/api/admin/user/block",{method:"POST",headers:{"Content-Type":"application/json","X-Admin-Password":ADMIN},body:JSON.stringify({user_id:id})});
+  const d=await r.json();showAlert("alert",d.message||d.erreur,d.ok);if(d.ok)refreshCurrent();
+}
+async function deleteUser(id,pseudo){
+  if(!confirm(`Supprimer définitivement l'utilisateur "${pseudo}" (id:${id})? Toutes ses données seront effacées.`))return;
+  const r=await fetch(API+"/api/admin/user/delete",{method:"POST",headers:{"Content-Type":"application/json","X-Admin-Password":ADMIN},body:JSON.stringify({user_id:id})});
+  const d=await r.json();showAlert("alert",d.message||d.erreur,d.ok);if(d.ok)refreshCurrent();
+}
+async function abonneUser(id){
+  const plan=prompt("Choisis le plan d'abonnement:
+1=3jours(250F) 2=1semaine(500F) 3=2semaines(1000F) 4=1mois(2000F) 5=bac(3000F) 6=annuel(10000F)","4");
+  if(!plan)return;
+  const codes={"1":"3jours","2":"1semaine","3":"2semaines","4":"1mois","5":"bac","6":"annuel"};
+  const code=codes[plan];if(!code)return;
+  const r=await fetch(API+"/api/admin/abonnement/confirm",{method:"POST",headers:{"Content-Type":"application/json","X-Admin-Password":ADMIN},body:JSON.stringify({user_id:id,plan:code})});
+  const d=await r.json();showAlert("alert",d.message||d.erreur||"Abonnement confirmé",d.ok);
+}
 </script>
 </body>
 </html>
