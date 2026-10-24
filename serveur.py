@@ -750,7 +750,7 @@ class Handler(BaseHTTPRequestHandler):
         u = user_by_token(token)
 
         if path == "/api/register":
-            pseudo = data.get("pseudo", "").strip()
+            pseudo = (data.get("pseudo", "") or data.get("prenom", "")).strip()
             if not pseudo or len(pseudo) < 3:
                 return self.send_json({"erreur": "Pseudo trop court (3+ caractères)"}, 400)
             c = db()

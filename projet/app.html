@@ -163,20 +163,30 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
   <form class="auth-form" onsubmit="return false" id="authForm">
     <!-- Register fields -->
     <div id="regFields">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="field">
+          <label>Prénom</label>
+          <input type="text" id="prenom" placeholder="Ex: Aminata">
+        </div>
+        <div class="field">
+          <label>Nom</label>
+          <input type="text" id="nom" placeholder="Ex: Diallo">
+        </div>
+      </div>
       <div class="field">
-        <label>Pseudo</label>
-        <input type="text" id="pseudo" placeholder="Ex: Aminata" autocomplete="username">
+        <label>Pseudo (username)</label>
+        <input type="text" id="pseudo" placeholder="Ex: AminataD (3+ caractères)" autocomplete="username">
       </div>
       <div class="field">
         <label>Mot de passe</label>
         <input type="password" id="mdp" placeholder="8+ caractères, lettre + chiffre" autocomplete="new-password">
       </div>
       <div class="field">
-        <label>Email (optionnel)</label>
+        <label>Email</label>
         <input type="email" id="email" placeholder="Ex: aminata@gmail.com" autocomplete="email">
       </div>
       <div class="field">
-        <label>Téléphone / WhatsApp (recommandé)</label>
+        <label>Téléphone / WhatsApp</label>
         <input type="tel" id="telephone" placeholder="Ex: +221 770 00 00 00" autocomplete="tel">
       </div>
       <div class="field">
@@ -188,8 +198,34 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
         </select>
       </div>
       <div class="field">
-        <label>Ville</label>
-        <input type="text" id="ville" placeholder="Ex: Dakar" value="Dakar">
+        <label>Ville / Région</label>
+        <select id="ville">
+          <option value="Dakar" selected>Dakar</option>
+          <option value="Thiès">Thiès</option>
+          <option value="Diourbel">Diourbel</option>
+          <option value="Saint-Louis">Saint-Louis</option>
+          <option value="Kaolack">Kaolack</option>
+          <option value="Matam">Matam</option>
+          <option value="Tambacounda">Tambacounda</option>
+          <option value="Kedougou">Kedougou</option>
+          <option value="Ziguinchor">Ziguinchor</option>
+          <option value="Lodéve">Lodéve</option>
+          <option value="Fatick">Fatick</option>
+          <option value="Kolda">Kolda</option>
+          <option value="Sédhiou">Sédhiou</option>
+          <option value="Vélingara">Vélingara</option>
+          <option value="Pikine">Pikine</option>
+          <option value="Rufisque">Rufisque</option>
+          <option value="Touba">Touba</option>
+          <option value="Mbacké">Mbacké</option>
+          <option value="Nioro">Nioro</option>
+          <option value="Tamba">Tambacounda</option>
+          <option value="Kédougou">Kédougou</option>
+          <option value="Ziguinchor">Ziguinchor</option>
+          <option value="Sédhiou">Sédhiou</option>
+          <option value="Kolda">Kolda</option>
+          <option value="Vélingara">Vélingara</option>
+        </select>
       </div>
       <div class="field">
         <label>Langue</label>
@@ -484,23 +520,28 @@ async function doAuth(){
   errEl.classList.remove("show"); okEl.classList.remove("show");
 
   if(mode==="register"){
+    const prenom = document.getElementById("prenom").value.trim();
+    const nom = document.getElementById("nom").value.trim();
     const pseudo = document.getElementById("pseudo").value.trim();
     const mdp = document.getElementById("mdp").value;
     const email = document.getElementById("email").value.trim();
     const telephone = document.getElementById("telephone").value.trim();
     const niveau = document.getElementById("niveau").value;
-    const ville = document.getElementById("ville").value.trim();
+    const ville = document.getElementById("ville").value;
     const langue = document.getElementById("langue").value;
-    if(pseudo.length<3){errEl.textContent="Pseudo trop court (3+ caractères)";errEl.classList.add("show");return;}
+    if(!prenom){errEl.textContent="Veuillez saisir votre prénom";errEl.classList.add("show");return;}
+    if(!pseudo || pseudo.length<3){errEl.textContent="Pseudo : 3+ caractères";errEl.classList.add("show");return;}
     if(mdp.length<8||!/[a-zA-Z]/.test(mdp)||!/[0-9]/.test(mdp)){errEl.textContent="Mot de passe : 8+ caractères, lettre + chiffre";errEl.classList.add("show");return;}
     try{
-      const r = await fetch(API+"/api/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo,mot_de_passe:mdp,email,telephone,niveau,ville,langue})});
+      const r = await fetch(API+"/api/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo,prenom,nom,mot_de_passe:mdp,email,telephone,niveau,ville,langue})});
       const d = await r.json();
       if(!r.ok){errEl.textContent=d.erreur||"Erreur inscription";errEl.classList.add("show");return;}
       token=d.token;user=d.user;
       localStorage.setItem("ecolemax_token",token);
       localStorage.setItem("ecolemax_pseudo",pseudo);
-      okEl.textContent="✅ Inscription réussie ! Bienvenue.";okEl.classList.add("show");
+      localStorage.setItem("ecolemax_prenom",prenom);
+      localStorage.setItem("ecolemax_nom",nom);
+      okEl.textContent="✅ Inscription réussie ! Bienvenue "+prenom+".";okEl.classList.add("show");
       setTimeout(()=>enterApp(),500);
     }catch(e){errEl.textContent="Serveur inaccessible";errEl.classList.add("show");}
   }else{
@@ -593,7 +634,11 @@ async function refreshSubscription(){
     const r = await fetch(API+"/api/subscription/me",{headers:{"Authorization":"Bearer "+token}});
     const d = await r.json();
     const pseudo = localStorage.getItem("ecolemax_pseudo")||"";
-    document.getElementById("greetName").textContent = "👋 "+pseudo;
+    const prenom = localStorage.getItem("ecolemax_prenom")||"";
+    const nom = localStorage.getItem("ecolemax_nom")||"";
+    const fullName = (prenom + " " + nom).trim() || pseudo;
+    document.getElementById("greetName").textContent = "👋 "+fullName;
+    document.getElementById("profName").textContent = fullName;
     currentPlan = d.abonne && d.plan ? d.plan : null;
     if(currentPlan){
       document.getElementById("greetSub").textContent = currentPlan.nom+" · exp. "+currentPlan.date_expiration;

@@ -3,266 +3,318 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ÉcoleMax — L'appli scolaire du Sénégal</title>
+<title>ÉcoleMax — Le tuteur IA du Sénégal</title>
 <link rel="stylesheet" href="css/style.css">
+<style>
+:root{
+  --bg:#f8f9fc; --card:#ffffff; --text:#1a1a2e; --soft:#6b7280;
+  --primary:#15a05a; --primary-d:#0d6e3e; --primary-l:#e8f5ee;
+  --accent:#2dd4bf; --accent-l:#e0f7f3;
+  --blue:#3b82f6; --blue-l:#e8f0fe;
+  --orange:#f59e0b; --orange-l:#fef3e2;
+  --purple:#8b5cf6; --purple-l:#f3e8ff;
+  --line:#e5e7eb; --shadow:0 2px 12px rgba(0,0,0,.06); --shadow-lg:0 8px 30px rgba(0,0,0,.1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif;color:var(--text);background:var(--bg);line-height:1.6}
+a{text-decoration:none;color:inherit}
+.container{max-width:1100px;margin:0 auto;padding:0 20px}
+
+/* ===== NAVBAR ===== */
+nav{background:rgba(255,255,255,.95);backdrop-filter:blur(10px);position:sticky;top:0;z-index:100;border-bottom:1px solid var(--line)}
+nav .container{display:flex;align-items:center;justify-content:space-between;height:64px}
+.brand{font-size:22px;font-weight:900;display:flex;align-items:center;gap:8px}
+.brand .logo-box{font-size:28px}
+.nav-links{display:flex;gap:24px;align-items:center}
+.nav-links a{font-size:14px;font-weight:600;color:var(--soft);transition:.2s}
+.nav-links a:hover{color:var(--primary)}
+.nav-cta{background:var(--primary);color:#fff!important;padding:8px 20px;border-radius:10px!important}
+.nav-cta:hover{background:var(--primary-d)!important}
+
+/* ===== HERO ===== */
+.hero{position:relative;overflow:hidden;padding:60px 0 50px;background:linear-gradient(180deg,#f0fdf4 0%,#ffffff 60%)}
+.hero-bg{position:absolute;inset:0;pointer-events:none;opacity:.08;z-index:0}
+.hero .container{position:relative;z-index:1;display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center}
+.hero-text .badge{display:inline-flex;align-items:center;gap:6px;background:var(--primary-l);color:var(--primary-d);padding:6px 14px;border-radius:20px;font-size:13px;font-weight:700;margin-bottom:20px}
+.hero-text h1{font-size:42px;font-weight:900;line-height:1.2;margin-bottom:16px}
+.hero-text h1 .grad{background:linear-gradient(135deg,var(--primary),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-text p{font-size:16px;color:var(--soft);margin-bottom:28px;max-width:500px}
+.hero-cta{display:flex;gap:12px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:14px 28px;border-radius:12px;font-weight:700;font-size:15px;border:none;cursor:pointer;transition:.2s}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-d);transform:translateY(-1px);box-shadow:0 4px 15px rgba(21,160,90,.3)}
+.btn-ghost{background:#fff;color:var(--text);border:2px solid var(--line)}
+.btn-ghost:hover{border-color:var(--primary);color:var(--primary)}
+.hero-stats{display:flex;gap:24px;margin-top:32px;flex-wrap:wrap}
+.hero-stats .stat{text-align:left}
+.hero-stats .stat .v{font-size:22px;font-weight:800;color:var(--primary)}
+.hero-stats .stat .l{font-size:12px;color:var(--soft)}
+
+/* Hero illustration */
+.hero-illust{display:flex;align-items:center;justify-content:center}
+.illust-card{background:#fff;border-radius:24px;padding:30px;box-shadow:var(--shadow-lg);width:340px;text-align:center}
+.illust-card .icons{font-size:48px;margin-bottom:16px}
+.illust-card h3{font-size:18px;font-weight:800;margin-bottom:8px}
+.illust-card p{font-size:13px;color:var(--soft)}
+.illust-card .feat-row{display:flex;justify-content:center;gap:12px;margin-top:16px;flex-wrap:wrap}
+.illust-card .feat-chip{background:var(--primary-l);color:var(--primary-d);padding:4px 12px;border-radius:8px;font-size:12px;font-weight:600}
+
+/* ===== FEATURES ===== */
+.section{padding:50px 0}
+.section-title{font-size:32px;font-weight:900;text-align:center;margin-bottom:8px}
+.section-sub{text-align:center;color:var(--soft);font-size:15px;margin-bottom:40px}
+.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.feature-card{background:var(--card);border-radius:16px;padding:24px;box-shadow:var(--shadow);transition:.2s;border:1px solid var(--line)}
+.feature-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg)}
+.feature-card .ic{font-size:32px;margin-bottom:12px}
+.feature-card h3{font-size:17px;font-weight:800;margin-bottom:6px}
+.feature-card p{font-size:14px;color:var(--soft)}
+
+/* ===== LANGUAGES ===== */
+.lang-section{background:linear-gradient(135deg,#f0fdf4,#e0f7f3);padding:40px 0}
+.lang-grid{display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
+.lang-chip{background:#fff;padding:10px 20px;border-radius:10px;font-size:14px;font-weight:600;box-shadow:var(--shadow)}
+
+/* ===== PLANS ===== */
+.plans-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.plan-card{background:var(--card);border-radius:16px;padding:28px;box-shadow:var(--shadow);border:2px solid transparent;transition:.2s;text-align:center;position:relative}
+.plan-card:hover{transform:translateY(-4px)}
+.plan-card.featured{border-color:var(--primary);position:relative}
+.plan-card .tag{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--primary);color:#fff;padding:4px 16px;border-radius:20px;font-size:12px;font-weight:700}
+.plan-card .pn{font-size:18px;font-weight:800;margin-bottom:4px}
+.plan-card .pp{font-size:32px;font-weight:900;margin-bottom:8px}
+.plan-card .pp small{font-size:14px;font-weight:400;color:var(--soft)}
+.plan-card .pdesc{font-size:13px;color:var(--soft);margin-bottom:20px}
+.plan-card .pfeatures{list-style:none;text-align:left;margin-bottom:20px}
+.plan-card .pfeatures li{font-size:13px;padding:6px 0;display:flex;gap:8px;align-items:flex-start}
+.plan-card .pfeatures li .check{color:var(--primary);font-weight:800;flex-shrink:0}
+.plan-card .pfeatures li .cross{color:#ef4444;font-weight:800;flex-shrink:0}
+.plan-card .btn{width:100%}
+
+/* ===== CTA SECTION ===== */
+.cta-section{background:linear-gradient(135deg,var(--primary),var(--accent));padding:50px 0;text-align:center;color:#fff}
+.cta-section h2{font-size:28px;font-weight:900;margin-bottom:12px}
+.cta-section p{font-size:16px;opacity:.9;margin-bottom:24px}
+.cta-section .btn{background:#fff;color:var(--primary);font-size:16px;padding:16px 40px}
+
+/* ===== FOOTER ===== */
+footer{background:#1a1a2e;color:#9ca3af;padding:40px 0;text-align:center}
+footer .ft-brand{font-size:20px;font-weight:800;color:#fff;margin-bottom:8px}
+footer p{font-size:13px}
+footer .ft-links{display:flex;justify-content:center;gap:20px;margin-top:16px}
+footer .ft-links a{font-size:13px;color:#9ca3af}
+footer .ft-links a:hover{color:#fff}
+
+@media(max-width:768px){
+  .hero .container{grid-template-columns:1fr;gap:30px}
+  .hero-text h1{font-size:32px}
+  .features-grid,.plans-grid{grid-template-columns:1fr}
+  .nav-links a:not(.nav-cta){display:none}
+  .hero-illust{order:-1}
+  .illust-card{width:100%;max-width:340px}
+}
+</style>
 </head>
 <body>
 
 <!-- NAVBAR -->
-<nav class="navbar">
-  <div class="brand"><span class="logo-box">📚</span> ÉcoleMax</div>
-  <div class="nav-links">
-    <a href="index.html">Présentation</a>
-    <a href="app.html">Application</a>
-    <a href="dashboard.html">Tableau de bord</a>
-    <a href="#tarifs">Tarifs</a>
-    <a href="#contact" class="nav-cta">Commencer</a>
+<nav>
+  <div class="container">
+    <a href="index.html" class="brand"><span class="logo-box">📚</span> ÉcoleMax</a>
+    <div class="nav-links">
+      <a href="index.html">Accueil</a>
+      <a href="index.html#fonctions">Fonctions</a>
+      <a href="index.html#langues">Langues</a>
+      <a href="index.html#tarifs">Tarifs</a>
+      <a href="app.html#connecter" class="nav-cta">Se connecter</a>
+    </div>
   </div>
 </nav>
 
 <!-- HERO -->
 <header class="hero">
+  <svg class="hero-bg" viewBox="0 0 1200 600" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="100" cy="100" r="80" fill="none" stroke="#15a05a" stroke-width="3"/>
+    <circle cx="100" cy="100" r="40" fill="none" stroke="#2dd4bf" stroke-width="2"/>
+    <rect x="80" y="250" width="120" height="120" fill="none" stroke="#15a05a" stroke-width="3" transform="rotate(15 140 310)"/>
+    <polygon points="300,50 360,150 240,150" fill="none" stroke="#3b82f6" stroke-width="3"/>
+    <line x1="300" y1="50" x2="300" y2="150" stroke="#3b82f6" stroke-width="2"/>
+    <text x="300" y="200" font-size="40" fill="#15a05a" text-anchor="middle" font-family="serif" font-style="italic">π</text>
+    <circle cx="500" cy="80" r="60" fill="none" stroke="#8b5cf6" stroke-width="3"/>
+    <line x1="500" y1="20" x2="500" y2="140" stroke="#8b5cf6" stroke-width="2"/>
+    <line x1="440" y1="80" x2="560" y2="80" stroke="#8b5cf6" stroke-width="2"/>
+    <text x="500" y="200" font-size="36" fill="#8b5cf6" text-anchor="middle" font-family="serif">∑</text>
+    <rect x="680" y="40" width="100" height="100" fill="none" stroke="#f59e0b" stroke-width="3" transform="rotate(20 730 90)"/>
+    <text x="730" y="170" font-size="32" fill="#f59e0b" text-anchor="middle" font-family="serif">∫</text>
+    <circle cx="950" cy="100" r="70" fill="none" stroke="#15a05a" stroke-width="3"/>
+    <circle cx="950" cy="100" r="35" fill="none" stroke="#2dd4bf" stroke-width="2"/>
+    <text x="950" y="110" font-size="32" fill="#15a05a" text-anchor="middle" font-family="serif">∞</text>
+    <path d="M 1100 200 L 1150 150 L 1130 250 Z" fill="none" stroke="#3b82f6" stroke-width="3"/>
+    <text x="1130" y="290" font-size="28" fill="#3b82f6" text-anchor="middle" font-family="serif">x²</text>
+    <circle cx="200" cy="450" r="50" fill="none" stroke="#2dd4bf" stroke-width="2"/>
+    <text x="200" y="460" font-size="28" fill="#2dd4bf" text-anchor="middle" font-family="serif">sin</text>
+    <rect x="400" y="400" width="80" height="80" fill="none" stroke="#f59e0b" stroke-width="3" transform="rotate(10 440 440)"/>
+    <text x="440" y="510" font-size="28" fill="#f59e0b" text-anchor="middle" font-family="serif">√</text>
+    <line x1="600" y1="420" x2="700" y2="420" stroke="#8b5cf6" stroke-width="3"/>
+    <line x1="650" y1="400" x2="650" y2="440" stroke="#8b5cf6" stroke-width="2"/>
+    <text x="650" y="480" font-size="28" fill="#8b5cf6" text-anchor="middle" font-family="serif">cos</text>
+    <circle cx="850" cy="450" r="45" fill="none" stroke="#15a05a" stroke-width="3"/>
+    <text x="850" y="460" font-size="24" fill="#15a05a" text-anchor="middle" font-family="serif">log</text>
+    <text x="1050" y="450" font-size="36" fill="#3b82f6" text-anchor="middle" font-family="serif">a²+b²=c²</text>
+  </svg>
   <div class="container">
-    <span class="badge">🇰🇳 Pour les élèves du Sénégal · IA intégrée</span>
-    <h1>Toutes les matières, tous les niveaux,<br><span class="grad">le tutorat IA dans une seule appli.</span></h1>
-    <p>ÉcoleMax accompagne chaque élève — du primaire au bac — avec des exercices, des corrections, une recherche internet par IA et une aide à la rédaction. Un outil complet, léger, qui fonctionne même hors ligne.</p>
-    <div class="hero-cta">
-      <a class="btn btn-primary" href="app.html">🚀 S'inscrire</a>
-      <a class="btn btn-ghost" href="app.html#connecter">🔑 Se connecter</a>
+    <div class="hero-text">
+      <span class="badge">🇰🇳 Pour les élèves du Sénégal · IA intégrée</span>
+      <h1>Toutes les matières,<br><span class="grad">le tutorat IA dans une seule appli.</span></h1>
+      <p>ÉcoleMax accompagne chaque élève du Sénégal — du primaire au bac — avec des exercices, une correction photo par IA, une recherche internet par IA et une aide à la rédaction. Léger, rapide, fonctionne même hors ligne.</p>
+      <div class="hero-cta">
+        <a href="app.html" class="btn btn-primary">🚀 S'inscrire — Essai gratuit 24 h</a>
+        <a href="app.html#connecter" class="btn btn-ghost">🔑 Se connecter</a>
+      </div>
+      <div class="hero-stats">
+        <div class="stat"><div class="v">18</div><div class="l">matières</div></div>
+        <div class="stat"><div class="v">7</div><div class="l">langues</div></div>
+        <div class="stat"><div class="v">🤖</div><div class="l">IA 24/24</div></div>
+        <div class="stat"><div class="v">📸</div><div class="l">correction photo</div></div>
+      </div>
     </div>
-    <div class="hero-stats">
-      <div><div class="stat-num">15+</div><div class="stat-label">matières (Sénégal + France)</div></div>
-      <div><div class="stat-num">3  niveaux</div><div class="stat-label">Primaire · Collège · Lycée</div></div>
-      <div><div class="stat-num">🤖</div><div class="stat-label">IA ultra-performante 24/24</div></div>
-      <div><div class="stat-num">🌍 6 langues</div><div class="stat-label">FR · EN · ES · DE · PT · WO</div></div>
+    <div class="hero-illust">
+      <div class="illust-card">
+        <div class="icons">🤖📚📸</div>
+        <h3>ÉcoleMax</h3>
+        <p>Ton tuteur IA scolaire</p>
+        <div class="feat-row">
+          <span class="feat-chip">18 matières</span>
+          <span class="feat-chip">IA chat</span>
+          <span class="feat-chip">Photo</span>
+          <span class="feat-chip">Rédaction</span>
+        </div>
+      </div>
     </div>
   </div>
 </header>
 
-<!-- PROBLEM / SOLUTION -->
-<section>
-  <div class="container">
-    <div class="grid grid-2">
-      <div class="card">
-        <div class="icon">😤</div>
-        <h3>Le problème des élèves sénégalais</h3>
-        <p>Manque de manuels, cours surchauffés, devoirs à la maison sans aide, parents qui ne peuvent pas tous reprendre les leçons. Les élèves bloquent seuls sur un exercice ou une dissertation.</p>
-      </div>
-      <div class="card">
-        <div class="icon">✅</div>
-        <h3>La solution ÉcoleMax</h3>
-        <p>Un tuteur IA dans la poche : correction instantanée, explications en français <strong>et wolof</strong>, recherche sur internet, aide à la rédaction, et tout un programme d'exercices par niveau.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
 <!-- FEATURES -->
-<section style="background: var(--gradient-soft);">
+<section class="section" id="fonctions">
   <div class="container">
-    <div class="center">
-      <div class="section-title">Une application complète</div>
-      <div class="section-sub">Tout ce qu'un élève a besoin pour progresser, et tout ce qu'un administrateur a besoin pour gérer.</div>
-    </div>
-    <div class="grid grid-4 mt-40">
-      <div class="card center"><div class="icon">🧮</div><h3>Exercices toutes matières</h3><p>15+ matières du programme sénégalais et français : Maths, Français, Physique-Chimie, SVT, Hist-Géo, Anglais, Espagnol, Arabe, Latin, Philosophie, Économie, Wolof…</p></div>
-      <div class="card center"><div class="icon">🤖</div><h3>Assistant IA ultra-performant</h3><p>Corrections presque parfaites (vérification systématique), explications étape par étape — en français, wolof et toutes les langues.</p></div>
-      <div class="card center"><div class="icon">🌐</div><h3>Recherche internet</h3><p>L'IA consulte le web, résume et cite ses sources — jamais d'hallucination.</p></div>
-      <div class="card center"><div class="icon">✍️</div><h3>Rédaction & dissertation</h3><p>Plan, structure, idées, reformulation <strong>+ anti-plagiat</strong>. L'élève écrit, l'IA l'accompagne.</p></div>
-      <div class="card center"><div class="icon">🌍</div><h3>Traduction multilingue</h3><p>Un onglet « Traduction » : cours, exercices et textes en FR, EN, ES, DE, PT. Porte ouverte sur l'Europe.</p></div>
-      <div class="card center"><div class="icon">📷</div><h3>Correction photo du cahier</h3><p>L'élève photographie son devoir, l'IA le lit (OCR) et corrige instantanément.</p></div>
-      <div class="card center"><div class="icon">📵</div><h3>Hors ligne + leçons audio</h3><p>Télécharge les chapitres, révise sans connexion, écoute les leçons audio.</p></div>
-      <div class="card center"><div class="icon">📊</div><h3>Dashboard administrateur</h3><p>Revenus, abonnés, liens de paiement, contenu, IA, écoles, promotions — gestion à distance complète.</p></div>
+    <div class="section-title">Tout ce dont tu as besoin</div>
+    <div class="section-sub">Des outils puissants pour réussir dans toutes tes matières</div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="ic">🤖</div>
+        <h3>Assistant IA</h3>
+        <p>Posez vos questions en wolof ou français. Obtenez des réponses claires et détaillées sur toutes les matières.</p>
+      </div>
+      <div class="feature-card">
+        <div class="ic">📸</div>
+        <h3>Correction Photo</h3>
+        <p>Prenez en photo votre exercice ou votre page de manuel. L'IA vous explique comment le résoudre.</p>
+      </div>
+      <div class="feature-card">
+        <div class="ic">✍️</div>
+        <h3>Aide à la rédaction</h3>
+        <p>Génération de dissertations, résumés et exercices de français avec correction de plagiat.</p>
+      </div>
+      <div class="feature-card">
+        <div class="ic">🧮</div>
+        <h3>18 Matières</h3>
+        <p>Maths, français, physique, SVT, histoire, géo, anglais, espagnol, arabe, wolof, philo, latin, économie et plus.</p>
+      </div>
+      <div class="feature-card">
+        <div class="ic">🌐</div>
+        <h3>Recherche Internet IA</h3>
+        <p>L'IA cherche des informations actualisées sur internet pour enrichir ses réponses.</p>
+      </div>
+      <div class="feature-card">
+        <div class="ic">📱</div>
+        <h3>Hors ligne + Audio</h3>
+        <p>Téléchargez les chapitres pour réviser sans connexion. Écoutez les leçons en audio.</p>
+      </div>
     </div>
   </div>
 </section>
 
-<!-- HOW IT WORKS -->
-<section>
+<!-- LANGUAGES -->
+<section class="lang-section" id="langues">
   <div class="container">
-    <div class="center">
-      <div class="section-title">Comment ça marche</div>
-      <div class="section-sub">Du téléchargement au paiement, en 3 étapes.</div>
-    </div>
-    <div class="grid grid-3 mt-40">
-      <div class="card center"><div class="icon">1️⃣</div><h3>Télécharge l'appli</h3><p>Sur Android ou iOS, gratuite, moins de 20 Mo.</p></div>
-      <div class="card center"><div class="icon">2️⃣</div><h3>Choisis ton abonnement</h3><p>250 FCFA / 15 jours ou 500 FCFA / mois — paiement par Wave, Orange Money, Free, Airtel.</p></div>
-      <div class="card center"><div class="icon">3️⃣</div><h3>Étudie avec l'IA</h3><p>Exercices, corrections, recherche, rédaction — tout illimité.</p></div>
+    <div class="section-title">7 langues prises en charge</div>
+    <div class="section-sub">L'IA répond dans la langue de votre choix</div>
+    <div class="lang-grid">
+      <span class="lang-chip">🇫🇷 Français</span>
+      <span class="lang-chip">🇸🇳 Wolof</span>
+      <span class="lang-chip">🇬🇧 Anglais</span>
+      <span class="lang-chip">🇪🇸 Espagnol</span>
+      <span class="lang-chip">🇸🇦 Arabe</span>
+      <span class="lang-chip">🇵🇹 Portugais</span>
+      <span class="lang-chip">🇩🇪 Allemand</span>
     </div>
   </div>
 </section>
 
-<!-- PRICING -->
-<section id="tarifs" style="background: var(--gradient-soft);">
+<!-- PLANS -->
+<section class="section" id="tarifs" style="background:#f8f9fc">
   <div class="container">
-    <div class="center">
-      <div class="section-title">Tarifs</div>
-      <div class="section-sub">Un modèle freemium simple : gratuit pour commencer, payant pour tout débloquer.</div>
-    </div>
-    <div class="grid grid-4 mt-40">
-      <div class="pricing-card">
-        <div class="price">0 <small>FCFA</small></div>
-        <div style="color:var(--ink-soft);font-size:14px;font-weight:600;">Essai gratuit complet · 24 heures</div>
-        <ul class="plan-features">
-          <li><span class="tick">✓</span> 24 questions IA / jour</li>
-          <li><span class="tick">✓</span> 1 correction photo / jour</li>
-          <li><span class="tick">✓</span> Toutes les 18 matières</li>
-          <li><span class="tick">✓</span> Exercices + téléchargement</li>
+    <div class="section-title">Tarifs d'abonnement</div>
+    <div class="section-sub">Commencez avec l'essai gratuit de 24 h. Pas de paiement requis.</div>
+    <div class="plans-grid">
+      <div class="plan-card">
+        <div class="pn">Essai gratuit</div>
+        <div class="pp">0<small> FCFA</small></div>
+        <div class="pdesc">24 heures, tout débloqué</div>
+        <ul class="pfeatures">
+          <li><span class="check">✓</span> 24 questions IA par jour</li>
+          <li><span class="check">✓</span> 1 correction photo par jour</li>
+          <li><span class="check">✓</span> Tous les chapitres</li>
+          <li><span class="check">✓</span> 7 langues</li>
+          <li><span class="check">✓</span> Aucun paiement requis</li>
         </ul>
-        <button class="btn btn-dark" style="width:100%;">Essayer 24 h gratuitement</button>
+        <a href="app.html" class="btn btn-ghost">Commencer l'essai</a>
       </div>
-      <div class="pricing-card">
-        <div class="price">250 <small>FCFA</small></div>
-        <div style="color:var(--ink-soft);font-size:14px;font-weight:600;">Accès limité · 15 jours</div>
-        <ul class="plan-features">
-          <li><span class="tick">✓</span> 30 questions IA / jour</li>
-          <li><span class="tick">✓</span> Tous les sujets</li>
-          <li><span class="tick">✓</span> Correction détaillée</li>
-          <li><span class="cross">✗</span> Pas de téléchargement hors ligne</li>
+      <div class="plan-card featured">
+        <div class="tag">POPULAIRE</div>
+        <div class="pn">Mensuel</div>
+        <div class="pp">500<small> FCFA/mois</small></div>
+        <div class="pdesc">Pour élèves sérieux</div>
+        <ul class="pfeatures">
+          <li><span class="check">✓</span> 150 questions IA par jour</li>
+          <li><span class="check">✓</span> 5 corrections photo par jour</li>
+          <li><span class="check">✓</span> Tous les chapitres</li>
+          <li><span class="check">✓</span> 7 langues</li>
+          <li><span class="check">✓</span> Rédactions + plagiat</li>
         </ul>
-        <button class="btn btn-dark" style="width:100%;">S'abonner 15 jours</button>
+        <a href="app.html" class="btn btn-primary">S'abonner</a>
       </div>
-      <div class="pricing-card">
-        <div class="price">500 <small>FCFA</small></div>
-        <div style="color:var(--ink-soft);font-size:14px;font-weight:600;">Accès intermédiaire · 1 mois</div>
-        <ul class="plan-features">
-          <li><span class="tick">✓</span> 150 questions IA / jour</li>
-          <li><span class="tick">✓</span> Correction photo 5 / jour</li>
-          <li><span class="tick">✓</span> Téléchargement limité (5 chap/mois)</li>
-          <li><span class="cross">✗</span> Pas d'accès total illimité</li>
+      <div class="plan-card">
+        <div class="pn">Illimité</div>
+        <div class="pp">1500<small> FCFA/mois</small></div>
+        <div class="pdesc">Pour les plus compétitifs</div>
+        <ul class="pfeatures">
+          <li><span class="check">✓</span> IA illimitée</li>
+          <li><span class="check">✓</span> Photo illimitée</li>
+          <li><span class="check">✓</span> Tous les chapitres</li>
+          <li><span class="check">✓</span> 7 langues</li>
+          <li><span class="check">✓</span> Téléchargement hors ligne</li>
         </ul>
-        <button class="btn btn-dark" style="width:100%;">S'abonner 1 mois</button>
-      </div>
-      <div class="pricing-card featured">
-        <div class="ribbon">🚀 Accès Illimité</div>
-        <div class="price">1 500 <small>FCFA</small></div>
-        <div style="color:var(--ink-soft);font-size:14px;font-weight:600;">Tout illimité · 1 mois</div>
-        <ul class="plan-features">
-          <li><span class="tick">✓</span> IA illimitée 24/24</li>
-          <li><span class="tick">✓</span> Correction photo illimitée</li>
-          <li><span class="tick">✓</span> Téléchargement hors ligne</li>
-          <li><span class="tick">✓</span> Rédactions, bac, traduction</li>
-        </ul>
-        <button class="btn btn-primary" style="width:100%;">Passer Illimité</button>
+        <a href="app.html" class="btn btn-ghost">S'abonner</a>
       </div>
     </div>
-
-    <div class="grid grid-2 mt-20">
-      <div class="pricing-card">
-        <div class="ribbon">⭐ Pack fréquence</div>
-        <div class="price">1 200 <small>FCFA</small></div>
-        <div style="color:var(--ink-soft);font-size:14px;font-weight:600;">Accès Illimité · 3 mois</div>
-        <ul class="plan-features">
-          <li><span class="tick">✓</span> Tout illimité · 90 jours</li>
-          <li><span class="tick">✓</span> Meilleur prix / mois</li>
-          <li><span class="tick">✓</span> Parfait pour le trimestre</li>
-          <li><span class="tick">✓</span> Avec téléchargement hors ligne</li>
-        </ul>
-        <button class="btn btn-dark" style="width:100%;">S'abonner 3 mois</button>
-      </div>
-      <div class="pricing-card">
-        <div class="ribbon">🎓 Spécial terminales</div>
-        <div class="price">3 000 <small>FCFA</small></div>
-        <div style="color:var(--ink-soft);font-size:14px;font-weight:600;">Accès Illimité · pack Bac · 6 mois</div>
-        <ul class="plan-features">
-          <li><span class="tick">✓</span> Tout illimité 6 mois</li>
-          <li><span class="tick">✓</span> Annales corrigées (toutes options)</li>
-          <li><span class="tick">✓</span> Simulations d'examen</li>
-          <li><span class="tick">✓</span> Bilan de révision final</li>
-        </ul>
-        <button class="btn btn-dark" style="width:100%;">Acheter le pack Bac</button>
-      </div>
-    </div>
-    <p class="center mt-40" style="color:var(--ink-soft);font-size:14px;">Paiement accepté : Wave · Orange Money · Free Money · Airtel Money · PayDunya · carte bancaire.</p>
   </div>
 </section>
 
-<!-- SECURITE -->
-<section style="background: linear-gradient(135deg, #0b0e24 0%, #1e1b4b 60%, #312e81 100%); color:#fff;">
+<!-- CTA -->
+<section class="cta-section">
   <div class="container">
-    <div class="center">
-      <div class="section-title" style="color:#fff;">🔒 Sécurité totale — contenu protégé</div>
-      <div class="section-sub" style="color:rgba(255,255,255,.75);">Anti-plagiat · anti-capture d'écran · anti-partage · anti-téléchargement.</div>
-    </div>
-    <div class="grid grid-4 mt-40">
-      <div class="card" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);">
-        <div class="icon" style="background:rgba(255,255,255,.12);">🚫</div>
-        <h3 style="color:#fff;">Anti-plagiat</h3>
-        <p style="color:rgba(255,255,255,.75);">Vérification des rédactions et dissertations ; détection des contenus partagés en ligne.</p>
-      </div>
-      <div class="card" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);">
-        <div class="icon" style="background:rgba(255,255,255,.12);">📸</div>
-        <h3 style="color:#fff;">Anti-capture</h3>
-        <p style="color:rgba(255,255,255,.75);">Blocage screenshots/enregistrement + watermark dynamique (pseudo + date + heure) sur chaque écran.</p>
-      </div>
-      <div class="card" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);">
-        <div class="icon" style="background:rgba(255,255,255,.12);">🤝</div>
-        <h3 style="color:#fff;">Anti-partage</h3>
-        <p style="color:rgba(255,255,255,.75);">Watermark unique par utilisateur, copier-coller désactivé, pas de lien public, traçabilité.</p>
-      </div>
-      <div class="card" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);">
-        <div class="icon" style="background:rgba(255,255,255,.12);">📵</div>
-        <h3 style="color:#fff;">Anti-téléchargement</h3>
-        <p style="color:rgba(255,255,255,.75);">Pas de téléchargement hors ligne sauf plans Illimité ; contenu chiffré (AES-256) déchiffré dans l'appli.</p>
-      </div>
-    </div>
-    <p class="center mt-40" style="color:rgba(255,255,255,.8);font-size:16px;">🛡️ Les droits sont vérifiés côté serveur à chaque accès : plan, expiration, logs d'activité, alertes en temps réel.</p>
-  </div>
-</section>
-
-<!-- LANGUES & MARCHES -->
-<section style="background: linear-gradient(135deg, #1c2247 0%, #2d1b5e 60%, #4c1d95 100%); color:#fff;">
-  <div class="container">
-    <div class="center">
-      <div class="section-title" style="color:#fff;">🌍 Multilingue : un seul outil, tout le continent… et l'Europe</div>
-      <div class="section-sub" style="color:rgba(255,255,255,.75);">Interface, cours, corrections et traduction dans 6 langues — la base pour toucher l'Afrique et le marché européen.</div>
-    </div>
-    <div class="grid grid-4 mt-40">
-      <div class="card center" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);"><div class="icon" style="background:rgba(255,255,255,.1);">🇫🇷</div><h3 style="color:#fff;">Français</h3><p style="color:rgba(255,255,255,.7);">Sénégal · France · Canada</p></div>
-      <div class="card center" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);"><div class="icon" style="background:rgba(255,255,255,.1);">🇬🇧</div><h3 style="color:#fff;">Anglais</h3><p style="color:rgba(255,255,255,.7);">Royaume-Uni · États-Unis · Afrique</p></div>
-      <div class="card center" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);"><div class="icon" style="background:rgba(255,255,255,.1);">🇪🇸</div><h3 style="color:#fff;">Espagnol</h3><p style="color:rgba(255,255,255,.7);">Espagne · Amérique latine</p></div>
-      <div class="card center" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);"><div class="icon" style="background:rgba(255,255,255,.1);">🇩🇪</div><h3 style="color:#fff;">Allemand</h3><p style="color:rgba(255,255,255,.7);">Allemagne · Autriche · Suisse</p></div>
-    </div>
-    <div class="grid grid-2 mt-20">
-      <div class="card center" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);"><div class="icon" style="background:rgba(255,255,255,.1);">🇵🇹</div><h3 style="color:#fff;">Portugais</h3><p style="color:rgba(255,255,255,.7);">Portugal · Brésil · Afrique lussophone</p></div>
-      <div class="card center" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);"><div class="icon" style="background:rgba(255,255,255,.1);">🗣️</div><h3 style="color:#fff;">Wolof</h3><p style="color:rgba(255,255,255,.7);">Sénégal · langue nationale</p></div>
-    </div>
-    <p class="center mt-40" style="color:rgba(255,255,255,.8);font-size:16px;">🔁 <strong>Onglet « Traduction »</strong> : traduis un cours, un exercice ou un texte dans la langue choisie — avec explication des termes techniques.</p>
-  </div>
-</section>
-
-<!-- REVENUE PREVIEW FOR FOUNDER -->
-<section>
-  <div class="container">
-    <div class="center">
-      <div class="section-title">10 000 téléchargements = ?</div>
-      <div class="section-sub">Scénarios de revenus mensuels pour l'administrateur.</div>
-    </div>
-    <div class="grid grid-3 mt-40">
-      <div class="card center"><div class="tag">Conservateur · 3 % payants</div><div class="price" style="margin-top:10px;">~127 500 FCFA</div><p>300 abonnés · ~195 € / mois</p></div>
-      <div class="card center"><div class="tag">Réaliste · 5 % payants</div><div class="price" style="margin-top:10px;">~200 000 FCFA</div><p>500 abonnés · ~305 € / mois<br>(~2,4 M FCFA / an)</p></div>
-      <div class="card center"><div class="tag">Optimiste · 10 % payants</div><div class="price" style="margin-top:10px;">~375 000 FCFA</div><p>1 000 abonnés · ~572 € / mois</p></div>
-    </div>
-    <p class="center mt-40" style="color:var(--ink-soft);font-size:14px;">Coûts d'IA et d'hébergement estimés entre $50 et $100 / mois → marge > 90 %.</p>
-  </div>
-</section>
-
-<!-- CONTACT / CTA -->
-<section id="contact" style="background: var(--bg-dark); color:#fff;">
-  <div class="container center">
-    <h2 style="font-size:34px;font-weight:900;">Prêt à construire l'outil scolaire du Sénégal ?</h2>
-    <p style="color:rgba(255,255,255,.75);margin-top:14px;font-size:17px;max-width:640px;margin-left:auto;margin-right:auto;">Je peux t'accompagner sur : le design de l'application, le code, l'intégration IA, les paiements et le dashboard administrateur.</p>
-    <div class="hero-cta" style="justify-content:center;">
-      <a class="btn btn-primary" href="dashboard.html">Voir le dashboard</a>
-      <a class="btn btn-ghost" href="app.html">Explorer l'appli</a>
-    </div>
+    <h2>Prêt à réviser ?</h2>
+    <p>Inscrivez-vous gratuitement et profitez de 24 heures d'essai complet.</p>
+    <a href="app.html" class="btn">🚀 S'inscrire gratuitement</a>
   </div>
 </section>
 
 <!-- FOOTER -->
-<footer class="footer">
+<footer>
   <div class="ft-brand">📚 ÉcoleMax</div>
-  <p>Application scolaire pour le Sénégal.<br>Créé par <strong>SycheikhCorp</strong> © 2026</p>
+  <p>Application scolaire pour le Sénégal.</p>
+  <p>Créé par <strong style="color:#fff">SycheikhCorp</strong> © 2026</p>
 </footer>
 
 </body>
