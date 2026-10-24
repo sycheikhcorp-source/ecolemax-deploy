@@ -76,15 +76,6 @@ def db():
 
 def init_db():
     c = db()
-    # Migration: ajouter colonnes email/telephone/bloque si elles n'existent pas
-    cols = [r["name"] for r in c.execute("PRAGMA table_info(users)").fetchall()]
-    if "email" not in cols:
-        c.execute("ALTER TABLE users ADD COLUMN email TEXT")
-    if "telephone" not in cols:
-        c.execute("ALTER TABLE users ADD COLUMN telephone TEXT")
-    if "bloque" not in cols:
-        c.execute("ALTER TABLE users ADD COLUMN bloque INTEGER DEFAULT 0")
-    c.commit()
     c.executescript("""
     CREATE TABLE IF NOT EXISTS plans (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -160,6 +151,15 @@ def init_db():
         key TEXT PRIMARY KEY, value TEXT
     );
     """)
+    # Migration: ajouter colonnes email/telephone/bloque si elles n'existent pas
+    cols = [r["name"] for r in c.execute("PRAGMA table_info(users)").fetchall()]
+    if "email" not in cols:
+        c.execute("ALTER TABLE users ADD COLUMN email TEXT")
+    if "telephone" not in cols:
+        c.execute("ALTER TABLE users ADD COLUMN telephone TEXT")
+    if "bloque" not in cols:
+        c.execute("ALTER TABLE users ADD COLUMN bloque INTEGER DEFAULT 0")
+    c.commit()
     c.executescript("""
     INSERT OR IGNORE INTO plans (code, nom, prix, duree_jours, limite_ia_jour, photo_jour, telechargement, download_quota, description) VALUES
     ('gratuit',    'Essai gratuit 24 h', 0,     1,   24,   1, 1, 5, 'Essai 24 h : 24 questions IA/jour · 1 photo/jour · tout débloqué'),
