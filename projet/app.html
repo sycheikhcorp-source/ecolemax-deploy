@@ -139,6 +139,21 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
 .tab .ic{font-size:22px}
 .tab.active{color:var(--primary)}
 
+/* ===== IA ADMIN ===== */
+.ia-targets{display:flex;gap:6px;margin-bottom:10px}
+.tag{padding:4px 10px;border-radius:12px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid}
+.tag-site{background:var(--blue-l);border-color:rgba(59,130,246,.2);color:var(--blue)}
+.tag-app{background:var(--orange-l);border-color:rgba(245,158,11,.2);color:var(--orange)}
+.tag-all{background:var(--primary-l);border-color:rgba(21,160,90,.2);color:var(--primary)}
+.ia-msgs{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding-bottom:80px;margin-bottom:8px}
+.ia-msg{max-width:90%;padding:8px 12px;border-radius:14px;font-size:13px;line-height:1.5}
+.ia-msg.user{align-self:flex-end;background:var(--grad);color:#fff;border-bottom-right-radius:4px}
+.ia-msg.bot{align-self:flex-start;background:#fff;border:1px solid var(--line);border-bottom-left-radius:4px}
+.ia-msg.bot .src{display:block;font-size:10px;color:var(--ink-soft);margin-top:4px}
+.ia-input-row{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:500px;background:#fff;border-top:1px solid var(--line);padding:8px 12px;display:flex;gap:8px;z-index:10}
+.ia-input-row input{flex:1;background:var(--bg);border:1px solid var(--line);border-radius:20px;padding:10px 16px;color:var(--ink);font-size:14px;outline:none}
+.ia-input-row button{width:44px;height:44px;border-radius:50%;background:var(--grad);border:none;color:#fff;font-size:18px;cursor:pointer}
+
 /* ===== PLAN SHEET ===== */
 .sheet-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);z-index:50;display:none;align-items:flex-end;justify-content:center}
 .sheet-overlay.show{display:flex}
@@ -192,6 +207,8 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
       <div class="field"><label>Mot de passe</label><input type="password" id="mdp" placeholder="8+ lettre + chiffre"><span class="pwd-toggle" onclick="togglePwd('mdp',this)">👁️</span></div>
       <div class="field"><label>Niveau</label>
         <select id="niveau">
+          <option value="Collège">Collège</option>
+          <option value="Lycée">Lycée</option>
           <option value="Terminale">Terminale</option>
           <option value="Bac">Bac (1ère/2ème)</option>
           <option value="Université">Université</option>
@@ -322,8 +339,29 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
     <div class="prof-row"><span class="k">Statut</span><span class="v" id="planStatus">—</span></div>
     <div style="margin-top:12px"><button class="btn btn-ghost" onclick="showPlans()">🔍 Voir les plans</button></div>
   </div>
+  <div class="prof-card"><button class="btn btn-ghost" onclick="goToTab('iaadmin')">🤖 IA Admin — Poser des questions</button></div>
   <div class="prof-card"><button class="btn btn-danger" onclick="logout()">🚪 Déconnexion</button></div>
   <p style="text-align:center;font-size:10px;color:var(--ink-soft);padding:16px">ÉcoleMax — Créé par <strong>SycheikhCorp</strong> © 2026</p>
+</div>
+
+<!-- ==================== IA ADMIN ==================== -->
+<div class="screen chat-screen" id="screen-ia-admin">
+  <div class="chat-header"><h3>🤖 IA Admin</h3><p>Posez une question pour le site et l'application.</p></div>
+  <div class="suggest-row">
+    <div class="suggest-chip" onclick="iaAsk('Quelle est la capitale du Sénégal ?')">Capitale Sénégal</div>
+    <div class="suggest-chip" onclick="iaAsk('Explique la photosynthèse.')">Photosynthèse</div>
+    <div class="suggest-chip" onclick="iaAsk('Dérivée de x² ?')">Dérivée</div>
+  </div>
+  <div class="ia-targets">
+    <span class="tag tag-site" onclick="iaSetTarget('site')">🌐 Site</span>
+    <span class="tag tag-app" onclick="iaSetTarget('app')">📱 App</span>
+    <span class="tag tag-all" onclick="iaSetTarget('all')">✅ Tous</span>
+  </div>
+  <div class="ia-msgs" id="iaMsgs"></div>
+  <div class="ia-input-row">
+    <input type="text" id="iaInput" placeholder="Posez une question..." onkeydown="if(event.key==='Enter')iaSend()">
+    <button onclick="iaSend()">➤</button>
+  </div>
 </div>
 
 <!-- ==================== TAB BAR ==================== -->
@@ -523,6 +561,11 @@ async function refreshSubscription(){
 function goToTab(tab){
   document.querySelectorAll(".screen").forEach(function(s){s.classList.remove("active");});
   document.querySelectorAll(".tab").forEach(function(t){t.classList.remove("active");});
+  if(tab==="iaadmin"){
+    document.getElementById("screen-ia-admin").classList.add("active");
+    document.getElementById("iaInput").focus();
+    return;
+  }
   var tabs={home:"screen-home",chat:"screen-chat",photo:"screen-photo",profile:"screen-profile"};
   document.getElementById(tabs[tab]).classList.add("active");
   document.querySelectorAll(".tab")[{home:0,chat:1,photo:2,profile:3}[tab]].classList.add("active");
@@ -559,6 +602,27 @@ async function sendChat(){
 }
 
 function askSuggest(q){document.getElementById("chatInput").value=q;sendChat();}
+
+// ---- IA Admin ----
+var iaTarget="all";
+function iaSetTarget(t){iaTarget=t;var tags=document.querySelectorAll(".ia-targets .tag");tags.forEach(function(el){el.style.opacity=".5";});var map={site:"tag-site",app:"tag-app",all:"tag-all"};var sel=document.querySelector(".ia-targets .tag."+map[t]);if(sel)sel.style.opacity="1";}
+function iaAddMsg(text,type,src){var m=document.getElementById("iaMsgs");var html='<div class="ia-msg '+type+'">'+escapeHtml(text);if(src)html+='<span class="src">'+src+'</span>';html+='</div>';m.insertAdjacentHTML("beforeend",html);m.scrollTop=m.scrollHeight;}
+function iaAsk(q){document.getElementById("iaInput").value=q;iaSend();}
+async function iaSend(){
+  var input=document.getElementById("iaInput");
+  var question=input.value.trim();
+  if(!question)return;
+  input.value="";
+  iaAddMsg(question,"user");
+  iaAddMsg("","bot","loading");
+  try{
+    var r=await fetch(API+"/api/ai/ask",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({question:question,niveau:localStorage.getItem("ecolemax_niveau")||"Terminale",target:iaTarget})});
+    var d=await r.json();
+    if(!r.ok){throw new Error(d.erreur||"Erreur");}
+    var src=d.source==="IA"?"🤖 IA":"📚 Base";
+    iaAddMsg(d.reponse||"Pas de réponse.","bot",src);
+  }catch(e){iaAddMsg(e.message,"err");}
+}
 
 function addMsg(text,type,loading,src){
   var msgs=document.getElementById("chatMsgs");
