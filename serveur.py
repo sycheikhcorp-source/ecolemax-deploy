@@ -293,6 +293,18 @@ def init_db():
         ('info','Algorithme','qcm','La complexité de tri rapide est?',json.dumps(['O(n)','O(n log n)','O(n²)','O(log n)'],),'1','O(n log n)','Université','Algorithmes',5),
         ('chim','Orbitale','qcm','Nombre d\'orbitales dans la couche n=2?',json.dumps(['1','2','4','8'],),'2','4','Université','Chimie',5),
         ('ec','Monnaie','qcm','Qu\'est-ce que le Bitcoin?',json.dumps(['Monnaie numérique','Action','Obligation','Matière'],),'0','Monnaie numérique','Université','Économie',4),
+        ('maths','Dérivée','qcm','d/dx (3x²+2x) = ?',json.dumps(['6x','3x+2','6x+2','3x²']),'2','6x+2','Université S1','Calcul',5),
+        ('info','Structure','qcm','Quelle structure de données est FIFO?',json.dumps(['Stack','Queue','Tree','Graph']),'1','Queue','Université S1','Algorithmes',4),
+        ('phys','Thermo','qcm','La loi de Fourier concerne?',json.dumps(['Convection','Conduction','Radiation','Évaporation']),'1','Conduction','Université S1','Thermodynamique',5),
+        ('chim','Cinétique','qcm','La vitesse de réaction dépend de?',json.dumps(['Température','Pression','Volume','Masse']),'0','Température','Université S1','Chimie',4),
+        ('fr','Analyse','ouvert','Analyse le registre d un texte scientifique.','','Un texte scientifique utilise un registre formel, impersonnel, précis.','Analyser un registre = identifier le niveau de langue, le ton, le style.','Université S1','Analyse',4),
+        ('ec','Théorie','qcm','Qu est-ce que la monnaie fiduciaire?',json.dumps(['Monnaie électronique','Monnaie scripturale','Monnaie basée sur la confiance','Monnaie collante']),'2','Monnaie basée sur la confiance','Université S1','Économie',4),
+        ('maths','Statistique','qcm','La variance de X est Var(X)=?',json.dumps(['E(X)','E(X²)','E(X²)-E(X)²','E(X)-E(X²)']),'2','E(X²)-E(X)²','Université S2','Statistiques',5),
+        ('info','Base de données','qcm','Quel langage pour gérer une base SQL?',json.dumps(['HTML','Python','SQL','CSS']),'2','SQL','Université S2','Bases de données',4),
+        ('phys','Électromag','qcm','La loi d Ohm est V = ?',json.dumps(['R/I','I×R','I/R','R×I²']),'1','I×R','Université S2','Électricité',5),
+        ('chim','Organique','qcm','Quel groupe fonctionnel contient le méthane?',json.dumps(['Aldéhyde','Alcool','Alcan','Acide']),'2','Alcan','Université S2','Chimie organique',5),
+        ('fr','Argument','ouvert','Rédige un plan de dissertation (intro-dév-concl).','','Introduction : définition + problématique. Développement : arguments + exemples. Conclusion : synthèse + ouverture.','Un plan de dissertation suit une structure tripartite.','Université S2','Rédaction',4),
+        ('ec','Étude','qcm','Qu est-ce que le PIB nominal?',json.dumps(['PIB à prix constants','PIB à prix courants','PIB réel','PIB en volume']),'1','PIB à prix courants','Université S2','Économie',4),
     ]
     for e in exercices:
         c.execute("INSERT OR IGNORE INTO exercises (sujet_code,titre,type,qtext,options,reponse,explication,niveau,chapitre,difficulte) VALUES (?,?,?,?,?,?,?,?,?,?)", e)
