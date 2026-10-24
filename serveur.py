@@ -583,7 +583,8 @@ class Handler(BaseHTTPRequestHandler):
                                    "notifications_non_lues":nb_notif,"favoris":nb_fav})
         if path == "/api/exercises":
             import urllib.parse as _up
-            qs = _up.parse_qs(self.path.split("?")[1]) if "?" in self.path else {}
+            raw_qs = self.path.split("?", 1)[1] if "?" in self.path else ""
+            qs = _up.parse_qs(_up.unquote(raw_qs, encoding="utf-8", errors="replace"))
             sujet = qs.get("sujet", qs.get("matiere", [""]))[0].lower()
             niveau = qs.get("niveau", [""])[0]
             chapitre = qs.get("chapitre", [""])[0]
