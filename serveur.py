@@ -1030,6 +1030,22 @@ class Handler(BaseHTTPRequestHandler):
             log_sec(u["id"], "plagiat", "Vérification dissertation")
             return self.send_json(r)
 
+        if path == "/api/ai/correct":
+            # Correcteur de textes : correction orthographe/grammaire/conjugaison
+            if not u:
+                return self.send_json({"erreur": "Authentification requise"}, 401)
+            p = plan_actif(u)
+            if not p:
+                return self.send_json({"erreur": "Essai gratuit de 24 h terminé — abonne-toi pour continuer."}, 402)
+            texte = data.get("texte", "")
+            if not texte or len(texte.strip()) < 10:
+                return self.send_json({"erreur": "Texte trop court (10+ caractères)"}, 400)
+            question = ("Corrige ce texte en français. Affiche d'abord le texte corrigé, puis explique chaque erreur "
+                        "(orthographe, grammaire, conjugaison, ponctuation). Texte à corriger : " + texte[:1500])
+            r = reponse_ia(question, p)
+            log_sec(u["id"], "correction_texte", "Correction texte")
+            return self.send_json(r)
+
         if path == "/api/security/log":
             if not u:
                 return self.send_json({"erreur": "Authentification requise"}, 401)
