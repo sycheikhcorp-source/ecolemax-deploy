@@ -650,79 +650,6 @@ class Handler(BaseHTTPRequestHandler):
             ex = c.execute("SELECT * FROM exercises").fetchall()
             c.close()
             return self.send_json({"sujets":[dict(r) for r in sujets], "cours":[dict(r) for r in cours], "exercices":[dict(r) for r in ex]})
-        if path == "/api/admin/user/block":
-            if self.headers.get("X-Admin-Password","") != ADMIN_PASSWORD:
-                return self.send_json({"erreur":"Non autorisé"}, 403)
-            uid = data.get("user_id")
-            c = db()
-            u = c.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone()
-            if not u: c.close(); return self.send_json({"erreur":"Utilisateur non trouvé"}, 404)
-            c.execute("DELETE FROM sessions WHERE user_id=?", (uid,))
-            c.execute("UPDATE users SET role='bloque' WHERE id=?", (uid,))
-            c.commit(); c.close()
-            log_sec(1, "admin_action", f"Utilisateur {uid} bloqué")
-            return self.send_json({"ok":True, "message":"Utilisateur bloqué"})
-
-        if path == "/api/admin/user/delete":
-            if self.headers.get("X-Admin-Password","") != ADMIN_PASSWORD:
-                return self.send_json({"erreur":"Non autorisé"}, 403)
-            uid = data.get("user_id")
-            c = db()
-            u = c.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone()
-            if not u: c.close(); return self.send_json({"erreur":"Utilisateur non trouvé"}, 404)
-            c.execute("DELETE FROM sessions WHERE user_id=?", (uid,))
-            c.execute("DELETE FROM favoris WHERE user_id=?", (uid,))
-            c.execute("DELETE FROM notifications WHERE user_id=?", (uid,))
-            c.execute("DELETE FROM usages WHERE user_id=?", (uid,))
-            c.execute("DELETE FROM abonnements WHERE user_id=?", (uid,))
-            c.execute("DELETE FROM paiements WHERE user_id=?", (uid,))
-            c.execute("DELETE FROM results WHERE user_id=?", (uid,))
-            c.execute("DELETE FROM support WHERE user_id=?", (uid,))
-            c.execute("DELETE FROM users WHERE id=?", (uid,))
-            c.commit(); c.close()
-            log_sec(1, "admin_action", f"Utilisateur {uid} supprimé")
-            return self.send_json({"ok":True, "message":"Utilisateur supprimé"})
-
-        if path == "/api/admin/abonnement/control":
-            if self.headers.get("X-Admin-Password","") != ADMIN_PASSWORD:
-                return self.send_json({"erreur":"Non autorisé"}, 403)
-            c = db()
-            expired = c.execute("SELECT * FROM abonnements WHERE statut='actif' AND (expire='' OR date(expire)<date('now'))").fetchall()
-            pending = c.execute("SELECT * FROM abonnements WHERE statut='en_attente'").fetchall()
-            no_sub = c.execute("SELECT id,pseudo,email FROM users WHERE NOT EXISTS(SELECT 1 FROM abonnements a WHERE a.user_id=users.id AND a.statut='actif')").fetchall()
-            to_renew = c.execute("SELECT * FROM abonnements WHERE statut='actif' AND date(expire) BETWEEN date('now') AND date('now','+3 days')").fetchall()
-            c.close()
-            return self.send_json({
-                "expires":[dict(r) for r in expired],
-                "en_attente":[dict(r) for r in pending],
-                "sans_abonnement":[dict(r) for r in no_sub],
-                "a_renouveler":[dict(r) for r in to_renew],
-                "stats":{
-                    "expires_count":len(expired),
-                    "attente_count":len(pending),
-                    "sans_abonnement_count":len(no_sub),
-                    "renouvellement_count":len(to_renew)
-                }
-            })
-
-        
-        if path == "/api/admin/abonnement/confirm":
-            if self.headers.get("X-Admin-Password","") != ADMIN_PASSWORD:
-                return self.send_json({"erreur":"Non autorisé"}, 403)
-            uid = data.get("user_id")
-            plan_code = data.get("plan","")
-            c = db()
-            plan = c.execute("SELECT * FROM plans WHERE code=?", (plan_code,)).fetchone()
-            if not plan: c.close(); return self.send_json({"erreur":"Plan non trouvé"}, 404)
-            u = c.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone()
-            if not u: c.close(); return self.send_json({"erreur":"Utilisateur non trouvé"}, 404)
-            debut = datetime.datetime.now().isoformat()
-            expire = (datetime.datetime.now() + datetime.timedelta(days=plan["duree_jours"])).isoformat()
-            c.execute("UPDATE abonnements SET statut='actif', debut=?, expire=? WHERE user_id=?", (debut, expire, uid))
-            c.commit(); c.close()
-            log_sec(1, "admin_action", f"Admin a confirmé abonnement {plan_code} pour user {uid}")
-            return self.send_json({"ok":True, "message":f"Abonnement {plan['nom']} confirmé pour {u['pseudo']}"})
-
         if path == "/api/admin/supports":
             if self.headers.get("X-Admin-Password","") != ADMIN_PASSWORD:
                 return self.send_json({"erreur":"Non autorisé"}, 403)
@@ -799,6 +726,80 @@ class Handler(BaseHTTPRequestHandler):
         path = self.path.split("?")[0]
         data = self.body()
         u = get_user_by_token(self)
+
+        if path == "/api/admin/user/block":
+            if self.headers.get("X-Admin-Password","") != ADMIN_PASSWORD:
+                return self.send_json({"erreur":"Non autorisé"}, 403)
+            uid = data.get("user_id")
+            c = db()
+            u = c.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone()
+            if not u: c.close(); return self.send_json({"erreur":"Utilisateur non trouvé"}, 404)
+            c.execute("DELETE FROM sessions WHERE user_id=?", (uid,))
+            c.execute("UPDATE users SET role='bloque' WHERE id=?", (uid,))
+            c.commit(); c.close()
+            log_sec(1, "admin_action", f"Utilisateur {uid} bloqué")
+            return self.send_json({"ok":True, "message":"Utilisateur bloqué"})
+
+        if path == "/api/admin/user/delete":
+            if self.headers.get("X-Admin-Password","") != ADMIN_PASSWORD:
+                return self.send_json({"erreur":"Non autorisé"}, 403)
+            uid = data.get("user_id")
+            c = db()
+            u = c.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone()
+            if not u: c.close(); return self.send_json({"erreur":"Utilisateur non trouvé"}, 404)
+            c.execute("DELETE FROM sessions WHERE user_id=?", (uid,))
+            c.execute("DELETE FROM favoris WHERE user_id=?", (uid,))
+            c.execute("DELETE FROM notifications WHERE user_id=?", (uid,))
+            c.execute("DELETE FROM usages WHERE user_id=?", (uid,))
+            c.execute("DELETE FROM abonnements WHERE user_id=?", (uid,))
+            c.execute("DELETE FROM paiements WHERE user_id=?", (uid,))
+            c.execute("DELETE FROM results WHERE user_id=?", (uid,))
+            c.execute("DELETE FROM support WHERE user_id=?", (uid,))
+            c.execute("DELETE FROM users WHERE id=?", (uid,))
+            c.commit(); c.close()
+            log_sec(1, "admin_action", f"Utilisateur {uid} supprimé")
+            return self.send_json({"ok":True, "message":"Utilisateur supprimé"})
+
+        if path == "/api/admin/abonnement/control":
+            if self.headers.get("X-Admin-Password","") != ADMIN_PASSWORD:
+                return self.send_json({"erreur":"Non autorisé"}, 403)
+            c = db()
+            expired = c.execute("SELECT * FROM abonnements WHERE statut='actif' AND (expire='' OR date(expire)<date('now'))").fetchall()
+            pending = c.execute("SELECT * FROM abonnements WHERE statut='en_attente'").fetchall()
+            no_sub = c.execute("SELECT id,pseudo,email FROM users WHERE NOT EXISTS(SELECT 1 FROM abonnements a WHERE a.user_id=users.id AND a.statut='actif')").fetchall()
+            to_renew = c.execute("SELECT * FROM abonnements WHERE statut='actif' AND date(expire) BETWEEN date('now') AND date('now','+3 days')").fetchall()
+            c.close()
+            return self.send_json({
+                "expires":[dict(r) for r in expired],
+                "en_attente":[dict(r) for r in pending],
+                "sans_abonnement":[dict(r) for r in no_sub],
+                "a_renouveler":[dict(r) for r in to_renew],
+                "stats":{
+                    "expires_count":len(expired),
+                    "attente_count":len(pending),
+                    "sans_abonnement_count":len(no_sub),
+                    "renouvellement_count":len(to_renew)
+                }
+            })
+
+        
+        if path == "/api/admin/abonnement/confirm":
+            if self.headers.get("X-Admin-Password","") != ADMIN_PASSWORD:
+                return self.send_json({"erreur":"Non autorisé"}, 403)
+            uid = data.get("user_id")
+            plan_code = data.get("plan","")
+            c = db()
+            plan = c.execute("SELECT * FROM plans WHERE code=?", (plan_code,)).fetchone()
+            if not plan: c.close(); return self.send_json({"erreur":"Plan non trouvé"}, 404)
+            u = c.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone()
+            if not u: c.close(); return self.send_json({"erreur":"Utilisateur non trouvé"}, 404)
+            debut = datetime.datetime.now().isoformat()
+            expire = (datetime.datetime.now() + datetime.timedelta(days=plan["duree_jours"])).isoformat()
+            c.execute("UPDATE abonnements SET statut='actif', debut=?, expire=? WHERE user_id=?", (debut, expire, uid))
+            c.commit(); c.close()
+            log_sec(1, "admin_action", f"Admin a confirmé abonnement {plan_code} pour user {uid}")
+            return self.send_json({"ok":True, "message":f"Abonnement {plan['nom']} confirmé pour {u['pseudo']}"})
+
 
         # ── Auth ──
         if path == "/api/register":
