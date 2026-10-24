@@ -371,7 +371,7 @@ REPONSES_LOCALES = {
 # File d'attente simple pour contourner le rate-limit Pollinations (1 réq/30s par IP)
 _pollinations_lock = threading.Lock()
 _last_pollinations_call = 0
-_POLLINATIONS_MIN_INTERVAL = 30  # secondes entre deux appels
+_POLLINATIONS_MIN_INTERVAL = 5  # secondes entre deux appels (contourne rate-limit sans bloquer)
 
 def _pollinations_call(messages, max_tokens=600, timeout=25):
     """Appel Pollinations avec retry + backoff + rate-limiter."""
@@ -581,6 +581,23 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_json({"user":{"id":u["id"],"pseudo":u["pseudo"],"email":u["email"],"niveau":u["niveau"],"role":u["role"]},
                                    "plan":p,"usage":dict(usage) if usage else None,
                                    "notifications_non_lues":nb_notif,"favoris":nb_fav})
+        if path == "/api/exercises":
+            import urllib.parse as _up
+            qs = _up.parse_qs(self.path.split("?")[1]) if "?" in self.path else {}
+            sujet = qs.get("sujet", qs.get("matiere", [""]))[0].lower()
+            niveau = qs.get("niveau", [""])[0]
+            chapitre = qs.get("chapitre", [""])[0]
+            diff = qs.get("difficulte", [""])[0]
+            c = db()
+            q = "SELECT * FROM exercises WHERE 1=1"
+            params = []
+            if sujet: q += " AND sujet_code=?"; params.append(sujet)
+            if niveau: q += " AND niveau=?"; params.append(niveau)
+            if chapitre: q += " AND chapitre=?"; params.append(chapitre)
+            if diff: q += " AND difficulte=?"; params.append(diff)
+            rows = c.execute(q, params).fetchall()
+            c.close()
+            return self.send_json({"exercices":[dict(r) for r in rows]})
         if path.startswith("/api/"):
             return self.send_json({"erreur":"Méthode non autorisée"}, 405)
         # Fichiers statiques
