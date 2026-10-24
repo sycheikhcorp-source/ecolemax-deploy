@@ -309,8 +309,9 @@ def update_usage(uid, field):
     today = datetime.datetime.now().strftime("%Y-%m-%d")
     row = c.execute("SELECT * FROM usages WHERE user_id=? AND date=?", (uid, today)).fetchone()
     if not row:
+        col = {"ia":"ia_count","photo":"photo_count","correct":"correct_count","ex":"ex_count"}[field]
         c.execute("INSERT INTO usages (user_id,date,ia_count,photo_count,correct_count,ex_count) VALUES (?,?,0,0,0,0)", (uid, today))
-        c.execute(f"UPDATE usages SET {field}=1 WHERE user_id=? AND date=?", (uid, today))
+        c.execute(f"UPDATE usages SET {col}=1 WHERE user_id=? AND date=?", (uid, today))
     else:
         col = {"ia":"ia_count","photo":"photo_count","correct":"correct_count","ex":"ex_count"}[field]
         c.execute(f"UPDATE usages SET {col}={col}+1 WHERE user_id=? AND date=?", (uid, today))
