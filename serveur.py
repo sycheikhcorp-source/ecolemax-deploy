@@ -40,9 +40,12 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 OPENAI_BASE = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
 OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
-GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
+GROQ_MODEL = os.environ.get("GROQ_MODEL", "gpt-oss-120b")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
 POLLINATIONS_KEY = os.environ.get("POLLINATIONS_KEY", "")
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
+OPENROUTER_MODEL = os.environ.get("OPENROUTER_MODEL", "openrouter/free")
 TAVILY_API_KEY = os.environ.get("TAVILY_API_KEY", "")
 
 # Paiements (clés marchand en production)
@@ -410,9 +413,10 @@ def reponse_ia(question, plan):
         cached = dict(_IA_CACHE[cache_key])
         cached["source"] = str(cached.get("source", "")) + " (cache)"
         return cached
-    # 1. OpenAI / Groq (OpenAI-compatible)
+    # 1. OpenAI / Groq / OpenRouter (OpenAI-compatible)
     for key, base, model in ((OPENAI_API_KEY, OPENAI_BASE, OPENAI_MODEL),
-                             (GROQ_API_KEY, "https://api.groq.com/openai/v1", GROQ_MODEL)):
+                             (GROQ_API_KEY, "https://api.groq.com/openai/v1", GROQ_MODEL),
+                             (OPENROUTER_API_KEY, "https://openrouter.ai/api/v1", OPENROUTER_MODEL)):
         if key:
             try:
                 data = _call_llm(_llm_messages(question), base, key, model)
