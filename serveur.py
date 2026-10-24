@@ -636,9 +636,13 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def body(self):
-        length = int(self.headers.get("Content-Length", 0))
-        if length == 0: return {}
-        return json.loads(self.rfile.read(length).decode() or "{}")
+        try:
+            length = int(self.headers.get("Content-Length", 0))
+            if length == 0: return {}
+            raw = self.rfile.read(length)
+            return json.loads(raw.decode("utf-8", "replace") or "{}")
+        except (json.JSONDecodeError, ValueError, UnicodeDecodeError):
+            return {}
 
     def static(self, path):
         if path in ("", "/"):
