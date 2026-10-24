@@ -188,6 +188,10 @@ input,textarea,select{font-family:inherit}
   body{max-width:480px;margin:0 auto;box-shadow:var(--shadow-lg)}
   .tabbar{max-width:480px;left:50%;transform:translateX(-50%)}
 }
+
+  .lang-item{padding:14px 16px;border-bottom:1px solid var(--line);cursor:pointer;font-size:15px;display:flex;align-items:center;gap:10px}
+  .lang-item:hover{background:var(--violet-light)}
+  .lang-item span{font-size:20px}
 </style>
 </head>
 <body>
@@ -228,7 +232,7 @@ input,textarea,select{font-family:inherit}
         <div class="field"><label>Email (optionnel)</label><input id="rEmail" type="email"></div>
         <div class="field"><label>Mot de passe</label><input id="rMdp" type="password" required placeholder="8+ caractères, lettre + chiffre"></div>
         <div class="field"><label>Niveau</label>
-          <select id="rNiveau"><option>CP</option><option>CE1</option><option>CE2</option><option>CM1</option><option>CM2</option><option>6ème</option><option>5ème</option><option>4ème</option><option>3ème</option><option>2nde</option><option>1ère</option><option>Terminale</option></select>
+          <select id="rNiveau"><option>CM1</option><option>CM2</option><option>6ème</option><option>5ème</option><option>4ème</option><option>3ème</option><option>2nde</option><option>1ère</option><option>Terminale</option><option>Université L1</option><option>Université L2</option><option>Université L3</option></select>
         </div>
         <button class="btn btn-primary btn-block" type="submit">Créer mon compte</button>
       </form>
@@ -349,7 +353,7 @@ input,textarea,select{font-family:inherit}
     <div class="back-row"><button class="back-btn" onclick="goToTab('home')">←</button><div class="section-title" style="margin:0">📚 Bibliothèque d'exercices</div></div>
     <div id="exFilters" style="margin-bottom:12px">
       <div class="field"><label>Filtrer par matière</label><select id="exSujet" onchange="loadExercises()"><option value="">Toutes</option></select></div>
-      <div class="field"><label>Filtrer par niveau</label><select id="exNiveau" onchange="loadExercises()"><option value="">Tous</option><option>CP</option><option>6ème</option><option>5ème</option><option>4ème</option><option>3ème</option><option>2nde</option><option>Terminale</option></select></div>
+      <div class="field"><label>Filtrer par niveau</label><select id="exNiveau" onchange="loadExercises()"><option value="">Tous</option><option>CM1</option><option>CM2</option><option>6ème</option><option>5ème</option><option>4ème</option><option>3ème</option><option>2nde</option><option>1ère</option><option>Terminale</option><option>Université L1</option><option>Université L2</option><option>Université L3</option></select></div>
     </div>
     <div id="exList"></div>
   </div>
@@ -416,6 +420,7 @@ input,textarea,select{font-family:inherit}
       <div class="prof-card" onclick="goToTab('abonnement')"><div class="ic">💎</div><div class="lb">Abonnement</div><div class="val">→</div></div>
       <div class="prof-card" onclick="openSupport()"><div class="ic">💬</div><div class="lb">Support technique</div><div class="val">→</div></div>
       <div class="prof-card" onclick="toggleTheme()"><div class="ic">🌙</div><div class="lb">Mode clair / sombre</div><div class="val" id="modeVal">clair</div></div>
+      <div class="prof-card" onclick="showLangPicker()"><div class="ic">🌍</div><div class="lb">Langue</div><div class="val" id="langVal">Français</div></div>
       <div class="prof-card" onclick="goToTab('profile')"><div class="ic">👤</div><div class="lb">Profil</div><div class="val">→</div></div>
       <div class="prof-card" onclick="logout()"><div class="ic" style="color:var(--err)">🚪</div><div class="lb">Déconnexion</div><div class="val">→</div></div>
     </div>
@@ -639,7 +644,7 @@ async function loadExerciseFilters(){
 async function loadExercises(){
   const sujet=document.getElementById("exSujet").value;
   const niveau=document.getElementById("exNiveau").value;
-  const r=await fetch(API+"/api/exercises",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+TOKEN},body:JSON.stringify({sujet,niveau})});
+  const params=new URLSearchParams({sujet,niveau});const r=await fetch(API+"/api/exercises?"+params,{headers:{"Authorization":"Bearer "+TOKEN}});
   const d=await r.json();
   const list=document.getElementById("exList");
   if(!d.exercices||d.exercices.length===0){list.innerHTML="<div class='card'>Aucun exercice trouvé.</div>";return;}
@@ -753,15 +758,19 @@ async function loadAbonnement(){
   }catch(e){}
   const r2=await fetch(API+"/api/plans");const plans=await r2.json();
   const list=document.getElementById("plansList");list.innerHTML="";
+  const dureeLabel={2:"48 H",3:"3 jours",7:"1 semaine",14:"2 semaines",30:"1 mois",90:"90 jours (BAC)",365:"1 an"};
   plans.forEach(p=>{
     const c=document.createElement("div");c.className="plan-card";
-    if(p.code==="gratuit"){c.className+=" current";}
+    if(p.code===plan_code){c.className+=" current";}
     const prix=p.prix===0?"Gratuit":(p.prix+" FCFA");
-    const duree=p.duree_jours===1?"48 H":(p.duree_jours+" jours");
+    const duree=dureeLabel[p.duree_jours]||(p.duree_jours+" jours");
+    const tranche = p.paiement_tranche && p.paiement_tranche!=="unique" && p.nb_tranches>1
+      ? `<div style="font-size:11px;color:var(--violet);margin-top:4px">💳 ${p.nb_tranches} tranches · ${Math.round(p.prix/p.nb_tranches)} FCFA/mois</div>` : '';
     c.innerHTML=`<div class="nm">${p.nom}</div><div class="pr">${prix}<small>/${duree}</small></div>
       <div class="desc">${p.description}</div>
       <div class="quota-bar"><div class="fill" style="width:${Math.min(100,p.limite_ia_jour/10)}%"></div></div>
       <div style="font-size:11px;color:var(--ink-soft)">${p.limite_ia_jour} questions IA · ${p.photo_jour} photo(s)</div>
+      ${tranche}
       ${p.prix===0?'<button class="btn btn-outline btn-block" disabled>Essai gratuit actif</button>':
         `<button class="btn btn-primary btn-block" onclick="subscribe('${p.code}',${p.prix})">S'abonner · ${p.prix} FCFA</button>`}`;
     list.appendChild(c);
@@ -824,6 +833,50 @@ function openSupport(){
 
 // ── Init au lancement ──
 if(TOKEN&&USER){initApp();}
+
+  // ── 7 Langues ──
+  const LANGS = {
+    fr: {name:"Français", flag:"🇫🇷"},
+    wo: {name:"Wolof", flag:"🇸🇳"},
+    en: {name:"English", flag:"🇬🇧"},
+    es: {name:"Español", flag:"🇪🇸"},
+    pt: {name:"Português", flag:"🇵🇹"},
+    de: {name:"Deutsch", flag:"🇩🇪"},
+    ar: {name:"العربية", flag:"🇸🇦"},
+  };
+  function showLangPicker(){
+    const langs = Object.entries(LANGS);
+    const html = langs.map(([code,l])=>`<div class="lang-item" onclick="setLang('${code}')"><span>${l.flag}</span> ${l.name}</div>`).join('');
+    showModal('🌍 Choisir la langue', html);
+  }
+  function setLang(code){
+    localStorage.setItem('ecolemax_lang', code);
+    document.documentElement.lang = code;
+    document.getElementById('langVal').textContent = LANGS[code].name;
+    applyTranslations(code);
+    hideModal();
+  }
+  function applyTranslations(code){
+    const t = {
+      fr: {dashboard:"Tableau de bord", chat:"Professeur IA", scan:"Scanner", correct:"Correcteur", exercices:"Exercices", matieres:"Matières", results:"Résultats", history:"Historique", abonnement:"Abonnement", profil:"Profil", parametres:"Paramètres", inscrire:"S'inscrire", connexion:"Connexion", pseudo:"Pseudo", mot_de_passe:"Mot de passe", email:"Email", niveau:"Niveau", ecrire:"Écrire votre question", envoyer:"Envoyer", coriger:"Corriger texte", prendre_photo:"Prendre photo", chercher:"Rechercher exercices", aucune:"Aucun exercice", welcome:"Bienvenue", essai_gratuit:"Essai 48 H gratuit"},
+      en: {dashboard:"Dashboard", chat:"AI Teacher", scan:"Scanner", correct:"Text Corrector", exercices:"Exercises", matieres:"Subjects", results:"Results", history:"History", abonnement:"Subscription", profil:"Profile", parametres:"Settings", inscrire:"Register", connexion:"Login", pseudo:"Username", mot_de_passe:"Password", email:"Email", niveau:"Level", ecrire:"Type your question", envoyer:"Send", coriger:"Correct text", prendre_photo:"Take photo", chercher:"Search exercises", aucune:"No exercises", welcome:"Welcome", essai_gratuit:"Free 48H trial"},
+      wo: {dashboard:"Faayda biir", chat:"Prof esu IA", scan:"Scanner", correct:"Sant lees", exercices:"Njangale", matieres:"Matiiere", results:"Ndimbal", history:"Paster", abonnement:"Abonement", profil:"Profil", parametres:"Parametres", inscrire:"Seggtu", connexion:"Dijoll", pseudo:"Tuuy", mot_de_passe:"Mbind mi", email:"Email", niveau:"Njiitu", ecrire:"Ngéddaalal", envoyer:"Saa", coriger:"Sant texte", prendre_photo:"Sukkanawu photo", chercher:"Nga nd猫l exercise", aucune:"Waa duty", welcome:"Njangal", essai_gratuit:"Benn 48h wu graat"},
+      es: {dashboard:"Panel", chat:"Profesor IA", scan:"Escáner", correct:"Corrector", exercices:"Ejercicios", matieres:"Materias", results:"Resultados", history:"Historial", abonnement:"Suscripción", profil:"Perfil", parametres:"Configuración", inscrire:"Registrarse", connexion:"Iniciar sesión", pseudo:"Usuario", mot_de_passe:"Contraseña", email:"Correo", niveau:"Nivel", ecrire:"Escribe tu pregunta", envoyer:"Enviar", coriger:"Corregir texto", prendre_photo:"Tomar foto", chercher:"Buscar ejercicios", aucune:"Ningún ejercicio", welcome:"Bienvenido", essai_gratuit:"Prueba gratis 48 H"},
+      pt: {dashboard:"Painel", chat:"Professor IA", scan:"Escanear", correct:"Corretor", exercices:"Exercícios", matieres:"Matérias", results:"Resultados", history:"Histórico", abonnement:"Assinatura", profil:"Perfil", parametres:"Configurações", inscrire:"Cadastrar", connexion:"Entrar", pseudo:"Usuário", mot_de_passe:"Senha", email:"E-mail", niveau:"Nível", ecrire:"Digite sua pergunta", envoyer:"Enviar", coriger:"Corrigir texto", prendre_photo:"Tirar foto", chercher:"Buscar exercícios", aucune:"Nenhum exercício", welcome:"Bem-vindo", essai_gratuit:"Teste grátis 48 H"},
+      de: {dashboard:"Dashboard", chat:"KI-Lehrer", scan:"Scanner", correct:"Korrektur", exercices:"Übungen", matieres:"Fächer", results:"Ergebnisse", history:"Verlauf", abonnement:"Abonnement", profil:"Profil", parametres:"Einstellungen", inscrire:"Registrieren", connexion:"Anmelden", pseudo:"Benutzername", mot_de_passe:"Passwort", email:"E-Mail", niveau:"Klasse", ecrire:"Frage eingeben", envoyer:"Senden", coriger:"Text korrigieren", prendre_photo:"Foto machen", chercher:"Übungen suchen", aucune:"Keine Übungen", welcome:"Willkommen", essai_gratuit:"48 H kostenlos"},
+      ar: {dashboard:"لوحة التحكم", chat:"أستاذ الذكاء", scan:"ماسح ضوئي", correct:"مدقق لغوي", exercices:"تدريبات", matieres:"المواد", results:"النتائج", history:"السجل", abonnement:"اشتراك", profil:"الملف الشخصي", parametres:"الإعدادات", inscrire:"تسجيل", connexion:"تسجيل الدخول", pseudo:"اسم المستخدم", mot_de_passe:"كلمة المرور", email:"البريد الإلكتروني", niveau:"المستوى", ecrire:"اكتب سؤالك", envoyer:"إرسال", coriger:"تصحيح النص", prendre_photo:"التقاط صورة", chercher:"بحث في التدريبات", aucune:"لا تدريبات", welcome:"مرحبا", essai_gratuit:"تجربة مجانية 48 ساعة"},
+    };
+    const tr = t[code] || t.fr;
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.dataset.i18n;
+      if (tr[key]) el.textContent = tr[key];
+    });
+  }
+  // Init lang
+  const savedLang = localStorage.getItem('ecolemax_lang') || 'fr';
+  document.documentElement.lang = savedLang;
+  if (document.getElementById('langVal')) document.getElementById('langVal').textContent = LANGS[savedLang].name;
+  applyTranslations(savedLang);
 </script>
 </body>
 </html>

@@ -17,6 +17,6 @@ services:
     name: ecolemax-keepalive
     runtime: python
     plan: free
-    schedule: "*/10 * * * *"
+    schedule: "*/5 * * * *"
     command: "python -c \"import urllib.request;urllib.request.urlopen('https://ecolemax.onrender.com/health', timeout=20).read()\""
     restartPolicy: always

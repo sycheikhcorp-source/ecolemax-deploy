@@ -436,18 +436,23 @@ async function loadSubjects(){
 async function loadPricing(){
   const r=await fetch(API+"/api/plans");const d=await r.json();
   const g=document.getElementById("pricingGrid");g.innerHTML="";
+  const dureeLabel={2:"48 H",3:"3 jours",7:"1 semaine",14:"2 semaines",30:"1 mois",90:"90 jours (BAC)",365:"1 an"};
   d.forEach(p=>{
     const c=document.createElement("div");
-    c.className="pricing-card"+(p.code==="mensuel"?" popular":"");
+    const popular = p.code==="1mois" || p.code==="bac";
+    c.className="pricing-card"+(popular?" popular":"");
     const prix=p.prix===0?"Gratuit":(p.prix+" FCFA");
-    const duree=p.duree_jours===1?"48 H":(p.duree_jours+" jours");
-    c.innerHTML=`${p.code==="mensuel"?'<div class="badge">⭐ Le plus populaire</div>':''}
+    const duree=dureeLabel[p.duree_jours]||(p.duree_jours+" jours");
+    const tranche = p.paiement_tranche && p.paiement_tranche!=="unique" && p.nb_tranches>1
+      ? `<li>💳 Paiement en ${p.nb_tranches} tranches de ${Math.round(p.prix/p.nb_tranches)} FCFA/mois</li>` : '';
+    c.innerHTML=`${popular?'<div class="badge">⭐ Le plus populaire</div>':''}
       <h3>${p.nom}</h3><div class="prix">${prix}<small>/${duree}</small></div>
       <ul class="features">
         <li>${p.limite_ia_jour} questions IA par période</li>
         <li>${p.photo_jour} photo(s) de correction par période</li>
-        <li>Accès à tous les cours et exercices</li>
-        <li>Historique des corrections</li>
+        <li>Accès à tous les cours et exercices (CM1 → Université)</li>
+        <li>Historique des corrections et favoris</li>
+        ${tranche}
       </ul>
       ${p.prix===0?'<button class="btn btn-outline" onclick="openModal(\'inscription\')">Essai gratuit</button>':
         `<button class="btn btn-primary" onclick="openModal('connexion')">S'abonner · ${p.prix} FCFA</button>`}`;
