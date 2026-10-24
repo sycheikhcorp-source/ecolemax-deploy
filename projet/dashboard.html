@@ -632,12 +632,12 @@ async function renderControl(){
 }
 async function blockUser(id,pseudo){
   if(!confirm(`Bloquer l'utilisateur "${pseudo}" (id:${id})? Les sessions seront supprimées.`))return;
-  const r=await fetch(API+"/api/admin/user/block",{method:"POST",headers:{"Content-Type":"application/json","X-Admin-Password":ADMIN},body:JSON.stringify({user_id:id})});
+  const r=await fetch(API+"/api/admin/user/block",{method:"POST",headers:{"Content-Type":"application/json","X-Admin-Password":ADMIN_PW},body:JSON.stringify({user_id:id})});
   const d=await r.json();showAlert("alert",d.message||d.erreur,d.ok);if(d.ok)refreshCurrent();
 }
 async function deleteUser(id,pseudo){
   if(!confirm(`Supprimer définitivement l'utilisateur "${pseudo}" (id:${id})? Toutes ses données seront effacées.`))return;
-  const r=await fetch(API+"/api/admin/user/delete",{method:"POST",headers:{"Content-Type":"application/json","X-Admin-Password":ADMIN},body:JSON.stringify({user_id:id})});
+  const r=await fetch(API+"/api/admin/user/delete",{method:"POST",headers:{"Content-Type":"application/json","X-Admin-Password":ADMIN_PW},body:JSON.stringify({user_id:id})});
   const d=await r.json();showAlert("alert",d.message||d.erreur,d.ok);if(d.ok)refreshCurrent();
 }
 async function abonneUser(id){
@@ -646,7 +646,7 @@ async function abonneUser(id){
   if(!plan)return;
   const codes={"1":"3jours","2":"1semaine","3":"2semaines","4":"1mois","5":"bac","6":"annuel"};
   const code=codes[plan];if(!code)return;
-  const r=await fetch(API+"/api/admin/abonnement/confirm",{method:"POST",headers:{"Content-Type":"application/json","X-Admin-Password":ADMIN},body:JSON.stringify({user_id:id,plan:code})});
+  const r=await fetch(API+"/api/admin/abonnement/confirm",{method:"POST",headers:{"Content-Type":"application/json","X-Admin-Password":ADMIN_PW},body:JSON.stringify({user_id:id,plan:code})});
   const d=await r.json();showAlert("alert",d.message||d.erreur||"Abonnement confirmé",d.ok);
 }
 </script>
