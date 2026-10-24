@@ -824,6 +824,20 @@ class Handler(BaseHTTPRequestHandler):
             rows = c.execute(q, params).fetchall()
             c.close()
             return self.send_json({"exercices":[dict(r) for r in rows]})
+        if path == "/api/quiz":
+            import urllib.parse as _up2
+            _q2 = _up2.urlparse(self.path).query
+            _p2 = _up2.parse_qs(_q2)
+            c = db()
+            categorie = _p2.get("categorie",[""])[0]
+            niveau = _p2.get("niveau",[""])[0]
+            q = "SELECT * FROM quiz WHERE 1=1"
+            params = []
+            if categorie: q += " AND categorie=?"; params.append(categorie)
+            if niveau: q += " AND niveau=?"; params.append(niveau)
+            rows = c.execute(q, params).fetchall()
+            c.close()
+            return self.send_json({"quiz":[dict(r) for r in rows]})
         if path.startswith("/api/"):
             return self.send_json({"erreur":"Méthode non autorisée"}, 405)
         # Fichiers statiques
