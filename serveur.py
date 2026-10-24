@@ -423,7 +423,7 @@ def _call_llm(messages, base, key, model, endpoint="/chat/completions", extra=No
         return json.loads(r.read().decode())
 
 def _calculer(question):
-    \"\"\"Calcule les expressions mathématiques simples localement (ex: 12 x 12).\"\"\"
+    """Calcule les expressions mathématiques simples localement (ex: 12 x 12)."""
     import re
     q = question.lower()
     # Expression: nombre op nombre (op: + - * / × ÷)
