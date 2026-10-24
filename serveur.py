@@ -434,40 +434,44 @@ def reponse_ia(question, plan):
             return {"reponse": txt, "confiance": 0.95, "source": "IA", "explication": "", "etapes": []}
         except Exception:
             pass
-    # 3. Pollinations (gratuit, limite ~1/30s par IP sans clé)
-    try:
-        headers = {"Content-Type": "application/json"}
-        if POLLINATIONS_KEY:
-            headers["Authorization"] = "Bearer " + POLLINATIONS_KEY
-        req = urllib.request.Request(
-            "https://text.pollinations.ai/",
-            data=json.dumps({"messages": _llm_messages(question), "model": "openai"}).encode(),
-            headers=headers)
-        with urllib.request.urlopen(req, timeout=45) as r:
-            raw = r.read().decode()
+    # 3. Pollinations (gratuit, limite ~1/30s par IP sans clé) — avec retry 3x
+    for attempt in range(3):
         try:
-            txt = json.loads(raw)["choices"][0]["message"]["content"]
-        except Exception:
-            txt = raw.strip()
-        if "limit" in txt.lower() or "too many" in txt.lower():
-            local = reponses_locales.chercher(question)
-            if local:
-                return local
-            return _message_saturation()
-        return {"reponse": txt, "confiance": 0.9, "source": "IA", "explication": "", "etapes": []}
-    except Exception as e:
-        msg = str(e)
-        if any(k in msg.lower() for k in ("rate", "limit", "every", "429", "402", "too many")):
-            local = reponses_locales.chercher(question)
-            if local:
-                return local
-            return _message_saturation()
-        # Autre erreur → repli hors ligne
-        r = _repli_mock(question)
-        r["source"] = "repli hors ligne"
-        return r
-
-    # ---- Repli hors ligne ----
+            headers = {"Content-Type": "application/json"}
+            if POLLINATIONS_KEY:
+                headers["Authorization"] = "Bearer " + POLLINATIONS_KEY
+            req = urllib.request.Request(
+                "https://text.pollinations.ai/",
+                data=json.dumps({"messages": _llm_messages(question), "model": "openai"}).encode(),
+                headers=headers)
+            with urllib.request.urlopen(req, timeout=45) as r:
+                raw = r.read().decode()
+            try:
+                txt = json.loads(raw)["choices"][0]["message"]["content"]
+            except Exception:
+                txt = raw.strip()
+            if "limit" in txt.lower() or "too many" in txt.lower():
+                if attempt < 2:
+                    time.sleep(2 + attempt * 2)
+                    continue
+                local = reponses_locales.chercher(question)
+                if local:
+                    return local
+                return _message_saturation()
+            return {"reponse": txt, "confiance": 0.9, "source": "IA", "explication": "", "etapes": []}
+        except Exception as e:
+            msg = str(e)
+            if any(k in msg.lower() for k in ("rate", "limit", "every", "429", "402", "too many")):
+                if attempt < 2:
+                    time.sleep(2 + attempt * 2)
+                    continue
+                local = reponses_locales.chercher(question)
+                if local:
+                    return local
+                return _message_saturation()
+            r = _repli_mock(question)
+            r["source"] = "repli hors ligne"
+            return r
     local = reponses_locales.chercher(question)
     if local:
         return local
