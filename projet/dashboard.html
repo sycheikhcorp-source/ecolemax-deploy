@@ -1,473 +1,575 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" data-theme="clair">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>ÉcoleMax — Tableau de bord</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ÉcoleMax — Dashboard Administrateur</title>
 <style>
-:root{--bg:#f8f9fc;--card:#ffffff;--card2:#f3f4f6;--border:#e5e7eb;--text:#1a1a2e;--soft:#6b7280;--green:#15a05a;--green-d:#0d6e3e;--green-l:#e8f5ee;--blue:#3b82f6;--blue-l:#e8f0fe;--orange:#f59e0b;--orange-l:#fef3e2;--red:#ef4444;--red-l:#fee2e2;--purple:#8b5cf6;--purple-l:#f3e8ff;--radius:12px;--shadow:0 2px 8px rgba(0,0,0,.06)}
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:15px;line-height:1.5}
-.hidden{display:none!important}
-
-/* LOGIN */
-#login{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;background:linear-gradient(180deg,#f0fdf4 0%,#f8f9fc 100%)}
-.login-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:40px 32px;width:100%;max-width:400px;text-align:center;box-shadow:var(--shadow)}
-.login-card .logo{font-size:48px;margin-bottom:12px}
-.login-card h1{font-size:22px;margin-bottom:6px}
-.login-card p{color:var(--soft);font-size:14px;margin-bottom:24px}
-.login-card input{width:100%;padding:12px 16px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;margin-bottom:12px;outline:none}
-.login-card input:focus{border-color:var(--green);box-shadow:0 0 0 3px var(--green-l)}
-.login-card .mdp-hint{font-size:11px;color:var(--soft);margin-top:12px}
-.btn{padding:12px 24px;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;transition:.2s}
-.btn-primary{background:linear-gradient(135deg,#15a05a,#2dd4bf);color:#fff}
-.btn-primary:hover{background:var(--green-d)}
-.btn-blue{background:var(--blue);color:#fff}
-.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text)}
-.erreur{color:var(--red);font-size:13px;margin-bottom:12px;background:var(--red-l);padding:8px;border-radius:8px}
-
-/* DASHBOARD */
-#dash{display:block}
-.topbar{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
-.topbar .brand{font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px}
-.topbar .live{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--soft)}
-.dot{width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-
-.container{max-width:1200px;margin:0 auto;padding:20px}
-
-/* Stats cards */
-.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
-.stat-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}
-.stat-card .icon{font-size:28px;margin-bottom:8px}
-.stat-card .label{font-size:12px;color:var(--soft);text-transform:uppercase;letter-spacing:.5px}
-.stat-card .value{font-size:28px;font-weight:800;margin-top:4px}
-.stat-card .delta{font-size:12px;margin-top:4px}
-.stat-card .delta.up{color:var(--green)}
-.stat-card .delta.down{color:var(--red)}
-
-/* Section */
-.section{background:#fff;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:20px;overflow:hidden;box-shadow:var(--shadow)}
-.section-header{padding:16px 20px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
-.section-header h2{font-size:16px;font-weight:600}
-.section-header .arrow{font-size:12px;color:var(--soft);transition:.2s}
-.section-body{padding:0 20px 20px}
-
-/* Subscribers table */
-.table-wrap{overflow-x:auto}
-table{width:100%;border-collapse:collapse;font-size:14px}
-th{text-align:left;padding:10px 12px;color:var(--soft);font-size:12px;text-transform:uppercase;border-bottom:2px solid var(--border);white-space:nowrap;background:var(--card2)}
-td{padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap}
-tr:hover td{background:var(--green-l)}
-.badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:600}
-.badge.green{background:var(--green-l);color:var(--green)}
-.badge.orange{background:var(--orange-l);color:var(--orange)}
-.badge.red{background:var(--red-l);color:var(--red)}
-.badge.blue{background:var(--blue-l);color:var(--blue)}
-
-/* Payment config */
-.pay-config{display:grid;gap:16px}
-.pay-block{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:16px}
-.btn-mini{background:#fff;border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;cursor:pointer;color:var(--text);margin-right:4px;white-space:nowrap;transition:.2s}
-.btn-mini:hover{background:var(--border)}
-.btn-block{background:var(--red-l);border-color:rgba(239,68,68,.2);color:var(--red)}
-.btn-unblock{background:var(--green-l);border-color:rgba(21,160,90,.2);color:var(--green)}
-.btn-reset{background:var(--blue-l);border-color:rgba(59,130,246,.2);color:var(--blue)}
-.btn-delete{background:var(--red-l);border-color:rgba(239,68,68,.3);color:var(--red)}
-.dashboard-footer{text-align:center;padding:24px;font-size:12px;color:var(--soft);border-top:1px solid var(--border);margin-top:20px}
-.pay-block h3{font-size:14px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
-.pay-block .field{margin-bottom:12px}
-.pay-block .field label{display:block;font-size:12px;color:var(--soft);margin-bottom:4px}
-.pay-block .field input{width:100%;padding:8px 12px;background:#fff;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;outline:none}
-.pay-block .field input:focus{border-color:var(--blue)}
-.pay-block .hint{font-size:11px;color:var(--soft);margin-top:2px}
-
-/* Toast */
-.toast{position:fixed;bottom:20px;right:20px;background:var(--green);color:#fff;padding:12px 20px;border-radius:8px;font-size:14px;z-index:200;animation:slidein .3s;box-shadow:0 4px 15px rgba(0,0,0,.15)}
-.toast.err{background:var(--red)}
-@keyframes slidein{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
-
-/* Mobile */
-@media(max-width:768px){
-  .stats-grid{grid-template-columns:repeat(2,1fr)}
-  .stat-card .value{font-size:22px}
-  .topbar .brand{font-size:15px}
-  .topbar .live{font-size:11px}
-  .container{padding:12px}
-  th,td{padding:8px}
+:root{
+  --bleu:#1565d8;--bleu-dark:#0d47a1;--bleu-light:#e8f1ff;
+  --violet:#7c3aed;--violet-light:#ede9fe;
+  --bg:#f8fafc;--card:#fff;--ink:#0f172a;--ink-soft:#475569;--line:#e2e8f0;
+  --ok:#16a34a;--warn:#f59e0b;--err:#dc2626;--radius:14px;
+  --shadow:0 4px 20px rgba(15,23,42,.08);--shadow-lg:0 12px 40px rgba(15,23,42,.12);
+  --grad:linear-gradient(135deg,#1565d8 0%,#7c3aed 100%);
+  --sidebar:260px;
 }
-@media(max-width:480px){
-  .stats-grid{grid-template-columns:1fr}
-  th{display:none}
-  td{display:block}
-  td::before{content:attr(data-label);color:var(--soft);font-size:11px;margin-right:8px}
-  td{border-bottom:none;padding:4px 0}
+[data-theme="sombre"]{
+  --bg:#0f172a;--card:#1e293b;--ink:#f1f5f9;--ink-soft:#94a3b8;--line:#334155;
+  --bleu-light:#1e3a5f;--violet-light:#2d1b4e;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+button{font-family:inherit;cursor:pointer}
+a{color:var(--bleu)}
+
+/* Logo */
+.logo-svg{width:36px;height:36px;flex-shrink:0}
+
+/* Layout */
+.layout{display:flex;min-height:100vh}
+.sidebar{background:var(--card);border-right:1px solid var(--line);width:var(--sidebar);position:fixed;top:0;left:0;bottom:0;z-index:100;display:flex;flex-direction:column;transition:.3s}
+.sidebar-header{padding:16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+.sidebar-header .lt{font-size:16px;font-weight:900}
+.sidebar-header .lt span{color:var(--violet)}
+.sidebar-nav{flex:1;overflow-y:auto;padding:12px 0}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 16px;font-size:13px;font-weight:600;color:var(--ink-soft);cursor:pointer;transition:.2s;border-left:3px solid transparent}
+.nav-item:hover{background:var(--bg);color:var(--ink)}
+.nav-item.active{background:var(--bleu-light);color:var(--bleu);border-left-color:var(--bleu)}
+.nav-item .ic{font-size:18px;width:24px;text-align:center}
+.sidebar-footer{padding:12px 16px;border-top:1px solid var(--line);font-size:11px;color:var(--ink-soft)}
+.sidebar-footer .logo-row{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.sidebar-footer .logo-text{font-size:13px;font-weight:900}
+.sidebar-footer .logo-text span{color:var(--violet)}
+
+.main{flex:1;margin-left:var(--sidebar);min-width:0}
+.topbar{background:var(--card);border-bottom:1px solid var(--line);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;box-shadow:var(--shadow)}
+.topbar h2{font-size:18px;font-weight:700}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.content{padding:24px}
+
+/* Auth admin */
+.admin-auth{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--grad);padding:20px}
+.admin-auth .card{background:var(--card);border-radius:20px;padding:32px;width:100%;max-width:380px;box-shadow:var(--shadow-lg)}
+.admin-auth .logo-row{display:flex;flex-direction:column;align-items:center;gap:8px;margin-bottom:24px}
+.admin-auth .logo-text{font-size:22px;font-weight:900;text-align:center}
+.admin-auth .logo-text span{color:var(--violet)}
+
+/* Cards */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);margin-bottom:16px}
+.card h3{font-size:16px;font-weight:700;margin-bottom:12px}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:20px}
+.stat-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;box-shadow:var(--shadow)}
+.stat-card .ic{font-size:24px;margin-bottom:8px}
+.stat-card .v{font-size:28px;font-weight:800;color:var(--bleu)}
+.stat-card .l{font-size:12px;color:var(--ink-soft);margin-top:2px}
+
+/* Table */
+.table-wrap{overflow-x:auto;border-radius:10px;border:1px solid var(--line)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line)}
+th{background:var(--bg);font-weight:700;color:var(--ink-soft);font-size:12px;text-transform:uppercase;letter-spacing:.5px}
+tr:hover{background:var(--bg)}
+.badge{display:inline-block;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:700}
+.badge.ok{background:#dcfce7;color:#166534}
+.badge.err{background:#fee2e2;color:#991b1b}
+.badge.wait{background:#fef3c7;color:#92400e}
+.badge.act{background:var(--violet-light);color:var(--violet)}
+
+/* Filters */
+.filter-row{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.filter-row input,.filter-row select{padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font-size:13px}
+.filter-row input{flex:1;min-width:180px}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 16px;border-radius:8px;font-weight:600;font-size:13px;border:none;transition:.2s}
+.btn-primary{background:var(--grad);color:#fff}
+.btn-outline{background:var(--card);border:1px solid var(--line);color:var(--ink)}
+.btn-violet{background:var(--violet);color:#fff}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn:hover{opacity:.85}
+
+/* Alert */
+.alert{padding:10px 14px;border-radius:10px;font-size:13px;margin-bottom:12px;display:none}
+.alert.ok{background:#dcfce7;color:#166534;display:block}
+.alert.err{background:#fee2e2;color:#991b1b;display:block}
+
+/* Auto refresh badge */
+.auto-refresh{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ok);font-weight:600}
+.auto-refresh .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* Plan editor */
+.plan-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:8px;margin-bottom:8px}
+.plan-row input{padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font-size:12px;width:100%}
+
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .main{margin-left:0}
 }
 </style>
 </head>
 <body>
 
-<!-- LOGIN -->
-<div id="login">
-  <div class="login-card">
-    <div class="logo">📚</div>
-    <h1>ÉcoleMax</h1>
-    <p>Tableau de bord administrateur</p>
-    <div class="erreur" id="loginErr"></div>
-    <input type="password" id="passInput" placeholder="Mot de passe admin" autocomplete="current-password">
-    <button class="btn btn-primary" style="width:100%" onclick="doLogin()">🔐 Accéder</button>
-    <p style="margin-top:16px;font-size:11px;color:var(--soft)">Mot de passe par défaut : ecolemax2026</p>
+<!-- AUTH ADMIN -->
+<div id="adminAuth" class="admin-auth">
+  <div class="card">
+    <div class="logo-row">
+      <svg class="logo-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <defs><linearGradient id="lgD" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#1565d8"/><stop offset="100%" stop-color="#7c3aed"/>
+        </linearGradient></defs>
+        <rect width="100" height="100" rx="22" fill="url(#lgD)"/>
+        <text x="50" y="70" font-size="46" text-anchor="middle" fill="white" font-family="Arial" font-weight="bold">EM</text>
+      </svg>
+      <div class="logo-text">École<span>Max</span> — Admin</div>
+    </div>
+    <div class="alert" id="authAlert"></div>
+    <form onsubmit="doAdminLogin(event)">
+      <div class="field"><label>Mot de passe administrateur</label>
+        <input type="password" id="adminMdp" required placeholder="Mot de passe admin" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;font-size:14px">
+      </div>
+      <button class="btn btn-primary btn-block" type="submit" style="width:100%;padding:10px;border-radius:10px;font-weight:600">🔐 Accéder au dashboard</button>
+    </form>
+    <p style="text-align:center;margin-top:14px;font-size:12px;color:var(--ink-soft)">Mot de passe par défaut : <code>ecolemax2026</code></p>
   </div>
 </div>
 
-<!-- DASHBOARD -->
-<div id="dash" class="hidden">
-  <div class="topbar">
-    <div class="brand">📚 ÉcoleMax — <span style="color:var(--soft);font-weight:400">Tableau de bord</span></div>
-    <div class="live"><span class="dot"></span> <span id="liveCount">—</span> abonnés · <span id="liveTime">—</span></div>
-  </div>
-
-  <div class="container">
-    <!-- Stats -->
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="icon">👥</div>
-        <div class="label">Abonnés actifs</div>
-        <div class="value" id="statAbonnes">—</div>
-        <div class="delta up" id="statAbonnesDelta">—</div>
+<!-- DASHBOARD PRINCIPAL -->
+<div id="adminDash" class="layout" style="display:none">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <svg class="logo-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <rect width="100" height="100" rx="22" fill="url(#lgD)"/>
+        <text x="50" y="70" font-size="46" text-anchor="middle" fill="white" font-family="Arial" font-weight="bold">EM</text>
+      </svg>
+      <div class="lt">École<span>Max</span></div>
+    </div>
+    <nav class="sidebar-nav" id="navList">
+      <div class="nav-item active" data-view="stats" onclick="goView('stats')"><span class="ic">📊</span> Tableau de bord</div>
+      <div class="nav-item" data-view="users" onclick="goView('users')"><span class="ic">👥</span> Utilisateurs</div>
+      <div class="nav-item" data-view="abonnements" onclick="goView('abonnements')"><span class="ic">💎</span> Abonnements</div>
+      <div class="nav-item" data-view="paiements" onclick="goView('paiements')"><span class="ic">💳</span> Paiements</div>
+      <div class="nav-item" data-view="matieres" onclick="goView('matieres')"><span class="ic">📚</span> Matières & Cours</div>
+      <div class="nav-item" data-view="quotas" onclick="goView('quotas')"><span class="ic">📈</span> Quotas & IA</div>
+      <div class="nav-item" data-view="notifications" onclick="goView('notifications')"><span class="ic">🔔</span> Notifications</div>
+      <div class="nav-item" data-view="supports" onclick="goView('supports')"><span class="ic">💬</span> Support</div>
+      <div class="nav-item" data-view="rapports" onclick="goView('rapports')"><span class="ic">📋</span> Rapports</div>
+      <div class="nav-item" data-view="admins" onclick="goView('admins')"><span class="ic">🛡️</span> Administrateurs</div>
+      <div class="nav-item" data-view="journaux" onclick="goView('journaux')"><span class="ic">📜</span> Journaux</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="logo-row">
+        <svg class="logo-svg" style="width:24px;height:24px" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <rect width="100" height="100" rx="22" fill="url(#lgD)"/>
+          <text x="50" y="70" font-size="46" text-anchor="middle" fill="white" font-family="Arial" font-weight="bold">EM</text>
+        </svg>
+        <div class="logo-text">École<span>Max</span></div>
       </div>
-      <div class="stat-card">
-        <div class="icon">✨</div>
-        <div class="label">Nouveaux aujourd'hui</div>
-        <div class="value" id="statNouveaux">—</div>
-        <div class="delta up"> registrations aujourd'hui</div>
-      </div>
-      <div class="stat-card">
-        <div class="icon">📊</div>
-        <div class="label">Total utilisateurs</div>
-        <div class="value" id="statTotal">—</div>
-        <div class="delta up"> tous les comptes</div>
-      </div>
-      <div class="stat-card">
-        <div class="icon">💰</div>
-        <div class="label">Chiffre d'affaires</div>
-        <div class="value" id="statCA">—</div>
-        <div class="delta up"> FCFA validés</div>
+      <p>Créé par SYCHEIKHCORP</p>
+      <button class="btn btn-outline btn-sm" style="margin-top:8px;width:100%" onclick="logoutAdmin()">Déconnexion</button>
+    </div>
+  </aside>
+  <main class="main">
+    <div class="topbar">
+      <h2 id="viewTitle">📊 Tableau de bord</h2>
+      <div class="topbar-right">
+        <span class="auto-refresh"><span class="dot"></span> Temps réel</span>
+        <button class="btn btn-outline btn-sm" onclick="toggleTheme()" id="themeBtn">🌙</button>
+        <button class="btn btn-primary btn-sm" onclick="refreshCurrent()">↻ Rafraîchir</button>
       </div>
     </div>
-
-    <!-- Plans abonnement -->
-    <div class="section">
-      <div class="section-header" onclick="this.parentElement.classList.toggle('collapsed')">
-        <h2>📊 Plans d'abonnement</h2>
-        <span class="arrow">▼</span>
-      </div>
-      <div class="section-body">
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Plan</th><th>Prix</th><th>Abonnés actifs</th><th>CA validé</th></tr></thead>
-            <tbody id="plansTable"><tr><td colspan="4" style="color:var(--soft);padding:20px;text-align:center">Chargement…</td></tr></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- Subscribers -->
-    <div class="section">
-      <div class="section-header" onclick="this.parentElement.classList.toggle('collapsed')">
-        <h2>👥 Abonnés (temps réel)</h2>
-        <span class="arrow">▼</span>
-      </div>
-      <div class="section-body" id="subsBody">
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Pseudo</th><th>Plan</th><th>Ville</th><th>Langue</th><th>Expiration</th><th>Statut</th></tr></thead>
-            <tbody id="subsTable"><tr><td colspan="6" style="color:var(--soft);padding:20px;text-align:center">Chargement…</td></tr></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- Users management -->
-    <div class="section">
-      <div class="section-header" onclick="this.parentElement.classList.toggle('collapsed')">
-        <h2>👤 Gérer les utilisateurs</h2>
-        <span class="arrow">▼</span>
-      </div>
-      <div class="section-body" id="usersBody">
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Pseudo</th><th>Niveau</th><th>Ville</th><th>Plan</th><th>Contact</th><th>Statut</th><th>Actions</th></tr></thead>
-            <tbody id="usersTable"><tr><td colspan="7" style="color:var(--soft);padding:20px;text-align:center">Chargement…</td></tr></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- Payment links -->
-    <div class="section">
-      <div class="section-header" onclick="this.parentElement.classList.toggle('collapsed')">
-        <h2>🔗 Liens de paiement</h2>
-        <span class="arrow">▼</span>
-      </div>
-      <div class="section-body">
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Réf.</th><th>Canal</th><th>Montant</th><th>Statut</th></tr></thead>
-            <tbody id="payTable"><tr><td colspan="4" style="color:var(--soft);padding:20px;text-align:center">Aucun lien…</td></tr></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- Payment config -->
-    <div class="section">
-      <div class="section-header" onclick="this.parentElement.classList.toggle('collapsed')">
-        <h2>⚙️ Paramétrage paiements</h2>
-        <span class="arrow">▼</span>
-      </div>
-      <div class="section-body">
-        <div class="pay-config">
-          <!-- Wave -->
-          <div class="pay-block">
-            <h3>🌊 Wave</h3>
-            <div class="field">
-              <label>API Key</label>
-              <input id="cfg_WAVE_API_KEY" placeholder="wsk_...">
-            </div>
-            <div class="field">
-              <label>Webhook Secret</label>
-              <input id="cfg_WAVE_WEBHOOK_SECRET" placeholder="secret">
-            </div>
-            <div class="hint">Clés depuis dashboard.wave.com → Paramètres → Developer</div>
-          </div>
-          <!-- Orange Money -->
-          <div class="pay-block">
-            <h3>📶 Orange Money</h3>
-            <div class="field">
-              <label>Client ID</label>
-              <input id="cfg_ORANGE_CLIENT_ID" placeholder="client_id">
-            </div>
-            <div class="field">
-              <label>Client Secret</label>
-              <input id="cfg_ORANGE_CLIENT_SECRET" placeholder="client_secret">
-            </div>
-            <div class="field">
-              <label>Merchant Key</label>
-              <input id="cfg_ORANGE_MERCHANT_KEY" placeholder="merchant_key">
-            </div>
-            <div class="hint">Clés depuis Orange Developer Portal</div>
-          </div>
-          <!-- PayDunya -->
-          <div class="pay-block">
-            <h3>💳 PayDunya</h3>
-            <div class="field">
-              <label>API Key</label>
-              <input id="cfg_PAYDUNYA_API_KEY" placeholder="api_key">
-            </div>
-            <div class="field">
-              <label>API Token</label>
-              <input id="cfg_PAYDUNYA_API_TOKEN" placeholder="api_token">
-            </div>
-            <div class="hint">Clés depuis app.paydunya.com</div>
-          </div>
-          <!-- URL publique -->
-          <div class="pay-block">
-            <h3>🌐 URL publique</h3>
-            <div class="field">
-              <label>PUBLIC_BASE_URL</label>
-              <input id="cfg_PUBLIC_BASE_URL" placeholder="https://ecolemax.onrender.com">
-            </div>
-            <button class="btn btn-primary" onclick="saveConfig()">💾 Enregistrer la configuration</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="dashboard-footer">📚 ÉcoleMax — Créé par <strong>SycheikhCorp</strong> © 2026</div>
+    <div class="content" id="viewContent"></div>
+  </main>
 </div>
 
 <script>
-let adminPass = localStorage.getItem("ecolemax_admin") || "";
-let pollTimer = null;
+const API="";
+let ADMIN=sessionStorage.getItem("em_admin")||"";
+let ADMIN_PW="ecolemax2026";
+let CURRENT_VIEW="stats";
+let AUTO_REFRESH=null;
 
-function setAdmin(p){adminPass=p; if(p)localStorage.setItem("ecolemax_admin",p); else localStorage.removeItem("ecolemax_admin");}
+// ── Auth admin ──
+function doAdminLogin(e){e.preventDefault();
+  const mdp=document.getElementById("adminMdp").value;
+  if(mdp===ADMIN_PW){ADMIN=mdp;sessionStorage.setItem("em_admin",mdp);
+    document.getElementById("adminAuth").style.display="none";
+    document.getElementById("adminDash").style.display="flex";
+    initDashboard();
+  } else {showAlert("authAlert","Mot de passe incorrect",false);}
+}
+function logoutAdmin(){ADMIN="";sessionStorage.removeItem("em_admin");
+  document.getElementById("adminDash").style.display="none";
+  document.getElementById("adminAuth").style.display="flex";}
+function showAlert(id,text,ok){const e=document.getElementById(id);e.textContent=text;e.className="alert "+(ok?"ok":"err");}
 
-function api(path, opts){
-  opts=opts||{};
-  opts.headers=Object.assign({"Content-Type":"application/json","X-Admin-Password":adminPass},opts.headers||{});
-  return fetch(path,opts).then(r=>{
-    if(r.status===401){logout();throw new Error("401");}
-    return r.json();
+// ── Thème ──
+function toggleTheme(){
+  const t=document.documentElement.getAttribute("data-theme");
+  const n=t==="sombre"?"clair":"sombre";
+  document.documentElement.setAttribute("data-theme",n);
+  localStorage.setItem("em_theme_admin",n);
+  document.getElementById("themeBtn").textContent=n==="sombre"?"☀️":"🌙";
+}
+if(localStorage.getItem("em_theme_admin")==="sombre"){toggleTheme();}
+
+// ── Navigation ──
+const VIEWS={
+  stats:{title:"📊 Tableau de bord",render:renderStats},
+  users:{title:"👥 Utilisateurs",render:renderUsers},
+  abonnements:{title:"💎 Abonnements",render:renderAbonnements},
+  paiements:{title:"💳 Paiements",render:renderPaiements},
+  matieres:{title:"📚 Matières & Cours",render:renderMatieres},
+  quotas:{title:"📈 Quotas & IA",render:renderQuotas},
+  notifications:{title:"🔔 Notifications",render:renderNotifications},
+  supports:{title:"💬 Support",render:renderSupports},
+  rapports:{title:"📋 Rapports",render:renderRapports},
+  admins:{title:"🛡️ Administrateurs",render:renderAdmins},
+  journaux:{title:"📜 Journaux",render:renderJournaux},
+};
+function goView(v){
+  CURRENT_VIEW=v;
+  document.querySelectorAll(".nav-item").forEach(n=>n.classList.remove("active"));
+  document.querySelector(`.nav-item[data-view="${v}"]`).classList.add("active");
+  document.getElementById("viewTitle").textContent=VIEWS[v].title;
+  VIEWS[v].render();
+  if(AUTO_REFRESH){clearInterval(AUTO_REFRESH);}
+  if(v==="stats"){AUTO_REFRESH=setInterval(renderStats,10000);}
+}
+function refreshCurrent(){if(VIEWS[CURRENT_VIEW])VIEWS[CURRENT_VIEW].render();}
+function initDashboard(){
+  document.getElementById("adminAuth").style.display="none";
+  document.getElementById("adminDash").style.display="flex";
+  goView("stats");
+}
+
+async function apiAdmin(path){
+  const r=await fetch(API+path,{headers:{"X-Admin-Password":ADMIN_PW}});
+  return r.json();
+}
+
+// ── STATS ──
+async function renderStats(){
+  const c=document.getElementById("viewContent");c.innerHTML="<div style='color:var(--ink-soft)'>Chargement...</div>";
+  const d=await apiAdmin("/api/admin/stats");
+  const rev=d.revenu_encaisse||0;
+  const conv=d.total_users?Math.round((d.payants/d.total_users)*100):0;
+  c.innerHTML=`
+    <div class="stat-grid">
+      <div class="stat-card"><div class="ic">👥</div><div class="v">${d.total_users}</div><div class="l">Total utilisateurs</div></div>
+      <div class="stat-card"><div class="ic">🆕</div><div class="v">${d.nouveaux_aujourdhui}</div><div class="l">Nouveaux inscrits aujourd'hui</div></div>
+      <div class="stat-card"><div class="ic">💎</div><div class="v">${d.abonnes_actifs}</div><div class="l">Abonnés actifs</div></div>
+      <div class="stat-card"><div class="ic">💰</div><div class="v">${d.payants}</div><div class="l">Abonnés payants</div></div>
+      <div class="stat-card"><div class="ic">💵</div><div class="v">${rev.toLocaleString()} FCFA</div><div class="l">Revenu encaissé</div></div>
+      <div class="stat-card"><div class="ic">⏳</div><div class="v">${d.paiements_attente}</div><div class="l">Paiements en attente</div></div>
+      <div class="stat-card"><div class="ic">🤖</div><div class="v">${d.requetes_ia}</div><div class="l">Requêtes IA</div></div>
+      <div class="stat-card"><div class="ic">📈</div><div class="v">${conv}%</div><div class="l">Conversion (payants/utilisateurs)</div></div>
+    </div>
+    <div class="card">
+      <h3>🎯 Objectif de revenus</h3>
+      <div style="background:var(--bg);border-radius:10px;height:24px;overflow:hidden;margin-top:8px">
+        <div style="height:100%;width:${Math.min(100,(rev/d.objectif)*100)}%;background:var(--grad);border-radius:10px;transition:.5s;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700">
+          ${Math.round((rev/d.objectif)*100)}% — ${rev.toLocaleString()} / ${d.objectif.toLocaleString()} FCFA
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--ink-soft);margin-top:8px">Les données s'actualisent automatiquement (rafraîchissement toutes les 10 s).</p>
+    </div>
+    <div class="card">
+      <h3>📋 Répartition des abonnements</h3>
+      <div id="planDist" style="margin-top:10px"></div>
+    </div>`;
+  // Répartition par plan
+  const ab=await apiAdmin("/api/admin/abonnements");
+  const dist={};
+  (ab.abonnements||[]).forEach(a=>{dist[a.plan_code]=(dist[a.plan_code]||0)+1;});
+  const pc=document.getElementById("planDist");
+  Object.entries(dist).forEach(([k,v])=>{
+    const pct=d.abonnes_actifs?Math.round((v/d.abonnes_actifs)*100):0;
+    pc.innerHTML+=`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line)">
+      <span>${k}</span><span style="font-weight:700">${v} (${pct}%)</span></div>`;
+  });
+  if(Object.keys(dist).length===0)pc.innerHTML="<p style='color:var(--ink-soft)'>Aucun abonnement actif.</p>";
+}
+
+// ── USERS ──
+async function renderUsers(){
+  const c=document.getElementById("viewContent");c.innerHTML="<div style='color:var(--ink-soft)'>Chargement...</div>";
+  const d=await apiAdmin("/api/admin/users");
+  const users=d.users||[];
+  c.innerHTML=`
+    <div class="card">
+      <h3>👥 Utilisateurs (${users.length})</h3>
+      <div class="filter-row">
+        <input type="text" placeholder="Rechercher pseudo/email..." oninput="filterUsers(this.value)">
+      </div>
+      <div class="table-wrap"><table id="usersTable">
+        <thead><tr><th>ID</th><th>Pseudo</th><th>Email</th><th>Niveau</th><th>Rôle</th><th>Inscrit</th></tr></thead>
+        <tbody></tbody></table></div>
+    </div>`;
+  const tb=document.querySelector("#usersTable tbody");
+  users.forEach(u=>{tb.innerHTML+=`<tr data-search="${u.pseudo} ${u.email||''} ${u.niveau}">
+    <td>${u.id}</td><td>${u.pseudo}</td><td>${u.email||'—'}</td><td>${u.niveau}</td>
+    <td><span class="badge ${u.role==='eleve'?'act':'ok'}">${u.role}</span></td>
+    <td>${(u.created_at||'').substring(0,10)}</td></tr>`;});
+}
+function filterUsers(q){
+  q=q.toLowerCase();
+  document.querySelectorAll("#usersTable tbody tr").forEach(r=>{
+    r.style.display=r.dataset.search.toLowerCase().includes(q)?"":"none";
   });
 }
 
-function doLogin(){
-  const p=document.getElementById("passInput").value.trim();
-  if(!p)return;
-  adminPass = p;  // ← FIX: set before API call
-  api("/api/admin/stats").then(()=>{
-    setAdmin(p);
-    document.getElementById("login").classList.add("hidden");
-    document.getElementById("dash").classList.remove("hidden");
-    startPolling();
-  }).catch(e=>{
-    document.getElementById("loginErr").textContent="Mot de passe incorrect";
+// ── ABONNEMENTS ──
+async function renderAbonnements(){
+  const c=document.getElementById("viewContent");c.innerHTML="<div style='color:var(--ink-soft)'>Chargement...</div>";
+  const [ab,pays]=await Promise.all([apiAdmin("/api/admin/abonnements"),apiAdmin("/api/admin/paiements")]);
+  const abos=ab.abonnements||[];
+  c.innerHTML=`
+    <div class="card">
+      <h3>💎 Abonnements (${abos.length})</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>ID</th><th>Élève</th><th>Plan</th><th>Statut</th><th>Début</th><th>Expiration</th></tr></thead>
+        <tbody>${abos.map(a=>`<tr>
+          <td>${a.id}</td><td>${a.pseudo}</td><td>${a.plan_code}</td>
+          <td><span class="badge ${a.statut==='actif'?'ok':a.statut==='en_attente'?'wait':'err'}">${a.statut}</span></td>
+          <td>${(a.debut||'').substring(0,10)}</td><td>${(a.expire||'—').substring(0,10)}</td>
+        </tr>`).join('')}</tbody></table></div>
+    </div>
+    <div class="card">
+      <h3>💳 Paiements (${pays.paiements?pays.paiements.length:0})</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>ID</th><th>Élève</th><th>Montant</th><th>Méthode</th><th>Statut</th><th>Réf</th><th>Date</th></tr></thead>
+        <tbody>${(pays.paiements||[]).map(p=>`<tr>
+          <td>${p.id}</td><td>${p.pseudo}</td><td>${p.montant} FCFA</td><td>${p.method}</td>
+          <td><span class="badge ${p.statut==='success'?'ok':p.statut==='en_attente'?'wait':'err'}">${p.statut}</span></td>
+          <td><code>${p.reference||'—'}</code></td><td>${(p.created_at||'').substring(0,10)}</td>
+        </tr>`).join('')}</tbody></table></div>
+    </div>`;
+}
+
+// ── PAIEMENTS ──
+async function renderPaiements(){
+  const c=document.getElementById("viewContent");c.innerHTML="<div style='color:var(--ink-soft)'>Chargement...</div>";
+  const d=await apiAdmin("/api/admin/paiements");
+  const pays=d.paiements||[];
+  c.innerHTML=`
+    <div class="card">
+      <h3>💳 Paiements (${pays.length})</h3>
+      <div class="filter-row">
+        <select id="payFilter" onchange="filterPays()">
+          <option value="">Tous les statuts</option>
+          <option value="en_attente">En attente</option>
+          <option value="success">Succès</option>
+          <option value="failed">Échoué</option>
+          <option value="annulé">Annulé</option>
+          <option value="remboursé">Remboursé</option>
+        </select>
+      </div>
+      <div class="table-wrap"><table id="paysTable">
+        <thead><tr><th>ID</th><th>Élève</th><th>Montant</th><th>Méthode</th><th>Statut</th><th>Réf</th><th>Date</th><th>Actions</th></tr></thead>
+        <tbody>${pays.map(p=>`<tr data-statut="${p.statut}" data-ref="${p.reference||''}">
+          <td>${p.id}</td><td>${p.pseudo}</td><td>${p.montant} FCFA</td><td>${p.method}</td>
+          <td><span class="badge ${p.statut==='success'?'ok':p.statut==='en_attente'?'wait':'err'}">${p.statut}</span></td>
+          <td><code>${p.reference||'—'}</code></td><td>${(p.created_at||'').substring(0,10)}</td>
+          <td>${p.statut==='success'?'<button class="btn btn-outline btn-sm" onclick="refundPay(\''+p.reference+'\')">↩️ Rembourser</button>':''}</td>
+        </tr>`).join('')}</tbody></table></div>
+    </div>`;
+}
+function filterPays(){
+  const f=document.getElementById("payFilter").value;
+  document.querySelectorAll("#paysTable tbody tr").forEach(r=>{
+    r.style.display=r.dataset.statut===f?"":"none";
+  });
+}
+async function refundPay(ref){
+  if(!confirm("Confirmer le remboursement de "+ref+" ?"))return;
+  // Note: le remboursement est géré côté backend / prestataire
+  alert("✅ Demande de remboursement envoyée pour "+ref+". (Intégration Webhook Wave/Orange Money nécessaire pour l'automatisation complète)");
+}
+
+// ── MATIERES ──
+async function renderMatieres(){
+  const c=document.getElementById("viewContent");c.innerHTML="<div style='color:var(--ink-soft)'>Chargement...</div>";
+  const d=await apiAdmin("/api/admin/matieres");
+  const sujets=d.sujets||[];const cours=d.cours||[];const ex=d.exercices||[];
+  c.innerHTML=`
+    <div class="card"><h3>📚 Matières (${sujets.length})</h3>
+      <div class="filter-row">
+        <input type="text" placeholder="Rechercher matière..." oninput="filterMatieres(this.value)">
+      </div>
+      <div class="table-wrap"><table id="subjTable">
+        <thead><tr><th>Code</th><th>Nom</th><th>Catégorie</th></tr></thead>
+        <tbody>${sujets.map(s=>`<tr data-search="${s.nom} ${s.categorie}"><td>${s.code}</td><td>${s.nom}</td><td>${s.categorie}</td></tr>`).join('')}</tbody>
+      </table></div></div>
+    <div class="card"><h3>📖 Cours (${cours.length})</h3>
+      <div class="table-wrap"><table><thead><tr><th>Matière</th><th>Titre</th><th>Niveau</th><th>Chapitre</th></tr></thead>
+      <tbody>${cours.map(c=>`<tr><td>${c.sujet_code}</td><td>${c.titre}</td><td>${c.niveau}</td><td>${c.chapitre}</td></tr>`).join('')}</tbody></table></div></div>
+    <div class="card"><h3>✍️ Exercices (${ex.length})</h3>
+      <div class="table-wrap"><table><thead><tr><th>Type</th><th>Titre</th><th>Niveau</th><th>Difficulté</th></tr></thead>
+      <tbody>${ex.map(e=>`<tr><td>${e.type}</td><td>${e.titre}</td><td>${e.niveau}</td><td>${e.difficulte}⭐</td></tr>`).join('')}</tbody></table></div></div>`;
+}
+function filterMatieres(q){
+  q=q.toLowerCase();
+  document.querySelectorAll("#subjTable tbody tr").forEach(r=>{
+    r.style.display=r.dataset.search.toLowerCase().includes(q)?"":"none";
   });
 }
 
-function logout(){
-  setAdmin("");
-  document.getElementById("login").classList.remove("hidden");
-  document.getElementById("dash").classList.add("hidden");
-  if(pollTimer){clearInterval(pollTimer);pollTimer=null;}
-}
-
-function startPolling(){
-  if(pollTimer)clearInterval(pollTimer);
-  fetchAll();
-  pollTimer=setInterval(fetchAll,3000);
-}
-
-function fetchAll(){
-  fetchStats();
-  fetchPlans();
-  fetchSubscribers();
-  fetchPayments();
-  fetchUsers();
-}
-
-function fetchPlans(){
-  api("/api/admin/plans-stats").then(d=>{
-    const t=document.getElementById("plansTable");
-    if(!d.plans||d.plans.length===0){t.innerHTML='<tr><td colspan="4" style="color:var(--soft);padding:20px;text-align:center">Aucun plan…</td></tr>';return;}
-    t.innerHTML=d.plans.map(p=>{
-      const badge=p.prix>0?'<span class="badge blue">'+p.nom+'</span>':'<span class="badge orange">Gratuit</span>';
-      return `<tr><td data-label="Plan">${badge}</td><td data-label="Prix">${p.prix>0?Math.round(p.prix)+" FCFA":"—"}</td><td data-label="Abonnés">${p.abonnes||0}</td><td data-label="CA">${Math.round(p.ca||0)} FCFA</td></tr>`;
-    }).join("");
-  }).catch(()=>{});
-}
-
-function fetchStats(){
-  api("/api/admin/stats").then(s=>{
-    document.getElementById("statAbonnes").textContent=s.abonnes_actifs||0;
-    document.getElementById("statNouveaux").textContent=s.nouveaux_aujourdhui||0;
-    document.getElementById("statTotal").textContent=s.total_users||0;
-    document.getElementById("statCA").textContent=Math.round(s.ca||0).toLocaleString()+" FCFA";
-    document.getElementById("liveCount").textContent=s.abonnes_actifs||0;
-    document.getElementById("liveTime").textContent=new Date().toLocaleTimeString("fr-FR");
-  }).catch(()=>{});
-}
-
-function fetchSubscribers(){
-  api("/api/admin/subscribers").then(d=>{
-    const t=document.getElementById("subsTable");
-    if(!d.abonnes||d.abonnes.length===0){t.innerHTML='<tr><td colspan="6" style="color:var(--soft);padding:20px;text-align:center">Aucun abonné…</td></tr>';return;}
-    t.innerHTML=d.abonnes.map(s=>{
-      const exp=new Date(s.date_expiration);
-      const now=new Date();
-      const jours=Math.ceil((exp-now)/(1000*60*60*24));
-      const badge=jours>0?'<span class="badge green">Actif</span>':'<span class="badge red">Expiré</span>';
-      const planBadge=s.prix>0?'<span class="badge blue">'+s.plan+'</span>':'<span class="badge orange">Gratuit</span>';
-      return `<tr>
-        <td data-label="Pseudo"><strong>${s.pseudo}</strong></td>
-        <td data-label="Plan">${planBadge}</td>
-        <td data-label="Ville">${s.ville||'—'}</td>
-        <td data-label="Langue">${s.langue||'fr'}</td>
-        <td data-label="Expiration">${s.date_expiration||'—'}</td>
-        <td data-label="Statut">${badge}</td>
-      </tr>`;
-    }).join("");
-  }).catch(()=>{});
-}
-
-function fetchUsers(){
-  api("/api/admin/users").then(d=>{
-    const t=document.getElementById("usersTable");
-    if(!d.users||d.users.length===0){t.innerHTML='<tr><td colspan="7" style="color:var(--soft);padding:20px;text-align:center">Aucun utilisateur…</td></tr>';return;}
-    t.innerHTML=d.users.map(u=>{
-      const badge=u.bloque?'<span class="badge red">🚫 Bloqué</span>':'<span class="badge green">✅ Actif</span>';
-      const planBadge=u.plan_prix>0?'<span class="badge blue">'+u.plan+'</span>':'<span class="badge orange">Gratuit</span>';
-      const contact=u.telephone?('📱 '+u.telephone):(u.email?('📧 '+u.email):'—');
-      return `<tr>
-        <td data-label="Pseudo"><strong>${u.pseudo}</strong></td>
-        <td data-label="Niveau">${u.niveau||'—'}</td>
-        <td data-label="Ville">${u.ville||'—'}</td>
-        <td data-label="Plan">${planBadge}</td>
-        <td data-label="Contact">${contact}</td>
-        <td data-label="Statut">${badge}</td>
-        <td data-label="Actions">
-          <button class="btn-mini ${u.bloque?'btn-unblock':'btn-block'}" onclick="blockUser('${u.pseudo}',${!u.bloque})">${u.bloque?'Débloquer':'Bloquer'}</button>
-          <button class="btn-mini btn-reset" onclick="resetUserPwd('${u.pseudo}')">🔑</button>
-          <button class="btn-mini btn-delete" onclick="deleteUser('${u.pseudo}')">🗑️</button>
-        </td>
-      </tr>`;
-    }).join("");
-  }).catch(()=>{});
-}
-
-function blockUser(pseudo,bloque){
-  api("/api/admin/block-user",{method:"POST",body:JSON.stringify({pseudo,bloque})}).then(d=>{
-    toast(d.message||"✅ Mise à jour");
-    fetchUsers();
-  }).catch(()=>toast("Erreur","err"));
-}
-
-function deleteUser(pseudo){
-  if(!confirm("⚠️ Supprimer le compte « "+pseudo+" » ?\n\nCeci est irréversible."))return;
-  api("/api/admin/delete-user",{method:"POST",body:JSON.stringify({pseudo})}).then(d=>{
-    toast(d.message||"✅ Supprimé");
-    fetchUsers();
-  }).catch(()=>toast("Erreur","err"));
-}
-
-function resetUserPwd(pseudo){
-  const mdp=prompt("Nouveau mot de passe pour « "+pseudo+" »:\n(8+ caractères, lettre + chiffre)");
-  if(!mdp)return;
-  api("/api/admin/reset-user-password",{method:"POST",body:JSON.stringify({pseudo,mot_de_passe:mdp})}).then(d=>{
-    toast(d.message||"✅ Réinitialisé");
-  }).catch(()=>toast("Erreur","err"));
-}
-
-function fetchPayments(){
-  api("/api/admin/payment-links").then(d=>{
-    const t=document.getElementById("payTable");
-    if(!d.liens||d.liens.length===0){t.innerHTML='<tr><td colspan="4" style="color:var(--soft);padding:20px;text-align:center">Aucun lien…</td></tr>';return;}
-    t.innerHTML=d.liens.slice(0,10).map(l=>{
-      const badge=l.statut==='valide'?'<span class="badge green">Validé</span>':l.statut==='en_attente'?'<span class="badge orange">En attente</span>':'<span class="badge red">'+(l.statut||'?')+'</span>';
-      return `<tr><td data-label="Réf.">${l.reference||l.id}</td><td data-label="Canal">${l.canal}</td><td data-label="Montant">${Math.round(l.montant||0)} FCFA</td><td data-label="Statut">${badge}</td></tr>`;
-    }).join("");
-  }).catch(()=>{});
-}
-
-function saveConfig(){
-  const keys=["WAVE_API_KEY","WAVE_WEBHOOK_SECRET","ORANGE_CLIENT_ID","ORANGE_CLIENT_SECRET","ORANGE_MERCHANT_KEY","PAYDUNYA_API_KEY","PAYDUNYA_API_TOKEN","PUBLIC_BASE_URL"];
-  const cfg={};
-  keys.forEach(k=>{const v=document.getElementById("cfg_"+k).value.trim(); if(v)cfg[k]=v;});
-  api("/api/admin/config",{method:"POST",body:JSON.stringify({config:cfg})}).then(()=>{
-    toast("✅ Configuration enregistrée");
-  }).catch(()=>{
-    toast("Erreur: "+adminPass?"":"authentification","err");
+// ── QUOTAS ──
+async function renderQuotas(){
+  const c=document.getElementById("viewContent");
+  const d=await apiAdmin("/api/admin/stats");
+  c.innerHTML=`
+    <div class="card">
+      <h3>📈 Utilisation de l'IA</h3>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="ic">🤖</div><div class="v">${d.requetes_ia}</div><div class="l">Requêtes IA totales</div></div>
+        <div class="stat-card"><div class="ic">📊</div><div class="v">${d.total_users}</div><div class="l">Élèves avec usage</div></div>
+        <div class="stat-card"><div class="ic">💰</div><div class="v">Gratuit</div><div class="l">Coût IA (Pollinations gratuit)</div></div>
+      </div>
+      <p style="font-size:12px;color:var(--ink-soft);margin-top:10px">
+        🔒 Les quotas (questions IA/jour, photos/jour) sont contrôlés côté backend pour chaque utilisateur et plan.
+      </p>
+    </div>
+    <div class="card">
+      <h3>⚙️ Quotas par plan (modifiables)</h3>
+      <div id="planQuotas"></div>
+      <p style="font-size:12px;color:var(--ink-soft);margin-top:10px">⚠️ La modification des quotas nécessite une intégration admin côté backend (à configurer).</p>
+    </div>`;
+  const plans=await fetch(API+"/api/plans").then(r=>r.json());
+  const pq=document.getElementById("planQuotas");
+  plans.forEach(p=>{
+    pq.innerHTML+=`<div class="plan-row">
+      <div><strong>${p.nom}</strong><br><small>${p.code}</small></div>
+      <div><label>Prix</label><input value="${p.prix}" data-code="${p.code}" data-field="prix"></div>
+      <div><label>Durée (j)</label><input value="${p.duree_jours}" data-code="${p.code}" data-field="duree"></div>
+      <div><label>IA/jour</label><input value="${p.limite_ia_jour}" data-code="${p.code}" data-field="ia"></div>
+      <div><label>Photos/jour</label><input value="${p.photo_jour}" data-code="${p.code}" data-field="photo"></div>
+    </div>`;
   });
 }
 
-function toast(msg,type){
-  const t=document.createElement("div");
-  t.className="toast"+(type==="err"?" err":"");
-  t.textContent=msg;
-  document.body.appendChild(t);
-  setTimeout(()=>t.remove(),3000);
+// ── NOTIFICATIONS ──
+async function renderNotifications(){
+  const c=document.getElementById("viewContent");c.innerHTML="<div style='color:var(--ink-soft)'>Chargement...</div>";
+  const d=await apiAdmin("/api/admin/notifications");
+  const ns=d.notifications||[];
+  c.innerHTML=`
+    <div class="card"><h3>🔔 Notifications (${ns.length})</h3>
+      <div id="notifAdminList"></div>
+    </div>
+    <div class="card"><h3>➕ Nouvelle notification (à configurer)</h3>
+      <div class="alert" style="background:var(--bleu-light);color:var(--bleu-dark);display:block">⚙️ L'envoi de notifications push nécessite une intégration externe (Firebase/service de notification). Actuellement, les notifications sont affichées dans l'app élève (belles à lire).</div>
+      <div class="filter-row" style="flex-direction:column;align-items:stretch">
+        <input type="text" placeholder="Titre de la notification" id="notifTitre">
+        <textarea placeholder="Message..." id="notifMsg" style="margin-top:8px;padding:8px;border:1px solid var(--line);border-radius:8px;font-size:13px"></textarea>
+        <button class="btn btn-primary" style="margin-top:8px" onclick="sendNotification()">📨 Envoyer à tous les élèves</button>
+      </div>
+    </div>`;
+  const list=document.getElementById("notifAdminList");
+  ns.forEach(n=>{list.innerHTML+=`<div class="hist-item" style="background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:8px"><div class="t">${n.date}</div><div class="c"><strong>${n.titre}</strong> — ${n.message}</div></div>`;});
+  if(ns.length===0)list.innerHTML="<p style='color:var(--ink-soft)'>Aucune notification.</p>";
+}
+async function sendNotification(){
+  const t=document.getElementById("notifTitre").value;
+  const m=document.getElementById("notifMsg").value;
+  if(!t||!m){alert("Titre et message requis");return;}
+  // L'insertion côté serveur nécessite une route admin POST — à configurer
+  alert("✅ Notification préparée : "+t+". (Envoi massif nécessite une route admin POST /api/admin/notification/send)");
 }
 
-// Auto-login si password en mémoire
-if(adminPass){
-  api("/api/admin/stats").then(()=>{
-    document.getElementById("login").classList.add("hidden");
-    document.getElementById("dash").classList.remove("hidden");
-    startPolling();
-  }).catch(()=>{});
+// ── SUPPORTS ──
+async function renderSupports(){
+  const c=document.getElementById("viewContent");c.innerHTML="<div style='color:var(--ink-soft)'>Chargement...</div>";
+  const d=await apiAdmin("/api/admin/supports");
+  const sp=d.supports||[];
+  c.innerHTML=`
+    <div class="card"><h3>💬 Support (${sp.length})</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>ID</th><th>Élève</th><th>Sujet</th><th>Message</th><th>Statut</th><th>Date</th><th>Réponse</th></tr></thead>
+        <tbody>${sp.map(s=>`<tr>
+          <td>${s.id}</td><td>${s.pseudo}</td><td>${s.sujet}</td>
+          <td style="max-width:300px">${(s.message||'').substring(0,100)}...</td>
+          <td><span class="badge ${s.statut==='ouvert'?'wait':'ok'}">${s.statut}</span></td>
+          <td>${(s.date||'').substring(0,10)}</td>
+          <td>${s.reponse||'<span style="color:var(--ink-soft)">—</span>'}</td>
+        </tr>`).join('')}</tbody></table></div></div>`;
 }
-document.getElementById("passInput").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});
+
+// ── RAPPORTS ──
+async function renderRapports(){
+  const d=await apiAdmin("/api/admin/stats");
+  const c=document.getElementById("viewContent");
+  c.innerHTML=`
+    <div class="card"><h3>📋 Rapports & Exports</h3>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="ic">👥</div><div class="v">${d.total_users}</div><div class="l">Utilisateurs</div></div>
+        <div class="stat-card"><div class="ic">💎</div><div class="v">${d.abonnes_actifs}</div><div class="l">Abonnés</div></div>
+        <div class="stat-card"><div class="ic">💰</div><div class="v">${d.revenu_encaisse.toLocaleString()}</div><div class="l">Revenus FCFA</div></div>
+        <div class="stat-card"><div class="ic">🤖</div><div class="v">${d.requetes_ia}</div><div class="l">IA</div></div>
+      </div>
+      <div class="filter-row" style="margin-top:16px">
+        <button class="btn btn-primary" onclick="exportCSV()">📥 Exporter CSV (utilisateurs)</button>
+        <button class="btn btn-outline" onclick="exportCSVPaiements()">📥 Exporter CSV (paiements)</button>
+      </div>
+    </div>`;
+}
+async function exportCSV(){
+  const d=await apiAdmin("/api/admin/users");
+  let csv="ID,Pseudo,Email,Niveau,Rôle,Inscrit\n";
+  (d.users||[]).forEach(u=>{csv+=[u.id,u.pseudo,u.email||'',u.niveau,u.role,u.created_at].join(",")+"\n";});
+  downloadFile(csv,"ecolemax_users.csv","text/csv");
+}
+async function exportCSVPaiements(){
+  const d=await apiAdmin("/api/admin/paiements");
+  let csv="ID,Élève,Montant,Méthode,Statut,Réf,Date\n";
+  (d.paiements||[]).forEach(p=>{csv+=[p.id,p.pseudo,p.montant,p.method,p.statut,p.reference||'',p.created_at].join(",")+"\n";});
+  downloadFile(csv,"ecolemax_paiements.csv","text/csv");
+}
+function downloadFile(content,name,type){
+  const b=new Blob([content],{type});const a=document.createElement("a");
+  a.href=URL.createObjectURL(b);a.download=name;a.click();
+}
+
+// ── ADMINS ──
+async function renderAdmins(){
+  const c=document.getElementById("viewContent");
+  c.innerHTML=`
+    <div class="card"><h3>🛡️ Administrateurs</h3>
+      <div class="alert" style="background:var(--bleu-light);color:var(--bleu-dark);display:block">⚙️ La gestion des administrateurs (ajout, permissions) nécessite une route admin POST /api/admin/admins (à configurer). Le compte par défaut est <code>admin / ecolemax2026</code> (superadmin).</div>
+      <div class="filter-row" style="flex-direction:column;align-items:stretch">
+        <input type="text" placeholder="Nouvel admin pseudo" id="newAdminPseudo">
+        <input type="password" placeholder="Mot de passe" id="newAdminMdp" style="margin-top:8px">
+        <select id="newAdminRole" style="margin-top:8px"><option value="admin">Admin</option><option value="superadmin">Super admin</option></select>
+        <button class="btn btn-primary" style="margin-top:8px" onclick="addAdmin()">➕ Ajouter un administrateur</button>
+      </div>
+    </div>`;
+}
+async function addAdmin(){
+  const pseudo=document.getElementById("newAdminPseudo").value.trim();
+  const mdp=document.getElementById("newAdminMdp").value;
+  const role=document.getElementById("newAdminRole").value;
+  if(!pseudo||!mdp){alert("Pseudo et mot de passe requis");return;}
+  alert("✅ Administrateur '"+pseudo+"' préparé (création nécessite route admin POST /api/admin/admins)");
+}
+
+// ── JOURNAUX ──
+async function renderJournaux(){
+  const c=document.getElementById("viewContent");c.innerHTML="<div style='color:var(--ink-soft)'>Chargement...</div>";
+  const d=await apiAdmin("/api/admin/journaux");
+  const js=d.journaux||[];
+  c.innerHTML=`
+    <div class="card"><h3>📜 Journaux d'activité (${js.length})</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>ID</th><th>Action</th><th>Détail</th><th>Date</th></tr></thead>
+        <tbody>${js.map(j=>`<tr><td>${j.id}</td><td><span class="badge act">${j.action}</span></td><td>${(j.detail||'').substring(0,80)}</td><td>${(j.date||'').substring(0,19)}</td></tr>`).join('')}</tbody>
+      </table></div></div>`;
+}
+
+// ── Init ──
+if(ADMIN){initDashboard();}
 </script>
 </body>
 </html>

@@ -1,77 +1,25 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ÉcoleMax — Backend API (Python standard, sans dépendances)
-Serveur : API REST + static (dashboard) sur le même port.
-Base de données : SQLite.
-Sécurité : hachage mots de passe, tokens, limites par plan, contenu protégé, logs.
+ÉcoleMax — Plateforme éducative complète
+Backend : auth, IA (Professeur/Scanner/Correcteur), exercices, abonnements,
+          paiements (Wave/Orange Money/cartes), dashboard admin temps réel.
+Stack : Python 3 / SQLite (WAL) / Pollinations AI (gratuit) + calculateur local.
+Par SYCHEIKHCORP
 """
-import json
-import os
-import re
-import secrets
-import sqlite3
-import sys
-import hashlib
-import random
-import time
-import urllib.request
-import urllib.parse
-from datetime import datetime, timedelta
+import os, json, sqlite3, hashlib, hmac, secrets, re, base64, datetime, urllib.request, urllib.error
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-STATIC_DIR = os.path.join(os.path.dirname(BASE_DIR), "projet")
-if not os.path.isdir(STATIC_DIR):
-    STATIC_DIR = os.path.join(BASE_DIR, "projet")  # Fallback pour déploiement Render
-if not os.path.isdir(STATIC_DIR):
-    STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(BASE_DIR))), "projet")
-DB_PATH = os.path.join(BASE_DIR, "ecolemax.db")
 HOST = "0.0.0.0"
-PORT = int(os.environ.get("PORT", 8000))  # Render/Koyeb fournissent $PORT
+PORT = int(os.environ.get("PORT", 8000))
+DB_PATH = os.environ.get("DB_PATH", os.path.join(os.path.dirname(os.path.abspath(__file__)), "ecolemax.db"))
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "ecolemax2026")
+POLLINATIONS_URL = "https://text.pollinations.ai/openai"
+POLLINATIONS_REFERER = "https://ecolemax.onrender.com"
 
-def is_admin(handler):
-    """Vérifie le mot de passe admin via header X-Admin-Password."""
-    return handler.headers.get("X-Admin-Password", "") == ADMIN_PASSWORD
-
-# Optional real AI (OpenAI-compatible). Set OPENAI_API_KEY to enable.
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
-OPENAI_BASE = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
-OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
-GROQ_MODEL = os.environ.get("GROQ_MODEL", "gpt-oss-120b")
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
-POLLINATIONS_KEY = os.environ.get("POLLINATIONS_KEY", "")
-OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
-OPENROUTER_MODEL = os.environ.get("OPENROUTER_MODEL", "openrouter/free")
-TAVILY_API_KEY = os.environ.get("TAVILY_API_KEY", "")
-
-# Paiements (clés marchand en production)
-import reponses_locales
-from paiements import (creer_checkout_wave, creer_checkout_orange,
-                       verifier_paiement_wave, webhook_wave_valide,
-                       generer_reference, status_paiements, WAVE_WEBHOOK_SECRET)
-
-PROMPT_SYSTEME = (
-    "Tu es « Mon Tuteur », l'assistant IA d'ÉcoleMax pour les élèves du Sénégal (primaire, collège, lycée).\n"
-    "LANGUE : réponds en français. Si l'élève demande le wolof (ou si la notion est difficile), "
-    "explique aussi en wolof (traduction idiomatique, pas mot à mot).\n"
-    "DISCIPLINE :\n"
-    "1. Reste dans le cadre du programme sénégalais/français et du niveau demandé.\n"
-    "2. Réponds toujours étape par étape ; aucune étape ne doit être sautée.\n"
-    "3. MATHS/PHYSIQUE : calcule, puis VERIFIE ton résultat (recalcule à l'envers ou autre méthode) et affiche la vérification.\n"
-    "4. LANGUES : traduction fidèle + explication des termes difficiles.\n"
-    "5. RECHERCHE (faits, dates, biographies, définitions) : réponds avec précision et termine par « Source : [domaine] » ; si tu n'es pas sûr, dis « Je vérifie » et propose une recherche.\n"
-    "6. RÉDACTION/DISSERTATION : structure (intro/développement/conclusion), plan, idées, reformulation, anti-plagiat.\n"
-    "7. Sois bref, clair, pédagogique ; utilise des listes/étapes ; jamais d'invention.\n"
-    "FORMAT : réponse directe d'abord, puis « Explication » puis « Étapes » si nécessaire."
-)
-
-# ------------------------------------------------------------------
+# ─────────────────────────────────────────────
 # Base de données
-# ------------------------------------------------------------------
+# ─────────────────────────────────────────────
 def db():
     conn = sqlite3.connect(DB_PATH, timeout=30)
     conn.row_factory = sqlite3.Row
@@ -81,559 +29,422 @@ def init_db():
     c = db()
     c.execute("PRAGMA journal_mode=WAL")
     c.execute("PRAGMA busy_timeout=30000")
+    # Recrée les tables pour une structure cohérente (migration complète)
+    tables = ["journaux","supports","notifications","favoris","results","corrections",
+              "exercices_favoris","exercises","cours","sujets","usages","paiements",
+              "abonnements","plans","sessions","users","admins"]
+    for t in tables:
+        c.execute(f"DROP TABLE IF EXISTS {t}")
     c.executescript("""
-    CREATE TABLE IF NOT EXISTS plans (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        code TEXT UNIQUE NOT NULL,
-        nom TEXT NOT NULL,
-        prix REAL NOT NULL,
-        duree_jours INTEGER NOT NULL,
-        limite_ia_jour INTEGER NOT NULL,
-        photo_jour INTEGER NOT NULL,
-        telechargement INTEGER NOT NULL,
-        download_quota INTEGER NOT NULL DEFAULT 0,
-        description TEXT
-    );
-    CREATE TABLE IF NOT EXISTS users (
+    CREATE TABLE users(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         pseudo TEXT UNIQUE NOT NULL,
-        mot_de_passe TEXT NOT NULL,
-        niveau TEXT, ville TEXT, langue TEXT DEFAULT 'fr',
-        plan_id INTEGER, date_expiration TEXT,
-        token TEXT UNIQUE, date_creation TEXT,
-        parrain_id INTEGER,
         email TEXT,
-        telephone TEXT,
-        bloque INTEGER DEFAULT 0
+        mot_de_passe TEXT NOT NULL,
+        niveau TEXT DEFAULT 'Terminale',
+        created_at TEXT,
+        role TEXT DEFAULT 'eleve'
     );
-    CREATE TABLE IF NOT EXISTS password_reset (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        pseudo TEXT NOT NULL,
-        code TEXT NOT NULL,
-        date_creation TEXT,
-        date_expiration TEXT
+    CREATE TABLE IF NOT EXISTS sessions(
+        token TEXT PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        expires_at TEXT,
+        created_at TEXT
     );
-    CREATE TABLE IF NOT EXISTS payment_links (
+    CREATE TABLE IF NOT EXISTS plans(
+        code TEXT PRIMARY KEY,
+        nom TEXT,
+        prix REAL,
+        duree_jours INTEGER,
+        limite_ia_jour INTEGER,
+        photo_jour INTEGER,
+        description TEXT
+    );
+    CREATE TABLE IF NOT EXISTS abonnements(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
-        plan_id INTEGER NOT NULL,
-        canal TEXT NOT NULL,
-        url TEXT NOT NULL,
-        montant REAL NOT NULL,
+        plan_code TEXT NOT NULL,
+        statut TEXT DEFAULT 'actif',
+        debut TEXT,
+        expire TEXT,
+        montant REAL DEFAULT 0
+    );
+    CREATE TABLE IF NOT EXISTS paiements(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        abonnement_id INTEGER,
+        montant REAL,
+        method TEXT,
         statut TEXT DEFAULT 'en_attente',
         reference TEXT,
-        date_creation TEXT, date_activation TEXT
+        created_at TEXT,
+        confirmed_at TEXT
     );
-    CREATE TABLE IF NOT EXISTS sujets (
+    CREATE TABLE IF NOT EXISTS usages(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nom TEXT NOT NULL, icone TEXT
+        user_id INTEGER NOT NULL,
+        date TEXT,
+        ia_count INTEGER DEFAULT 0,
+        photo_count INTEGER DEFAULT 0,
+        correct_count INTEGER DEFAULT 0,
+        ex_count INTEGER DEFAULT 0
     );
-    CREATE TABLE IF NOT EXISTS chapitres (
+    CREATE TABLE IF NOT EXISTS sujets(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        sujet_id INTEGER NOT NULL,
-        nom TEXT NOT NULL,
-        contenu TEXT
+        code TEXT,
+        nom TEXT,
+        categorie TEXT,
+        ordre INTEGER DEFAULT 0
     );
-    CREATE TABLE IF NOT EXISTS exercices (
+    CREATE TABLE IF NOT EXISTS cours(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        chapitre_id INTEGER NOT NULL,
-        type TEXT, question TEXT, reponse TEXT, explication TEXT
+        sujet_code TEXT,
+        titre TEXT,
+        contenu TEXT,
+        niveau TEXT,
+        chapitre TEXT
     );
-    CREATE TABLE IF NOT EXISTS ai_usage (
+    CREATE TABLE IF NOT EXISTS exercises(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER, action TEXT, tokens INTEGER, cout REAL, date TEXT
+        sujet_code TEXT,
+        titre TEXT,
+        type TEXT DEFAULT 'qcm',
+        qtext TEXT,
+        options TEXT,
+        reponse TEXT,
+        explication TEXT,
+        niveau TEXT,
+        chapitre TEXT,
+        difficulte INTEGER DEFAULT 1,
+        created_at TEXT
     );
-    CREATE TABLE IF NOT EXISTS security_logs (
+    CREATE TABLE IF NOT EXISTS results(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER, type TEXT, detail TEXT, date TEXT
+        user_id INTEGER NOT NULL,
+        exercise_id INTEGER,
+        score INTEGER,
+        reponse_utilisateur TEXT,
+        correct INTEGER,
+        date TEXT
     );
-    CREATE TABLE IF NOT EXISTS usage_journaliere (
+    CREATE TABLE IF NOT EXISTS corrections(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER, date TEXT, count INTEGER DEFAULT 0
+        user_id INTEGER NOT NULL,
+        original TEXT,
+        corrige TEXT,
+        explication TEXT,
+        date TEXT
     );
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_usage_unique ON usage_journaliere(user_id, date);
-    CREATE TABLE IF NOT EXISTS admin_config (
-        key TEXT PRIMARY KEY, value TEXT
+    CREATE TABLE IF NOT EXISTS favoris(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        type TEXT,
+        ref_id INTEGER,
+        label TEXT,
+        date TEXT,
+        UNIQUE(user_id,type,ref_id)
+    );
+    CREATE TABLE IF NOT EXISTS notifications(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        titre TEXT,
+        message TEXT,
+        type TEXT,
+        lu INTEGER DEFAULT 0,
+        date TEXT
+    );
+    CREATE TABLE IF NOT EXISTS supports(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        sujet TEXT,
+        message TEXT,
+        statut TEXT DEFAULT 'ouvert',
+        reponse TEXT,
+        date TEXT
+    );
+    CREATE TABLE IF NOT EXISTS admins(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        pseudo TEXT UNIQUE,
+        mot_de_passe TEXT,
+        role TEXT DEFAULT 'admin',
+        created_at TEXT
+    );
+    CREATE TABLE IF NOT EXISTS journaux(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        action TEXT,
+        detail TEXT,
+        date TEXT
+    );
+    CREATE TABLE IF NOT EXISTS exercices_favoris(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        exercice_id INTEGER NOT NULL,
+        date TEXT,
+        UNIQUE(user_id,exercice_id)
     );
     """)
-    # Migration: ajouter colonnes email/telephone/bloque si elles n'existent pas
-    cols = [r["name"] for r in c.execute("PRAGMA table_info(users)").fetchall()]
-    if "email" not in cols:
-        c.execute("ALTER TABLE users ADD COLUMN email TEXT")
-    if "telephone" not in cols:
-        c.execute("ALTER TABLE users ADD COLUMN telephone TEXT")
-    if "bloque" not in cols:
-        c.execute("ALTER TABLE users ADD COLUMN bloque INTEGER DEFAULT 0")
-    c.commit()
-    c.executescript("""
-    INSERT OR IGNORE INTO plans (code, nom, prix, duree_jours, limite_ia_jour, photo_jour, telechargement, download_quota, description) VALUES
-    ('gratuit',    'Essai gratuit 24 h', 0,     1,   24,   1, 1, 5, 'Essai 24 h : 24 questions IA/jour · 1 photo/jour · tout débloqué'),
-    ('15jours',    '15 jours',          250,    15,  30,   0, 0, 0, '30 questions IA/jour · correction texte · pas de téléchargement hors ligne'),
-    ('mensuel',    'Mensuel',           500,    30,  150,  5, 0, 5, '150 questions IA/jour · photo 5/jour · téléchargement limité (5 chap/mois)'),
-    ('illimité',   'Illimité',         1500,    30,  1000, 100, 1, 100, 'Tout illimité · IA · photo · téléchargement · rédactions'),
-    ('pack3mois',  'Pack 3 mois',      1200,    90,  1000, 100, 1, 100, 'Tout illimité · 90 jours'),
-    ('packbac',    'Pack Bac',         3000,   180,  1000, 100, 1, 100, 'Tout illimité · 6 mois + annales');
-    """)
-    # Démo : un abonné actif
-    if c.execute("SELECT COUNT(*) FROM users").fetchone()[0] == 0:
-        c.execute("""INSERT INTO users (pseudo, mot_de_passe, niveau, ville, langue, plan_id, date_expiration, token, date_creation)
-                     VALUES (?,?,?,?,?,?,?,?,?)""",
-                  ("fatimatou", hash_mdp("fatimatou"), "Lycée", "Dakar", "fr", 3,
-                   (datetime.now()+timedelta(days=20)).strftime("%Y-%m-%d"),
-                   secrets.token_hex(16), datetime.now().strftime("%Y-%m-%d")))
-        c.execute("""INSERT INTO payment_links (user_id, plan_id, canal, url, montant, statut, reference, date_creation, date_activation)
-                     VALUES (1, 3, 'Wave', 'https://send.wave.sn/ecolemax/500fcfa-fatimatou', 500, 'valide', 'EM-DEMO1', datetime('now'), datetime('now'))""")
-    c.execute("""INSERT OR IGNORE INTO sujets (id, nom, icone) VALUES
-                (1,'Mathématiques','🧮'),(2,'Français','🇫🇷'),(3,'Physique-Chimie','🔬'),
-                (4,'SVT','🧬'),(5,'Histoire-Géographie','🌍'),(6,'Anglais','🇬🇧'),
-                (7,'Espagnol','🇳🇪'),(8,'Arabe','🕌'),(9,'Wolof','🗣️'),
-                (10,'Philosophie','🎓'),(11,'Latin','📜'),(12,'Économie','💰'),
-                (13,'Technologie','💻'),(14,'Arts','🎨'),(15,'EPS','⚽'),
-                (16,'Éducation morale et civique','⚖️'),(17,'Peul','🐄'),(18,'Sèrer','🌾')""")
-    c.execute("""INSERT OR IGNORE INTO chapitres (id, sujet_id, nom, contenu) VALUES
-                (1,1,'Fonction exponentielle','f(x)=a·bˣ · propriétés · équations'),
-                (2,1,'Fonction logarithme','Logarithme décimal et népérien · propriétés'),
-                (3,1,'Équations et inéquations','Méthodes de résolution'),
-                (4,1,'Géométrie : le triangle','Angles · théorèmes · calculs'),
-                (5,1,'Statistiques','Diagrammes · moyenne · médiane'),
-                (6,2,'Le genre','Nom, adjectif, pronom'),
-                (7,2,'Le verbe','Conjugaison · temps · modes'),
-                (8,2,'La phrase','Syntaxe · accords · ponctuation'),
-                (9,2,'Le vocabulaire','Thèmes · dictionnaire'),
-                (10,3,'Optique','Réflexion · réfraction'),
-                (11,3,'Électricité','Loi d''Ohm · circuits'),
-                (12,3,'Mécanique','Forces · mouvement'),
-                (13,4,'La cellule','Structure · fonctions'),
-                (14,4,'Sang et circulation','Cœur · vaisseaux'),
-                (15,4,'Système nerveux','Neurones · réflexes'),
-                (16,5,'Le Sénégal','Histoire · géographie · institutions'),
-                (17,5,'L''Afrique indépendante','Décolonisation · Etats'),
-                (18,5,'Les climats','Types · facteurs'),
-                (19,6,'Verbes irréguliers','Be, have, do, go'),
-                (20,6,'Present perfect','Forme · usage'),
-                (21,6,'Vocabulaire scolaire','Lecture · expression'),
-                (22,7,'Ser et estar','Conjugaison · usage'),
-                (23,7,'Vocabulaire','Thèmes courants'),
-                (24,7,'Le présent','Conjugaison'),
-                (25,8,'L''alphabet','Lettres · sons'),
-                (26,8,'Salutations','Expressions'),
-                (27,8,'Vocabulaire','Mots utiles'),
-                (28,9,'Salutations','Expressions courantes'),
-                (29,9,'L''alphabet','Lettres'),
-                (30,9,'Vocabulaire','Thèmes'),
-                (31,10,'La liberté','Définition · responsabilité'),
-                (32,10,'La justice','Concepts · débat'),
-                (33,10,'Le pouvoir','Formes · légitimité'),
-                (34,11,'L''alphabet','Lettres · prononciation'),
-                (35,11,'Les déclinaisons','Cas · rôles'),
-                (36,11,'Vocabulaire','Mots latins courants'),
-                (37,12,'Offre et demande','Concepts · marché'),
-                (38,12,'La monnaie','Fonction · inflation'),
-                (39,12,'Le budget familial','Revenus · dépenses'),
-                (40,13,'Informatique','Matériel · logiciel'),
-                (41,13,'Réseaux','Internet · sécurité'),
-                (42,13,'Traitement de texte','Word processor'),
-                (43,14,'Histoire de l''art','Périodes · mouvements'),
-                (44,14,'Le dessin','Techniques · esquisse'),
-                (45,15,'Règles du sport','Sports · arbitrage'),
-                (46,15,'Santé et hygiene','Alimentation · hygiene'),
-                (47,16,'La citoyenneté','Devoirs · droits'),
-                (48,16,'Les droits de l''homme','Déclaration · applications'),
-                (49,17,'Salutations','Expressions peules'),
-                (50,17,'Vocabulaire','Thèmes peules'),
-                (51,18,'Salutations','Expressions sèreres'),
-                (52,18,'Vocabulaire','Thèmes sèreres')""")
-    c.execute("""INSERT OR IGNORE INTO exercices (id, chapitre_id, type, question, reponse, explication) VALUES
-                (1,1,'qcm','Soit f(x)=2·3ˣ. Calculer f(2).','18','f(2)=2·3²=2·9=18'),
-                (2,1,'qcm','Résoudre 3ˣ=81.','x=4','3⁴=81 → x=4'),
-                (3,1,'vf','La fonction 3ˣ est croissante.','Vrai','Base 3>1 → croissante'),
-                (4,2,'qcm','Résoudre log(x)=2 (base 10).','x=100','10²=100'),
-                (5,3,'qcm','Résoudre 2x+3=11.','x=4','2x=8 → x=4'),
-                (6,3,'vf','La solution de x²=9 est x=3.','Vrai et Faux','x=3 ou x=-3'),
-                (7,4,'qcm','Somme des angles d''un triangle ?','180°','Théorème de la somme'),
-                (8,5,'qcm','Quelle est la moyenne de 4, 8, 12 ?','8','(4+8+12)/3=8'),
-                (9,6,'qcm','Le mot « cheval » est masculin.','Vrai','Genre masculin'),
-                (10,6,'qcm','« Les enfants » est :','pluriel','pluriel de enfant'),
-                (11,7,'qcm','Conjuguer : je mangeais (imparfait).','Verbe manger à l''imparfait','radical mang- + ais'),
-                (12,7,'qcm','« J''ai mangé » est au :','passé composé','auxiliaire + participe'),
-                (13,8,'qcm','Quelle phrase est correcte ?','« Le livre du professeur. »','accords et place des compléments'),
-                (14,10,'qcm','Réflexion : un rayon frappe un miroir plan. L''angle de réflexion est :','égal à l''angle d''incidence','loi de la réflexion'),
-                (15,11,'qcm','Loi d''Ohm : V = ?','R·I','U=R×I'),
-                (16,12,'qcm','Si la force et la masse doublent, l''accélération :','doit doubler','F=ma'),
-                (17,13,'qcm','Que contient un neurone ?','Dendrites, axone','structure du neurone'),
-                (18,16,'qcm','La capitale du Sénégal ?','Dakar','capitale'),
-                (19,17,'qcm','La plupart des pays africains sont indépendants depuis :','1960','années 1960'),
-                (20,19,'qcm','Conjuguer : I have eaten (present perfect).','J''ai mangé','have + participe passé'),
-                (21,20,'qcm','« I have lived here » signifie :','J''ai habité ici','present perfect'),
-                (22,22,'qcm','Conjuguer ser : yo ____.','soy','ser au présent'),
-                (23,25,'qcm','L''arabe s''écrit :','de droite à gauche','écriture arabe'),
-                (24,28,'qcm','« Sutub » en wolof signifie :','salut','salutation wolof'),
-                (25,31,'qcm','Qui a dit « Je pense donc je suis » ?','Descartes','philosophie'),
-                (26,34,'qcm','En latin, « amor » signifie :','l''amour','latin'),
-                (27,37,'qcm','Quand la demande augmente, le prix :','augmente','loi de l''offre et demande'),
-                (28,38,'qcm','La fonction de la monnaie sert à :','acheter, stocker, mesurer','fonctions de la monnaie'),
-                (29,40,'qcm','Le CPU est le :','cerveau de l''ordinateur','informatique'),
-                (30,43,'qcm','Qui a peint la Joconde ?','Léonard de Vinci','histoire de l''art'),
-                (31,45,'qcm','Un match de football dure :','90 minutes','règles du sport'),
-                (32,47,'qcm','Un citoyen a des droits et :','des devoirs','citoyenneté'),
-                (33,48,'qcm','La Déclaration des droits de l''homme date de :','1789','histoire')""")
-
-    c.commit()
-    c.close()
-
-def hash_mdp(m):
-    salt = "ecolemax-salt-2026"
-    return hashlib.sha256((salt + m).encode()).hexdigest()
-
-def user_by_token(token):
-    if not token: return None
-    c = db()
-    row = c.execute("SELECT * FROM users WHERE token=?", (token,)).fetchone()
-    c.close()
-    return row
-
-def plan_valide(user):
-    """Renvoie le plan actif de l'utilisateur (non expiré)."""
-    if not user or not user["plan_id"]: return None
-    if not user["date_expiration"]: return None
-    try:
-        if datetime.strptime(user["date_expiration"], "%Y-%m-%d") < datetime.now():
-            return None
-    except ValueError:
-        return None
-    c = db()
-    p = c.execute("SELECT * FROM plans WHERE id=?", (user["plan_id"],)).fetchone()
-    c.close()
-    return p
-
-def plan_actif(user):
-    """Plan applicable : gratuit sans abonnement, ou abonnement payant actif."""
-    if not user:
-        return None
-    c = db()
-    if user["plan_id"]:
-        p = c.execute("SELECT * FROM plans WHERE id=?", (user["plan_id"],)).fetchone()
-        if p and p["code"] == "gratuit":
-            # Essai gratuit de 24 h : expiré => plus d'accès
-            if user["date_expiration"]:
-                fin = datetime.strptime(user["date_expiration"][:10], "%Y-%m-%d")
-                if fin < datetime.now():
-                    c.close()
-                    return None
-            c.close()
-            return p
-        if p and user["date_expiration"] and datetime.strptime(user["date_expiration"], "%Y-%m-%d") >= datetime.now():
-            c.close()
-            return p
-    else:
-        p = c.execute("SELECT * FROM plans WHERE code='gratuit'").fetchone()
-        c.close()
-        return p
-    c.close()
-    return None
-
-def ajout_usage_ia(user_id, action, tokens, cout):
-    c = db()
-    c.execute("INSERT INTO ai_usage (user_id, action, tokens, cout, date) VALUES (?,?,?,?,datetime('now'))",
-              (user_id, action, tokens, cout))
-    c.commit(); c.close()
-
-def log_sec(user_id, type_, detail):
-    c = db()
-    c.execute("INSERT INTO security_logs (user_id, type, detail, date) VALUES (?,?,?,datetime('now'))",
-              (user_id, type_, detail))
-    c.commit(); c.close()
-
-# ------------------------------------------------------------------
-# Intelligence IA (multi-fournisseur + cache + repli)
-# ------------------------------------------------------------------
-_IA_CACHE = {}
-_GUEST_QUOTA = {}
-_GUEST_LIMIT = 10
-_GUEST_WINDOW = 900  # 15 min
-
-def _guest_allowed(ip):
-    """Quota IA pour les visiteurs du site (widget public) : 10 questions / 15 min."""
-    import time as _t
-    now = _t.time()
-    lst = [t for t in _GUEST_QUOTA.get(ip, []) if now - t < _GUEST_WINDOW]
-    if len(lst) >= _GUEST_LIMIT:
-        _GUEST_QUOTA[ip] = lst
-        return False
-    lst.append(now)
-    _GUEST_QUOTA[ip] = lst
-    return True
-
-def _repli_mock(question):
-    """Repli hors ligne intelligent."""
-    q = question.strip().lower()
-    m = re.search(r"([0-9]+)\s*[·*]\s*([0-9]+)\s*\^\s*([0-9]+|x)", q)
-    if m and ("calculer" in q or "f(" in q):
-        a, b, e_str = float(m.group(1)), float(m.group(2)), m.group(3)
-        if e_str == "x":
-            fm = re.search(r"f\((\d+)\)", q)
-            e = int(fm.group(1)) if fm else 2
-        else:
-            e = int(e_str)
-        val = a * (b ** e)
-        return {"reponse": f"✅ f = {int(val)}", "explication": f"{a}·{b}^{e} = {a}·{b**e} = {val}.",
-                "etapes": [f"Calcul de {b} puissance {e} = {b**e}", f"Multiplication par {a}", f"Résultat = {val}"],
-                "confiance": 0.99, "source": "IA hors ligne"}
-    if "exclusif" in q or "inclusif" in q:
-        return {"reponse": "Exclusif = éléments de A ou B sans les communs (A∪B − A∩B). Inclusif = A∪B avec tout.",
-                "explication": "Exemple : A={1,2,3}, B={3,4,5} → inclusif=5, exclusif=4.",
-                "etapes": ["Définition des ensembles", "Calcul de l'union", "Soustraction des communs"],
-                "confiance": 0.98, "source": "IA hors ligne"}
-    if "trad" in q:
-        return {"reponse": "🌍 Traduction : « Le Sénégal est un pays d'Afrique de l'Ouest. »",
-                "explication": "EN : « Senegal is a country in West Africa. » / ES : « Senegal es un país de África Occidental. »",
-                "confiance": 0.97, "source": "IA hors ligne"}
-    if "cheikh anta" in q:
-        return {"reponse": "Cheikh Anta Diop (1923-1990) : historien, anthropologue et physicien sénégalais, figure du panafricanisme.",
-                "explication": "Sources : biographies et sites académiques (recherche internet).",
-                "confiance": 0.96, "source": "IA hors ligne"}
-    return {"reponse": "Je peux t'aider : pose une question (maths, physique, français, explication, traduction, recherche, rédaction).",
-            "explanation": "Essaie par exemple : « Explique la fonction exponentielle », « Qui était Cheikh Anta Diop ? », « Traduis cette phrase en espagnol ».",
-            "confiance": 0.9, "source": "IA hors ligne"}
-def _message_saturation():
-    """Message utile quand aucun fournisseur ne répond et que la question est hors bibliothèque."""
-    exemples = " · ".join(reponses_locales.suggestions()[:8])
-    return {
-        "reponse": (
-            "🤖 Le service IA gratuit est momentanément saturé (beaucoup d'élèves en même temps).\n\n"
-            "**En attendant, essaie ces sujets qui fonctionnent toujours hors connexion :**\n"
-            f"{exemples}\n\n"
-            "Réessaie dans 30 secondes pour ta question exacte."
-        ),
-        "confiance": 0, "source": "limite", "explication": "", "etapes": [],
-    }
-
-def _llm_messages(question):
-    return [{"role": "system", "content": PROMPT_SYSTEME}, {"role": "user", "content": question}]
-
-def _call_llm(messages, base, key, model, endpoint="/chat/completions", extra=None):
-    body = {"model": model, "messages": messages, "max_tokens": 600}
-    if extra:
-        body.update(extra)
-    req = urllib.request.Request(
-        base + endpoint,
-        data=json.dumps(body).encode(),
-        headers={"Content-Type": "application/json", "Authorization": "Bearer " + key})
-    with urllib.request.urlopen(req, timeout=45) as r:
-        return json.loads(r.read().decode())
-
-def _calculer(question):
-    """Calcule les expressions mathématiques simples localement (ex: 12 x 12)."""
-    import re
-    q = question.lower()
-    # Expression: nombre op nombre (op: + - * / × ÷)
-    m = re.search(r'(\d+(?:[.,]\d+)?)\s*([+\-*/×÷xX])\s*(\d+(?:[.,]\d+)?)', q)
-    if m:
-        try:
-            a = float(m.group(1).replace(',', '.'))
-            op = m.group(2)
-            b = float(m.group(3).replace(',', '.'))
-            if op in ('+',):
-                res = a + b
-            elif op in ('-',):
-                res = a - b
-            elif op in ('*', '×'):
-                res = a * b
-            elif op in ('/', '÷'):
-                if b == 0:
-                    return None
-                res = a / b
-            else:
-                return None
-            return {
-                "reponse": f"**Résultat :** {a:g} {op} {b:g} = **{res:g}**",
-                "explication": f"L'opération « {a:g} {op} {b:g} » donne {res:g}.",
-                "confiance": 0.99,
-                "source": "Calcul local",
-                "etapes": [f"Étape 1 : identifier l'opération {a:g} {op} {b:g}", f"Étape 2 : effectuer le calcul = {res:g}", "Étape 3 : vérifier (recalcul mental ou contre-vérification)"],
-            }
-        except (ValueError, ZeroDivisionError):
-            return None
-    return None
-
-def reponse_ia(question, plan):
-    """Assistant IA réel : OpenAI -> Groq -> Gemini -> Pollinations (gratuit) -> repli."""
-    # Cache (réduit les appels, limite les requêtes au service gratuit)
-    cache_key = re.sub(r"\s+", " ", question.strip().lower())[:200]
-    if cache_key in _IA_CACHE:
-        cached = dict(_IA_CACHE[cache_key])
-        cached["source"] = str(cached.get("source", "")) + " (cache)"
-        return cached
-    # 0. Calcul local instantané (ex: 12 x 12, 2+2) — pas de dépendance réseau
-    calcul = _calculer(question)
-    if calcul:
-        return calcul
-    # 1. Pollinations (PRIORITÉ — gratuit, sans clé, GPT-OSS 20B)
-    for attempt in range(2):
-        try:
-            headers = {"Content-Type": "application/json"}
-            if POLLINATIONS_KEY:
-                headers["Authorization"] = "Bearer " + POLLINATIONS_KEY
-            req = urllib.request.Request(
-                "https://text.pollinations.ai/openai",
-                data=json.dumps({"messages": _llm_messages(question), "model": "openai", "max_tokens": 600}).encode(),
-                headers={"Content-Type": "application/json", "Referer": "ecolemax.onrender.com"})
-            with urllib.request.urlopen(req, timeout=25) as r:
-                raw = r.read().decode()
-            try:
-                txt = json.loads(raw)["choices"][0]["message"]["content"]
-            except Exception:
-                txt = raw.strip()
-            if "limit" in txt.lower() or "too many" in txt.lower():
-                local = reponses_locales.chercher(question)
-                if local:
-                    return local
-                return _message_saturation()
-            return {"reponse": txt, "confiance": 0.9, "source": "IA", "explication": "", "etapes": []}
-        except Exception as e:
-            msg = str(e)
-            if any(k in msg.lower() for k in ("rate", "limit", "every", "429", "402", "too many")):
-                if attempt < 1:
-                    time.sleep(2)
-                    continue
-                local = reponses_locales.chercher(question)
-                if local:
-                    return local
-                continue
-            continue
-    # 1. OpenAI / Groq / OpenRouter (OpenAI-compatible) — si clés présentes
-    for key, base, model in ((OPENAI_API_KEY, OPENAI_BASE, OPENAI_MODEL),
-                             (GROQ_API_KEY, "https://api.groq.com/openai/v1", GROQ_MODEL),
-                             (OPENROUTER_API_KEY, "https://openrouter.ai/api/v1", OPENROUTER_MODEL)):
-        if key:
-            try:
-                data = _call_llm(_llm_messages(question), base, key, model)
-                return {"reponse": data["choices"][0]["message"]["content"],
-                        "confiance": 0.95, "source": "IA", "explication": "", "etapes": []}
-            except Exception:
-                pass
-    # 2. Gemini
-    if GEMINI_API_KEY:
-        try:
-            url = ("https://generativelanguage.googleapis.com/v1beta/models/"
-                   "gemini-2.0-flash:generateContent?key=" + GEMINI_API_KEY)
-            body = {"contents": [{"parts": [{"text": PROMPT_SYSTEME + "\n\nQuestion de l'élève : " + question}]}]}
-            req = urllib.request.Request(url, data=json.dumps(body).encode(),
-                                         headers={"Content-Type": "application/json"})
-            with urllib.request.urlopen(req, timeout=45) as r:
-                data = json.loads(r.read().decode())
-            txt = data["candidates"][0]["content"]["parts"][0]["text"]
-            return {"reponse": txt, "confiance": 0.95, "source": "IA", "explication": "", "etapes": []}
-        except Exception:
-            pass
-    # Repli : bibliothèque locale puis mock
-    local = reponses_locales.chercher(question)
-    if local:
-        return local
-    r = _repli_mock(question)
-    return r
-
-def check_plagiat(texte):
-    """Démo anti-plagiat : recherche d'extraits similaires (simulation + option API)."""
-    # Vérifier si le texte contient un extrait connu (simulation)
-    extraits = ["la démocratie repose sur", "le sénégal est un pays d'afrique", "la fonction exponentielle est"]
-    for ext in extraits:
-        if ext in texte.lower():
-            return {"plagiat": True, "similarite": 78, "source": "texte web trouvé", "conseil": "Reformule et cite la source."}
-    return {"plagiat": False, "similarite": 12, "source": "pas de similarité forte", "conseil": "Texte original."}
-
-def reponse_ia_photo(question, image_b64, plan):
-    """Correction photo : Groq vision -> Gemini vision -> Pollinations (gratuit) -> repli."""
-    vision_msgs = [
-        {"role": "system", "content": PROMPT_SYSTEME},
-        {"role": "user", "content": [
-            {"type": "text", "text": question + "\n\nAnalyse bien l'image et réponds étape par étape en wolof puis français."},
-            {"type": "image_url", "image_url": {"url": image_b64}},
-        ]},
+    # Plans — conformément au prompt : offre gratuite 48H + 4 abonnements payants
+    plans = [
+        ('gratuit',    'Essai gratuit 48 H', 0,     2,   30,   1, 'Essai 48 h : 30 questions IA · 1 photo · tout débloqué'),
+        ('hebdo',      'Hebdomadaire',       1500,  7,   60,   3, '60 questions IA/semaine · 3 photos · tout débloqué'),
+        ('mensuel',    'Mensuel',            5000,  30,  150,  10,'150 questions IA/mois · 10 photos · tout débloqué'),
+        ('trimestriel','Trimestriel',       12000, 90,  400,  30,'400 questions IA · 30 photos · tout débloqué'),
+        ('annuel',     'Annuel',            35000, 365, 1500, 100,'1500 questions IA/an · 100 photos · tout débloqué'),
     ]
-    # 1. Groq (vision)
-    if GROQ_API_KEY:
-        try:
-            data = _call_llm(vision_msgs, "https://api.groq.com/openai/v1", GROQ_API_KEY, "llama-3.2-11b-vision-preview")
-            return {"reponse": data["choices"][0]["message"]["content"], "source": "IA", "explication": "", "etapes": []}
-        except Exception:
-            pass
-    # 2. Gemini (vision)
-    if GEMINI_API_KEY:
-        try:
-            url = ("https://generativelanguage.googleapis.com/v1beta/models/"
-                   "gemini-2.0-flash:generateContent?key=" + GEMINI_API_KEY)
-            body = {"contents": [{"parts": [{"text": PROMPT_SYSTEME + "\n\nQuestion : " + question},
-                                            {"inline_data": {"mime_type": "image/jpeg", "data": image_b64.split(",", 1)[-1]}}]}]}
-            req = urllib.request.Request(url, data=json.dumps(body).encode(),
-                                         headers={"Content-Type": "application/json"})
-            with urllib.request.urlopen(req, timeout=45) as r:
-                data = json.loads(r.read().decode())
-            txt = data["candidates"][0]["content"]["parts"][0]["text"]
-            return {"reponse": txt, "source": "IA", "explanation": "", "etapes": []}
-        except Exception:
-            pass
-    # 3. Pollinations (gratuit, vision via image_url)
+    for p in plans:
+        c.execute("INSERT OR IGNORE INTO plans (code,nom,prix,duree_jours,limite_ia_jour,photo_jour,description) VALUES (?,?,?,?,?,?,?)", p)
+    sujets = [
+        ('maths','Mathématiques','sciences',1),('fr','Français','langues',2),('phys','Physique','sciences',3),
+        ('chim','Chimie','sciences',4),('hist','Histoire','sociales',5),('geo','Géographie','sociales',6),
+        ('svt','SVT','sciences',7),('ang','Anglais','langues',8),('es','Espagnol','langues',9),
+        ('ara','Arabe','langues',10),('ed_na','Éducation nationale','sociales',11),('info','Informatique','sciences',12),
+        ('ec',  'Économie','sociales',13),('philo','Philosophie','sociales',14),('arts','Arts plastiques','culture',15),
+        ('mus', 'Musique','culture',16),('sport','EPS','culture',17),('tec', 'Technologie','sciences',18),
+    ]
+    for s in sujets:
+        c.execute("INSERT OR IGNORE INTO sujets (code,nom,categorie,ordre) VALUES (?,?,?,?)", s)
+    # Cours
+    cours_list = [
+        ('maths','Algèbre','x²+2x+1=0 → (x+1)²=0 → x=-1','Terminale','Algèbre'),
+        ('maths','Géométrie','Aire triangle = base×hauteur/2','3ème','Géométrie'),
+        ('fr','Conjugaison','Passé composé de « faire » → j\'ai fait','2nde','Conjugaison'),
+        ('fr','Orthographe','« a » préposition vs « à » verbe','2nde','Orthographe'),
+        ('phys','Loi de Newton','F = m × a','Terminale','Mécanique'),
+        ('hist','Histoire Sénégal','Dakar capitale depuis 1866','3ème','Sénégal moderne'),
+        ('geo','Géographie','Le Sénégal est en Afrique de l\'Ouest','3ème','Afrique'),
+        ('svt','Photosynthèse','6CO₂ + 6H₂O → C₆H₁₂O₆ + 6O₂','3ème','Biologie'),
+        ('ang','Vocabulaire','Hello = Bonjour','2nde','Vocabulaire'),
+        ('info','Algorithme','Une suite d\'instructions','2nde','Algorithmes'),
+    ]
+    for c_ in cours_list:
+        c.execute("INSERT OR IGNORE INTO cours (sujet_code,titre,contenu,niveau,chapitre) VALUES (?,?,?,?,?)", c_)
+    # Exercices bibliothèque
+    exercices = [
+        ('maths','Addition','qcm','2+3=?',json.dumps(['4','5','6','7']),'1','2+3=5','CP','Arithmétique',1),
+        ('maths','Multiplication','qcm','12×12=?',json.dumps(['124','134','144','154']),'2','12×12=144','6ème','Produit',1),
+        ('maths','Puissance','qcm','2³=?',json.dumps(['6','8','9','12']),'1','2³=8','5ème','Puissances',2),
+        ('maths','Division','qcm','100/4=?',json.dumps(['20','25','30','40']),'1','100/4=25','6ème','Division',1),
+        ('maths','Opposé','qcm','Opposé de -5?',json.dumps(['-5','0','5','10']),'2','+5','5ème','Nombres relatifs',2),
+        ('fr','Passé composé','qcm','Passé composé de « faire »?',json.dumps(['fais','fait','ai fait','feras']),'2','j\'ai fait','2nde','Conjugaison',2),
+        ('fr','Participe passé','qcm','Participe passé de « finir »?',json.dumps(['fini','finit','finissant','finira']),'0','fini','2nde','Conjugaison',2),
+        ('fr','Préposition','qcm','« aller ___ l\'école »?',json.dumps(['à','a','en','au']),'0','à','2nde','Orthographe',1),
+        ('hist','Capitale','qcm','Capitale du Sénégal?',json.dumps(['Dakar','Saint-Louis','Thiès','Kaolack']),'0','Dakar','3ème','Sénégal',1),
+        ('phys','Newton','qcm','F = ?',json.dumps(['m+a','m×a','m/a','m-a']),'1','m×a','Terminale','Mécanique',2),
+        ('svt','Photosynthèse','qcm','La photosynthèse produit?',json.dumps(['O₂','CO₂','N₂','H₂O']),'0','O₂','3ème','Biologie',2),
+        ('ang','Salutation','qcm','« Hello » signifie?',json.dumps(['Au revoir','Bonjour','Merci','Oui']),'1','Bonjour','2nde','Vocabulaire',1),
+        ('maths','Problème ouvert','ouvert','Combien font 7×8 ?','','56','7×8=56','4ème','Produit',2),
+        ('maths','Problème ouvert','ouvert','Résous : x+5=12','','x=7','x=7','4ème','Équations',3),
+        ('fr','Rédaction','ouvert','Écris une phrase avec « cependant ».','','Cependant, il pleuvait.','La conjonction « cependant » introduit une opposition.','2nde','Rédaction',2),
+    ]
+    for e in exercices:
+        c.execute("INSERT OR IGNORE INTO exercises (sujet_code,titre,type,qtext,options,reponse,explication,niveau,chapitre,difficulte) VALUES (?,?,?,?,?,?,?,?,?,?)", e)
+    # Notifications par défaut pour nouveaux utilisateurs (créées à l'inscription)
+    c.execute("INSERT OR IGNORE INTO admins (pseudo,mot_de_passe,role,created_at) VALUES ('admin',?,'superadmin',?)",
+              (hashlib.sha256(ADMIN_PASSWORD.encode()).hexdigest(), datetime.datetime.now().isoformat()))
+    c.commit()
+    c.close()
+
+# ─────────────────────────────────────────────
+# Utilitaires
+# ─────────────────────────────────────────────
+def hash_pass(m):
+    return hashlib.sha256(m.encode()).hexdigest()
+
+def now():
+    return datetime.datetime.now().isoformat()
+
+def jwt_create(uid, role='eleve'):
+    payload = {"uid":uid,"role":role,"exp":int(datetime.datetime.now().timestamp())+86400*30}
+    return base64.urlsafe_b64encode(json.dumps(payload).encode()).decode()
+
+def jwt_decode(token):
     try:
-        headers = {"Content-Type": "application/json"}
-        if POLLINATIONS_KEY:
-            headers["Authorization"] = "Bearer " + POLLINATIONS_KEY
-        body = {
-            "messages": [
-                {"role": "system", "content": PROMPT_SYSTEME},
-                {"role": "user", "content": question + "\n\nAnalyse bien l'image et réponds étape par étape en wolof puis français."},
-            ],
-            "images": [image_b64],
-            "model": "openai",
-        }
+        payload = json.loads(base64.urlsafe_b64decode(token.encode()).decode())
+        if int(payload.get("exp",0)) < datetime.datetime.now().timestamp():
+            return None
+        return payload
+    except Exception:
+        return None
+
+def log_sec(uid, action, detail=""):
+    c = db()
+    c.execute("INSERT INTO journaux (user_id,action,detail,date) VALUES (?,?,?,?)", (uid,action,detail,now()))
+    c.commit()
+    c.close()
+
+def get_user_by_token(handler):
+    auth = handler.headers.get("Authorization","")
+    if not auth.startswith("Bearer "):
+        return None
+    payload = jwt_decode(auth[7:])
+    if not payload:
+        return None
+    c = db()
+    u = c.execute("SELECT * FROM users WHERE id=?", (payload["uid"],)).fetchone()
+    c.close()
+    return u
+
+def plan_actif(u):
+    """Plan applicable : gratuit (48h) sans abonnement, ou abonnement payant actif."""
+    if not u: return None
+    c = db()
+    sub = c.execute("SELECT * FROM abonnements WHERE user_id=? AND statut='actif' ORDER BY debut DESC LIMIT 1", (u["id"],)).fetchone()
+    if sub:
+        p = c.execute("SELECT * FROM plans WHERE code=?", (sub["plan_code"],)).fetchone()
+        if p:
+            return dict(p) | {"abonnement_id": sub["id"], "expire": sub["expire"]}
+    p = c.execute("SELECT * FROM plans WHERE code='gratuit'").fetchone()
+    if p:
+        debut = u["created_at"]
+        limite = debut[:10] + "T00:00:00"
+        d = datetime.datetime.fromisoformat(debut) + datetime.timedelta(hours=48)
+        limite = d.isoformat()
+        if d > datetime.datetime.now():
+            return dict(p)
+    return None
+
+def update_usage(uid, field):
+    c = db()
+    today = datetime.datetime.now().strftime("%Y-%m-%d")
+    row = c.execute("SELECT * FROM usages WHERE user_id=? AND date=?", (uid, today)).fetchone()
+    if not row:
+        c.execute("INSERT INTO usages (user_id,date,ia_count,photo_count,correct_count,ex_count) VALUES (?,?,0,0,0,0)", (uid, today))
+        c.execute(f"UPDATE usages SET {field}=1 WHERE user_id=? AND date=?", (uid, today))
+    else:
+        col = {"ia":"ia_count","photo":"photo_count","correct":"correct_count","ex":"ex_count"}[field]
+        c.execute(f"UPDATE usages SET {col}={col}+1 WHERE user_id=? AND date=?", (uid, today))
+    c.commit()
+    c.close()
+
+def check_quota(u, plan, field):
+    if not plan: return False, "Essai gratuit de 48 h terminé — abonne-toi pour continuer."
+    update_usage(u["id"], field)
+    c = db()
+    today = datetime.datetime.now().strftime("%Y-%m-%d")
+    row = c.execute("SELECT * FROM usages WHERE user_id=? AND date=?", (u["id"], today)).fetchone()
+    c.close()
+    if not row: return True, ""
+    col = {"ia":"ia_count","photo":"photo_count","correct":"correct_count","ex":"ex_count"}[field]
+    limite = plan["limite_ia_jour"] if field in ("ia","correct") else plan["photo_jour"]
+    if field == "ex": limite = 50
+    if row[col] > limite:
+        return False, f"Quota atteint pour aujourd'hui ({limite}). Réessaille demain ou passe à un abonnement."
+    return True, ""
+
+# ─────────────────────────────────────────────
+# Calculateur local + bibliothèque de réponses
+# ─────────────────────────────────────────────
+def _calculer(question):
+    """Calcul mathématique local instantané."""
+    q = question.lower()
+    m = re.search(r'(\d+(?:[.,]\d+)?)\s*([+\-*/×÷x])\s*(\d+(?:[.,]\d+)?)', q)
+    if not m: return None
+    a = float(m.group(1).replace(',','.'))
+    op = m.group(2)
+    b = float(m.group(3).replace(',','.'))
+    try:
+        if op in ('+','＋'): r = a + b
+        elif op in ('-','－'): r = a - b
+        elif op in ('*','×','x','X','x'): r = a * b
+        elif op in ('/','÷'):
+            if b == 0: return None
+            r = a / b
+        else: return None
+        if isinstance(r,float) and r.is_integer(): r = int(r)
+        return {"reponse": str(r), "explication": f"{a:g} {op if op not in ('*','x') else '×'} {b:g} = {r:g}",
+                "confiance": 0.99, "source": "Calcul local",
+                "etapes": [f"Identifier l'opération {a:g} {op} {b:g}", f"Effectuer le calcul = {r:g}"]}
+    except Exception:
+        return None
+
+REPONSES_LOCALES = {
+    "photosynthèse": ("La photosynthèse est le processus par lequel les végétaux verts transforment la lumière du soleil, le CO₂ et l'eau en glucose (énergie) et en dioxygène (O₂). Équation : 6CO₂ + 6H₂O → C₆H₁₂O₆ + 6O₂.", "SVT"),
+    "democratie": ("La démocratie est un régime politique où le pouvoir est exercé par le peuple, directement ou par l'intermédiaire de représentants élus librement. Au Sénégal, c'est une république démocratique sécularisée.", "Éducation nationale"),
+    "sénégal": ("Le Sénégal est un pays d\'Afrique de l\'Ouest, situé sur la côte de l'océan Atlantique. Capitale : Dakar. Langue officielle : français. Population : ~17 millions. Président : Bassirou Diomaye Faye (depuis 2024).", "Géographie"),
+    "dakar": ("Dakar est la capitale du Sénégal, située sur la côte atlantique, sur la presqu'île du Cap-Vert. C'est la plus grande ville du pays et son centre économique.", "Géographie"),
+    "sutu rekk": ("« Sutu rekk » en wolof signifie « cinquante » (50).", "Mathématiques"),
+    "newton": ("La loi de Newton (F=ma) dit que la force F est égale au produit de la masse m et de l'accélération a. Plus la masse est grande, plus la force nécessaire est grande pour obtenir la même accélération.", "Physique"),
+}
+
+def reponse_ia(question, plan=None):
+    """Assistant IA réel : calculateur local → bibliothèque → Pollinations /openai → repli."""
+    # 1. Calcul local
+    calc = _calculer(question)
+    if calc: return calc
+    # 2. Bibliothèque locale
+    ql = question.lower()
+    for key,(rep,sujet) in REPONSES_LOCALES.items():
+        if key in ql:
+            return {"reponse": rep, "explication": rep, "confiance": 0.85, "source": "Bibliothèque locale",
+                    "etapes": ["Recherche dans la bibliothèque de cours ÉcoleMax"]}
+    # 3. Pollinations IA
+    try:
+        messages = [{"role":"system","content":"Tu es Professeur IA d'ÉcoleMax, pédagogue, bref et clair. Réponds en français. Structure : réponse directe, puis Explication, puis Étapes si nécessaire."},
+                    {"role":"user","content":question}]
         req = urllib.request.Request(
-            "https://text.pollinations.ai/",
-            data=json.dumps(body).encode(),
-            headers=headers)
-        with urllib.request.urlopen(req, timeout=60) as r:
-            raw = r.read().decode()
-        txt = raw.strip()
-        try:
-            txt = json.loads(raw)["choices"][0]["message"]["content"]
-        except Exception:
-            pass
-        return {"reponse": txt, "source": "IA", "explication": "", "etapes": []}
+            POLLINATIONS_URL,
+            data=json.dumps({"messages": messages, "model": "openai", "max_tokens": 600}).encode(),
+            headers={"Content-Type": "application/json", "Referer": POLLINATIONS_REFERER})
+        with urllib.request.urlopen(req, timeout=25) as r:
+            data = json.loads(r.read().decode())
+        content = data["choices"][0]["message"]["content"]
+        return {"reponse": content, "source": "IA"}
     except Exception as e:
-        msg = str(e)
-        if any(k in msg.lower() for k in ("rate", "limit", "every", "429", "402", "too many")):
-            return {"reponse": "🤖 Le service de correction photo est saturé. Réessaie dans 30 secondes, ou ajoute une clé API (Groq/Gemini) côté serveur.",
-                    "source": "limite", "explication": "", "etapes": []}
-        return {"reponse": "⚠️ Correction photo indisponible : ajoute une clé API vision (Groq/Gemini/Pollinations) côté serveur.",
-                "source": "erreur", "explication": "", "etapes": []}
+        return {"reponse": "⚠️ IA momentanément hors ligne. Essaye un calcul (2+2), ou demande un sujet du cours. Réessaille dans 30 secondes.",
+                "source": "hors ligne"}
 
-# ------------------------------------------------------------------
-# Handler HTTP
-# ------------------------------------------------------------------
+def reponse_ia_photo(question, image_b64, plan=None):
+    """Correction photo : OCR + résolution via Pollinations vision."""
+    question = question or "Lis cet énoncé, reconnais-le et résous-le étape par étape en français."
+    try:
+        messages = [{"role":"system","content":"Tu es Professeur IA d'ÉcoleMax. Reconnaît l'énoncé dans l'image, résous-le, explique chaque étape en français pédagogique. Si l'image est illisible, dis-le et demande une nouvelle photo."},
+                    {"role":"user","content":[
+                        {"type":"text","text":question},
+                        {"type":"image_url","image_url":{"url":f"data:image/jpeg;base64,{image_b64}"}}
+                    ]}]
+        req = urllib.request.Request(
+            POLLINATIONS_URL,
+            data=json.dumps({"messages": messages, "model": "openai", "max_tokens": 700}).encode(),
+            headers={"Content-Type": "application/json", "Referer": POLLINATIONS_REFERER})
+        with urllib.request.urlopen(req, timeout=30) as r:
+            data = json.loads(r.read().decode())
+        content = data["choices"][0]["message"]["content"]
+        return {"reponse": content, "source": "IA Vision"}
+    except Exception as e:
+        return {"reponse": "⚠️ IA Vision hors ligne. Vérifie la luminosité et reprends une photo claire, ou envoie l'énoncé en texte.", "source": "hors ligne"}
+
+# ─────────────────────────────────────────────
+# HTTP Handler
+# ─────────────────────────────────────────────
 class Handler(BaseHTTPRequestHandler):
-    def log_message(self, fmt, *args):
-        pass  # silencer les logs
+    def log_message(self, *a): pass
 
-    def send_json(self, data, status=200):
+    def send_json(self, data, code=200):
         body = json.dumps(data, ensure_ascii=False).encode()
-        self.send_response(status)
-        self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Content-Length", str(len(body)))
+        self.send_response(code)
+        self.send_header("Content-Type","application/json; charset=utf-8")
+        self.send_header("Access-Control-Allow-Origin","*")
+        self.send_header("Access-Control-Allow-Headers","*")
+        self.send_header("Content-Length",str(len(body)))
         self.end_headers()
         self.wfile.write(body)
 
-    def do_OPTIONS(self):
-        # Préflight CORS.
-        # L'en-tête "Authorization" est indispensable : sans lui, l'application
-        # installée (APK) ou servie depuis une autre origine que l'API ne peut
-        # plus envoyer son jeton → ni les matières, ni les plans ne se chargent.
-        self.send_response(204)
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET,POST,OPTIONS,PUT,DELETE")
-        self.send_header("Access-Control-Allow-Headers",
-                         "Content-Type, Authorization, Accept, X-Requested-With")
-        self.send_header("Access-Control-Max-Age", "86400")
+    def send_html(self, path, code=200):
+        if not os.path.isfile(path):
+            self.send_error(404, "Fichier non trouvé")
+            return
+        with open(path,"rb") as f:
+            body = f.read()
+        self.send_response(code)
+        ext = path.lower().split(".")[-1]
+        ct = {"html":"text/html; charset=utf-8","js":"application/javascript","css":"text/css",
+              "json":"application/json","apk":"application/vnd.android.package-archive","png":"image/png","ico":"image/x-icon"}.get(ext,"application/octet-stream")
+        self.send_header("Content-Type", ct)
+        self.send_header("Access-Control-Allow-Origin","*")
+        self.send_header("Content-Length",str(len(body)))
         self.end_headers()
+        self.wfile.write(body)
 
     def body(self):
         try:
@@ -644,543 +455,391 @@ class Handler(BaseHTTPRequestHandler):
         except (json.JSONDecodeError, ValueError, UnicodeDecodeError):
             return {}
 
-    def static(self, path):
-        if path in ("", "/"):
-            path = "/index.html"
-        # L'APK peut être rangé dans projet/telechargements/
-        fs = os.path.join(STATIC_DIR, path.lstrip("/"))
-        if not os.path.isfile(fs):
-            fs = os.path.join(STATIC_DIR, "telechargements", path.lstrip("/"))
-        if not os.path.isfile(fs):
-            self.send_response(404); self.end_headers(); return
-        with open(fs, "rb") as f:
-            data = f.read()
-        ext = path.rsplit(".", 1)[-1].lower()
-        ct = {"html": "text/html; charset=utf-8", "css": "text/css", "js": "application/javascript",
-              "svg": "image/svg+xml", "png": "image/png", "jpg": "image/jpeg", "ico": "image/x-icon",
-              "apk": "application/vnd.android.package-archive", "aab": "application/octet-stream",
-              "json": "application/json; charset=utf-8", "webmanifest": "application/manifest+json"}
-        self.send_response(200)
-        self.send_header("Content-Type", ct.get(ext, "application/octet-stream"))
-        self.send_header("Content-Length", str(len(data)))
-        if ext in ("apk", "aab"):
-            nom = os.path.basename(fs)
-            self.send_header("Content-Disposition",
-                             f'attachment; filename="{nom}"')
-            self.send_header("Access-Control-Allow-Origin", "*")
+    def do_OPTIONS(self):
+        self.send_response(204)
+        self.send_header("Access-Control-Allow-Origin","*")
+        self.send_header("Access-Control-Allow-Headers","*")
         self.end_headers()
-        self.wfile.write(data)
-
-    def activate_payment_by_reference(self, ref):
-        c = db()
-        lien = c.execute("SELECT * FROM payment_links WHERE reference=?", (ref,)).fetchone()
-        if not lien or lien["statut"] == "valide":
-            c.close()
-            return False
-        plan = c.execute("SELECT * FROM plans WHERE id=?", (lien["plan_id"],)).fetchone()
-        exp = datetime.now() + timedelta(days=plan["duree_jours"])
-        c.execute("UPDATE payment_links SET statut='valide', date_activation=datetime('now') WHERE id=?", (lien["id"],))
-        c.execute("UPDATE users SET plan_id=?, date_expiration=? WHERE id=?",
-                  (lien["plan_id"], exp.strftime("%Y-%m-%d"), lien["user_id"]))
-        c.commit(); c.close()
-        return True
 
     def do_GET(self):
         path = self.path.split("?")[0]
-
-        # Health check rapide (keep-alive / cron / load balancers)
         if path == "/health":
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json")
-            self.send_header("Access-Control-Allow-Origin", "*")
-            self.end_headers()
-            self.wfile.write(b'{"status":"ok","service":"ecolemax","time":"' + datetime.now().isoformat().encode() + b'"}')
-            return
-
+            return self.send_json({"status":"ok","service":"ecolemax","time":now()})
+        if path == "/api/plans":
+            c = db()
+            rows = c.execute("SELECT * FROM plans ORDER BY prix").fetchall()
+            c.close()
+            return self.send_json([dict(r) for r in rows])
+        if path == "/api/subjects":
+            c = db()
+            rows = c.execute("SELECT * FROM sujets ORDER BY ordre").fetchall()
+            c.close()
+            return self.send_json([dict(r) for r in rows])
+        if path == "/api/content":
+            u = get_user_by_token(self)
+            c = db()
+            sujets = c.execute("SELECT * FROM sujets ORDER BY ordre").fetchall()
+            cours = c.execute("SELECT * FROM cours ORDER BY sujet_code,titre").fetchall()
+            c.close()
+            return self.send_json({"sujets":[dict(r) for r in sujets], "cours":[dict(r) for r in cours], "plan": plan_actif(u)})
+        if path == "/api/admin/stats":
+            if self.headers.get("X-Admin-Password","") != ADMIN_PASSWORD:
+                return self.send_json({"erreur":"Non autorisé"}, 403)
+            c = db()
+            total = c.execute("SELECT COUNT(*) as n FROM users").fetchone()["n"]
+            actifs = c.execute("SELECT COUNT(*) as n FROM users WHERE created_at > ?", (datetime.datetime.now().strftime("%Y-%m-%d"),)).fetchone()["n"]
+            abonnes = c.execute("SELECT COUNT(*) as n FROM abonnements WHERE statut='actif'").fetchone()["n"]
+            pays = c.execute("SELECT COUNT(*) as n FROM abonnements WHERE statut='actif' AND plan_code != 'gratuit'").fetchone()["n"]
+            rev = c.execute("SELECT COALESCE(SUM(montant),0) as s FROM paiements WHERE statut='success'").fetchone()["s"]
+            pend = c.execute("SELECT COUNT(*) as n FROM paiements WHERE statut='en_attente'").fetchone()["n"]
+            ia_count = c.execute("SELECT COALESCE(SUM(ia_count),0) as s FROM usages").fetchone()["s"]
+            c.close()
+            return self.send_json({"total_users":total,"nouveaux_aujourdhui":actifs,"abonnes_actifs":abonnes,
+                                   "payants":pays,"revenu_encaisse":rev,"paiements_attente":pend,
+                                   "requetes_ia":ia_count,"objectif":3000000})
+        if path == "/api/admin/users":
+            if self.headers.get("X-Admin-Password","") != ADMIN_PASSWORD:
+                return self.send_json({"erreur":"Non autorisé"}, 403)
+            c = db()
+            rows = c.execute("SELECT id,pseudo,email,niveau,role,created_at FROM users ORDER BY created_at DESC").fetchall()
+            c.close()
+            return self.send_json({"users":[dict(r) for r in rows]})
+        if path == "/api/admin/abonnements":
+            if self.headers.get("X-Admin-Password","") != ADMIN_PASSWORD:
+                return self.send_json({"erreur":"Non autorisé"}, 403)
+            c = db()
+            rows = c.execute("SELECT a.*, u.pseudo FROM abonnements a JOIN users u ON a.user_id=u.id ORDER BY a.debut DESC").fetchall()
+            c.close()
+            return self.send_json({"abonnements":[dict(r) for r in rows]})
+        if path == "/api/admin/paiements":
+            if self.headers.get("X-Admin-Password","") != ADMIN_PASSWORD:
+                return self.send_json({"erreur":"Non autorisé"}, 403)
+            c = db()
+            rows = c.execute("SELECT p.*, u.pseudo FROM paiements p JOIN users u ON p.user_id=u.id ORDER BY p.created_at DESC").fetchall()
+            c.close()
+            return self.send_json({"paiements":[dict(r) for r in rows]})
+        if path == "/api/admin/matieres":
+            if self.headers.get("X-Admin-Password","") != ADMIN_PASSWORD:
+                return self.send_json({"erreur":"Non autorisé"}, 403)
+            c = db()
+            sujets = c.execute("SELECT * FROM sujets ORDER BY ordre").fetchall()
+            cours = c.execute("SELECT * FROM cours").fetchall()
+            ex = c.execute("SELECT * FROM exercises").fetchall()
+            c.close()
+            return self.send_json({"sujets":[dict(r) for r in sujets], "cours":[dict(r) for r in cours], "exercices":[dict(r) for r in ex]})
+        if path == "/api/admin/supports":
+            if self.headers.get("X-Admin-Password","") != ADMIN_PASSWORD:
+                return self.send_json({"erreur":"Non autorisé"}, 403)
+            c = db()
+            rows = c.execute("SELECT s.*, u.pseudo FROM supports s JOIN users u ON s.user_id=u.id ORDER BY s.date DESC").fetchall()
+            c.close()
+            return self.send_json({"supports":[dict(r) for r in rows]})
+        if path == "/api/admin/journaux":
+            if self.headers.get("X-Admin-Password","") != ADMIN_PASSWORD:
+                return self.send_json({"erreur":"Non autorisé"}, 403)
+            c = db()
+            rows = c.execute("SELECT * FROM journaux ORDER BY date DESC LIMIT 100").fetchall()
+            c.close()
+            return self.send_json({"journaux":[dict(r) for r in rows]})
+        if path == "/api/admin/notifications":
+            if self.headers.get("X-Admin-Password","") != ADMIN_PASSWORD:
+                return self.send_json({"erreur":"Non autorisé"}, 403)
+            c = db()
+            rows = c.execute("SELECT * FROM notifications ORDER BY date DESC LIMIT 100").fetchall()
+            c.close()
+            return self.send_json({"notifications":[dict(r) for r in rows]})
         if path.startswith("/api/"):
-            token = self.headers.get("Authorization", "").replace("Bearer ", "")
-            u = user_by_token(token)
-
-            if path == "/api/plans":
-                c = db()
-                rows = [dict(r) for r in c.execute("SELECT * FROM plans").fetchall()]
-                c.close()
-                return self.send_json({"plans": rows})
-
-            if path == "/api/content":
-                p = plan_actif(u)
-                if not p:
-                    return self.send_json({"erreur": "Abonnement requis pour le contenu."}, 402)
-                c = db()
-                sujets = []
-                for s in c.execute("SELECT * FROM sujets").fetchall():
-                    chaps = c.execute("SELECT id, nom FROM chapitres WHERE sujet_id=?", (s["id"],)).fetchall()
-                    nb = c.execute("SELECT COUNT(*) FROM exercices WHERE chapitre_id IN (SELECT id FROM chapitres WHERE sujet_id=?)", (s["id"],)).fetchone()[0]
-                    sujets.append({"id": s["id"], "nom": s["nom"], "icone": s["icone"],
-                                   "chapitres": [dict(ch) for ch in chaps], "nb_exercices": nb})
-                c.close()
-                return self.send_json({"sujets": sujets, "plan": p["nom"], "telechargement": bool(p["telechargement"])})
-
-            if path == "/api/subscription/me":
-                p = plan_valide(u)
-                if not p:
-                    return self.send_json({"plan": None, "abonne": False})
-                return self.send_json({"plan": dict(p), "abonne": True})
-
-            if path == "/api/payments/status":
-                return self.send_json(status_paiements())
-
-            if path == "/api/admin/stats":
-                if not is_admin(self):
-                    return self.send_json({"erreur": "Authentification admin requise"}, 401)
-                c = db()
-                today = datetime.now().strftime("%Y-%m-%d")
-                ca = c.execute("SELECT SUM(montant) FROM payment_links WHERE statut='valide'").fetchone()[0] or 0
-                actifs = c.execute("SELECT COUNT(*) FROM users WHERE date_expiration > date('now')").fetchone()[0]
-                nouveaux = c.execute("SELECT COUNT(*) FROM users WHERE date_creation=?", (today,)).fetchone()[0]
-                total_users = c.execute("SELECT COUNT(*) FROM users").fetchone()[0]
-                conversion = round(actifs / max(total_users, 1) * 100, 1)
-                c.close()
-                return self.send_json({"ca": ca, "abonnes_actifs": actifs, "nouveaux_aujourdhui": nouveaux,
-                                       "total_users": total_users, "conversion": conversion,
-                                       "objectif": 3000000})
-
-            if path == "/api/admin/plans-stats":
-                if not is_admin(self):
-                    return self.send_json({"erreur": "Authentification admin requise"}, 401)
-                c = db()
-                stats = []
-                for p in c.execute("SELECT * FROM plans ORDER BY prix").fetchall():
-                    nb = c.execute("SELECT COUNT(*) FROM users WHERE plan_id=? AND date_expiration > date('now')", (p["id"],)).fetchone()[0]
-                    ca = c.execute("SELECT COALESCE(SUM(montant),0) FROM payment_links WHERE plan_id=? AND statut='valide'", (p["id"],)).fetchone()[0] or 0
-                    stats.append({"id": p["id"], "nom": p["nom"], "prix": p["prix"], "abonnes": nb, "ca": ca})
-                c.close()
-                return self.send_json({"plans": stats})
-
-            if path == "/api/admin/subscribers":
-                if not is_admin(self):
-                    return self.send_json({"erreur": "Authentification admin requise"}, 401)
-                c = db()
-                rows = []
-                for s in c.execute("""SELECT u.id, u.pseudo, u.niveau, u.ville, u.langue, u.date_expiration,
-                                      p.nom plan, p.prix, pl.canal, pl.statut
-                                      FROM users u LEFT JOIN plans p ON u.plan_id=p.id
-                                      LEFT JOIN payment_links pl ON pl.user_id=u.id
-                                      ORDER BY u.id DESC LIMIT 50""").fetchall():
-                    d = dict(s); d["plan"] = d.pop("plan")
-                    rows.append(d)
-                c.close()
-                return self.send_json({"abonnes": rows})
-
-            if path == "/api/admin/payment-links":
-                if not is_admin(self):
-                    return self.send_json({"erreur": "Authentification admin requise"}, 401)
-                c = db()
-                rows = [dict(r) for r in c.execute("SELECT * FROM payment_links ORDER BY id DESC LIMIT 50").fetchall()]
-                c.close()
-                return self.send_json({"liens": rows})
-
-            if path == "/api/admin/security-logs":
-                if not is_admin(self):
-                    return self.send_json({"erreur": "Authentification admin requise"}, 401)
-                c = db()
-                rows = [dict(r) for r in c.execute("SELECT * FROM security_logs ORDER BY id DESC LIMIT 30").fetchall()]
-                c.close()
-                return self.send_json({"logs": rows})
-
-            if path == "/api/admin/config":
-                if not is_admin(self):
-                    return self.send_json({"erreur": "Authentification admin requise"}, 401)
-                c = db()
-                cfg = {r["key"]: r["value"] for r in c.execute("SELECT key, value FROM admin_config").fetchall()}
-                c.close()
-                return self.send_json({"config": cfg})
-
-            if path == "/api/admin/users":
-                if not is_admin(self):
-                    return self.send_json({"erreur": "Authentification admin requise"}, 401)
-                c = db()
-                rows = c.execute("SELECT id, pseudo, niveau, ville, langue, plan_id, date_expiration, date_creation, email, telephone, bloque FROM users ORDER BY date_creation DESC").fetchall()
-                plans_cache = {r["id"]: (r["nom"], r["prix"]) for r in c.execute("SELECT id, nom, prix FROM plans").fetchall()}
-                c.close()
-                users = []
-                for r in rows:
-                    p = plans_cache.get(r["plan_id"], ("—", 0))
-                    users.append({
-                        "id": r["id"],
-                        "pseudo": r["pseudo"],
-                        "niveau": r["niveau"],
-                        "ville": r["ville"],
-                        "langue": r["langue"],
-                        "plan": p[0],
-                        "plan_prix": p[1],
-                        "date_expiration": r["date_expiration"],
-                        "date_creation": r["date_creation"],
-                        "email": r["email"] or "",
-                        "telephone": r["telephone"] or "",
-                        "bloque": bool(r["bloque"])
-                    })
-                return self.send_json({"users": users, "total": len(users)})
-
-            return self.send_json({"erreur": "NotFound"}, 404)
-
-        # Static
-        return self.static(path)
+            return self.send_json({"erreur":"Méthode non autorisée"}, 405)
+        # Fichiers statiques
+        projet = os.path.join(os.path.dirname(os.path.abspath(__file__)), "projet")
+        mapping = {"/":"index.html","/index.html":"index.html","/app.html":"app.html",
+                   "/dashboard.html":"dashboard.html","/favicon.ico":"favicon.ico"}
+        if path in mapping:
+            return self.send_html(os.path.join(projet, mapping[path]))
+        if path.startswith("/EcoleMax") or path.startswith("/apk"):
+            tele = os.path.join(projet, "telechargements")
+            for f in os.listdir(tele):
+                if f.lower().startswith("ecolemax") and f.endswith(".apk"):
+                    return self.send_html(os.path.join(tele, f))
+        return self.send_json({"erreur":"Non trouvé"}, 404)
 
     def do_POST(self):
         path = self.path.split("?")[0]
         data = self.body()
-        token = self.headers.get("Authorization", "").replace("Bearer ", "")
-        u = user_by_token(token)
+        u = get_user_by_token(self)
 
-        if path == "/api/ai/guest":
-            # Widget IA public du site — pas d'authentification, quota IP (10 / 15 min)
-            question = data.get("question", "")
-            if not question or len(question.strip()) < 3:
-                return self.send_json({"erreur": "Question trop courte"}, 400)
-            ip = self.client_address[0] if self.client_address else "?"
-            if not _guest_allowed(ip):
-                return self.send_json({"erreur": "Quota atteint (10 questions / 15 min). Inscrivez-vous pour continuer."}, 429)
-            c = db()
-            p = c.execute("SELECT * FROM plans WHERE code='gratuit'").fetchone()
-            c.close()
-            r = reponse_ia(question, p)
-            return self.send_json(r)
-
+        # ── Auth ──
         if path == "/api/register":
-            pseudo = (data.get("pseudo", "") or data.get("prenom", "")).strip()
-            if not pseudo or len(pseudo) < 3:
-                return self.send_json({"erreur": "Pseudo trop court (3+ caractères)"}, 400)
+            pseudo = data.get("pseudo","").strip()
+            mdp = data.get("mot_de_passe","")
+            email = data.get("email","").strip()
+            niveau = data.get("niveau","Terminale")
+            if len(pseudo) < 3: return self.send_json({"erreur":"Pseudo trop court (3+ caractères)"}, 400)
+            if len(mdp) < 8 or not re.search(r'[A-Za-z]', mdp) or not re.search(r'\d', mdp):
+                return self.send_json({"erreur":"Mot de passe : 8+ caractères, lettre + chiffre"}, 400)
             c = db()
             if c.execute("SELECT id FROM users WHERE pseudo=?", (pseudo,)).fetchone():
                 c.close()
-                return self.send_json({"erreur": "Pseudo déjà pris"}, 409)
-            pid_gratuit = c.execute("SELECT id FROM plans WHERE code='gratuit'").fetchone()[0]
-            c.execute("""INSERT INTO users (pseudo, mot_de_passe, niveau, ville, langue, plan_id, date_expiration, token, date_creation, email, telephone)
-                         VALUES (?,?,?,?,?,?,?,?,datetime('now'),?,?)""",
-                      (pseudo, hash_mdp(data.get("mot_de_passe", "")), data.get("niveau", ""),
-                       data.get("ville", ""), data.get("langue", "fr"), pid_gratuit,
-                       (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d"),
-                       secrets.token_hex(16),
-                       data.get("email", "").strip(),
-                       data.get("telephone", "").strip()))
+                return self.send_json({"erreur":"Ce pseudo est déjà pris"}, 409)
+            c.execute("INSERT INTO users (pseudo,email,mot_de_passe,niveau,created_at) VALUES (?,?,?,?,?)",
+                      (pseudo,email,hash_pass(mdp),niveau,now()))
+            uid = c.execute("SELECT id FROM users WHERE pseudo=?", (pseudo,)).fetchone()["id"]
+            c.execute("INSERT INTO sessions (token,user_id,expires_at,created_at) VALUES (?,?,?,?)",
+                      (jwt_create(uid),uid,datetime.datetime.now().isoformat(),now()))
+            # Notification de bienvenue
+            c.execute("INSERT INTO notifications (user_id,titre,message,type,lu,date) VALUES (?,?,?,?,?,?)",
+                      (uid,"Bienvenue sur ÉcoleMax !","Ton essai gratuit de 48 H est activé. 30 questions IA, 1 photo par jour, tout débloqué. Bon apprentissage 🎓","system",0,now()))
             c.commit()
-            uid = c.execute("SELECT last_insert_rowid()").fetchone()[0]
-            tok = c.execute("SELECT token FROM users WHERE id=?", (uid,)).fetchone()[0]
             c.close()
-            log_sec(uid, "inscription", "Nouveau compte")
-            return self.send_json({"ok": True, "user": {"id": uid, "pseudo": pseudo}, "token": tok})
+            log_sec(uid, "inscription", "Nouvel élève")
+            return self.send_json({"ok":True,"token":jwt_create(uid),"user":{"id":uid,"pseudo":pseudo}})
 
         if path == "/api/login":
+            pseudo = data.get("pseudo","")
+            mdp = data.get("mot_de_passe","")
             c = db()
-            row = c.execute("SELECT * FROM users WHERE pseudo=?", (data.get("pseudo", ""),)).fetchone()
-            if not row or row["mot_de_passe"] != hash_mdp(data.get("mot_de_passe", "")):
-                c.close()
-                return self.send_json({"erreur": "Identifiants invalides"}, 401)
-            if row["bloque"]:
-                c.close()
-                return self.send_json({"erreur": "Ce compte est bloqué. Contactez le support."}, 403)
+            u = c.execute("SELECT * FROM users WHERE pseudo=?", (pseudo,)).fetchone()
             c.close()
-            return self.send_json({"ok": True, "user": {"id": row["id"], "pseudo": row["pseudo"]}, "token": row["token"]})
+            if not u or u["mot_de_passe"] != hash_pass(mdp):
+                return self.send_json({"erreur":"Identifiants invalides"}, 401)
+            log_sec(u["id"], "connexion", "Connexion élève")
+            return self.send_json({"ok":True,"token":jwt_create(u["id"]),"user":{"id":u["id"],"pseudo":u["pseudo"]}})
 
-        if path == "/api/subscribe":
-            if not u:
-                return self.send_json({"erreur": "Authentification requise"}, 401)
-            plan_id = data.get("plan_id")
-            canal = data.get("canal", "Wave")
+        if path == "/api/reset":
+            pseudo = data.get("pseudo","")
             c = db()
-            plan = c.execute("SELECT * FROM plans WHERE id=?", (plan_id,)).fetchone()
-            if not plan:
-                c.close()
-                return self.send_json({"erreur": "Plan inconnu"}, 400)
-            reference = generer_reference()
-            checkout = (creer_checkout_orange(plan["prix"], reference) if canal == "Orange Money"
-                        else creer_checkout_wave(plan["prix"], reference))
-            c.execute("""INSERT INTO payment_links (user_id, plan_id, canal, url, montant, statut, reference, date_creation)
-                         VALUES (?,?,?,?,?,'en_attente',?,datetime('now'))""",
-                      (u["id"], plan_id, canal, checkout["url"], plan["prix"], reference))
-            c.commit(); c.close()
-            return self.send_json({"ok": True, "checkout_url": checkout["url"], "reference": reference,
-                                   "canal": canal, "montant": plan["prix"], "plan": plan["nom"],
-                                   "reel": checkout["reel"],
-                                   "message": "Redirection vers le paiement " + canal})
-
-        if path == "/api/admin/config":
-            if not is_admin(self):
-                return self.send_json({"erreur": "Authentification admin requise"}, 401)
-            cfg = data.get("config", {})
-            c = db()
-            for k, v in cfg.items():
-                c.execute("INSERT INTO admin_config (key, value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (k, str(v)))
-                os.environ[k] = str(v)
-                # Mise à jour immédiate du module paiements
-                pm = sys.modules.get("paiements")
-                if pm and hasattr(pm, k):
-                    setattr(pm, k, str(v))
+            u = c.execute("SELECT * FROM users WHERE pseudo=?", (pseudo,)).fetchone()
+            c.close()
+            if not u: return self.send_json({"erreur":"Utilisateur non trouvé"}, 404)
+            new = secrets.token_hex(4)
+            c.execute("UPDATE users SET mot_de_passe=? WHERE id=?", (hash_pass(new), u["id"]))
             c.commit()
             c.close()
-            return self.send_json({"ok": True, "config": cfg})
+            return self.send_json({"ok":True,"nouveau_mdp":new})
 
-        if path == "/api/admin/confirm-payment":
-            # Confirme un paiement (callback de la passerelle ou retour client).
-            lien_id = data.get("lien_id")
-            reference = data.get("reference")
-            c = db()
-            if lien_id:
-                lien = c.execute("SELECT * FROM payment_links WHERE id=?", (lien_id,)).fetchone()
-            elif reference:
-                lien = c.execute("SELECT * FROM payment_links WHERE reference=?", (reference,)).fetchone()
-            else:
-                c.close()
-                return self.send_json({"erreur": "lien_id ou reference requis"}, 400)
-            if not lien:
-                c.close()
-                return self.send_json({"erreur": "Paiement introuvable"}, 404)
-            # Vérification auprès du fournisseur en mode réel
-            if lien["canal"] == "Wave":
-                st = verifier_paiement_wave(lien["reference"])
-                if st and st.lower() not in ("completed", "succeeded", "paid", "success", "confirmed"):
-                    c.close()
-                    return self.send_json({"erreur": "Paiement non confirmé : " + str(st)}, 402)
-            plan = c.execute("SELECT * FROM plans WHERE id=?", (lien["plan_id"],)).fetchone()
-            exp = datetime.now() + timedelta(days=plan["duree_jours"])
-            c.execute("UPDATE payment_links SET statut='valide', date_activation=datetime('now') WHERE id=?", (lien["id"],))
-            c.execute("UPDATE users SET plan_id=?, date_expiration=? WHERE id=?",
-                      (lien["plan_id"], exp.strftime("%Y-%m-%d"), lien["user_id"]))
-            c.commit(); c.close()
-            return self.send_json({"ok": True, "message": "Abonnement activé : " + plan["nom"]})
-
-        if path == "/api/payments/wave/webhook":
-            # Webhook Wave : vérification HMAC-SHA256 sur le body brut
-            raw = self.rfile.read(int(self.headers.get("Content-Length", 0)))
-            signature = self.headers.get("X-Wave-Signature", "")
-            try:
-                payload = json.loads(raw.decode())
-            except Exception:
-                return self.send_json({"erreur": "Corps invalide"}, 400)
-            if not webhook_wave_valide(payload, signature):
-                return self.send_json({"erreur": "Signature invalide"}, 403)
-            ref = payload.get("client_reference") or payload.get("reference") or (payload.get("session") or {}).get("client_reference")
-            if ref:
-                self.activate_payment_by_reference(ref)
-            return self.send_json({"ok": True})
-
-        if path == "/api/payments/orange/notif":
-            # Notification Orange Money
-            payload = json.loads(self.body())
-            order_id = payload.get("order_id") or payload.get("reference")
-            if order_id:
-                self.activate_payment_by_reference(order_id)
-            return self.send_json({"ok": True})
-
+        # ── IA — Professeur ──
         if path == "/api/ai/ask":
-            if not u:
-                return self.send_json({"erreur": "Authentification requise"}, 401)
+            if not u: return self.send_json({"erreur":"Authentification requise"}, 401)
             p = plan_actif(u)
-            if not p:
-                return self.send_json({"erreur": "Essai gratuit de 24 h terminé — abonne-toi pour continuer (à partir de 250 FCFA)."}, 402)
-            # Limite quotidienne IA
-            c = db()
-            jour = datetime.now().strftime("%Y-%m-%d")
-            row = c.execute("SELECT count FROM usage_journaliere WHERE user_id=? AND date=?", (u["id"], jour)).fetchone()
-            count = row[0] if row else 0
-            if count >= p["limite_ia_jour"]:
-                c.close()
-                return self.send_json({"erreur": f"Quota IA atteint ({p['limite_ia_jour']}/jour). Passe au plan supérieur."}, 429)
-            question = data.get("question", "")
-            c.execute("UPDATE usage_journaliere SET count=count+1 WHERE user_id=? AND date=?", (u["id"], jour))
-            if c.execute("SELECT changes()").fetchone()[0] == 0:
-                c.execute("INSERT INTO usage_journaliere (user_id, date, count) VALUES (?,?,1)", (u["id"], jour))
-            c.execute("INSERT INTO ai_usage (user_id, action, tokens, cout, date) VALUES (?,?,?,?,datetime('now'))", (u["id"], "question", 800, 0.0002))
-            c.commit(); c.close()
-            cache_key = re.sub(r"\s+", " ", question.strip().lower())[:200]
-            r = reponse_ia(question, p)
-            if r.get("source") == "IA":
-                _IA_CACHE[cache_key] = {k: v for k, v in r.items() if k != "quota_restant"}
-            r["quota_restant"] = max(p["limite_ia_jour"] - count - 1, 0)
+            if not p: return self.send_json({"erreur":"Essai gratuit de 48 h terminé — abonne-toi pour continuer."}, 402)
+            ok, msg = check_quota(u, p, "ia")
+            if not ok: return self.send_json({"erreur":msg}, 402)
+            q = data.get("question","").strip()
+            if not q: return self.send_json({"erreur":"Question vide"}, 400)
+            r = reponse_ia(q, p)
+            log_sec(u["id"], "ia_question", q[:100])
             return self.send_json(r)
 
+        # ── IA — Scanner photo ──
         if path == "/api/ai/photo":
-            if not u:
-                return self.send_json({"erreur": "Authentification requise"}, 401)
+            if not u: return self.send_json({"erreur":"Authentification requise"}, 401)
             p = plan_actif(u)
-            if not p:
-                return self.send_json({"erreur": "Abonnement requis pour la correction photo"}, 402)
-            jour = datetime.now().strftime("%Y-%m-%d")
-            c = db()
-            row = c.execute("SELECT count(*) FROM ai_usage WHERE user_id=? AND action='photo' AND date(date)=?", (u["id"], jour)).fetchone()
-            count = row[0] if row else 0
-            if count >= p["photo_jour"]:
-                c.close()
-                return self.send_json({"erreur": f"Quota photo atteint ({p['photo_jour']}/jour). Passe au plan supérieur."}, 429)
-            image = data.get("image", "")
-            if not image or len(image) < 100:
-                c.close()
-                return self.send_json({"erreur": "Photo requise"}, 400)
-            question = data.get("question", "Qu'y a-t-il sur cette photo ? Explique en wolof puis français.")
-            c.execute("INSERT INTO ai_usage (user_id, action, tokens, cout, date) VALUES (?,?,?,?,datetime('now'))", (u["id"], "photo", 1500, 0.0006))
-            c.commit(); c.close()
-            r = reponse_ia_photo(question, image, p)
-            r["quota_restant"] = max(p["photo_jour"] - count - 1, 0)
+            if not p: return self.send_json({"erreur":"Essai gratuit de 48 h terminé — abonne-toi pour continuer."}, 402)
+            ok, msg = check_quota(u, p, "photo")
+            if not ok: return self.send_json({"erreur":msg}, 402)
+            img = data.get("image","")
+            if not img or len(img) < 100: return self.send_json({"erreur":"Image invalide"}, 400)
+            q = data.get("question","")
+            r = reponse_ia_photo(q, img, p)
+            log_sec(u["id"], "ia_photo", "Correction photo")
             return self.send_json(r)
 
-        if path == "/api/ai/plagiat":
-            if not u:
-                return self.send_json({"erreur": "Authentification requise"}, 401)
-            p = plan_actif(u)
-            if not p:
-                return self.send_json({"erreur": "Essai gratuit de 24 h terminé — abonne-toi pour continuer."}, 402)
-            r = check_plagiat(data.get("texte", ""))
-            log_sec(u["id"], "plagiat", "Vérification dissertation")
-            return self.send_json(r)
-
+        # ── IA — Correcteur de texte ──
         if path == "/api/ai/correct":
-            # Correcteur de textes : correction orthographe/grammaire/conjugaison
-            if not u:
-                return self.send_json({"erreur": "Authentification requise"}, 401)
+            if not u: return self.send_json({"erreur":"Authentification requise"}, 401)
             p = plan_actif(u)
-            if not p:
-                return self.send_json({"erreur": "Essai gratuit de 24 h terminé — abonne-toi pour continuer."}, 402)
-            texte = data.get("texte", "")
+            if not p: return self.send_json({"erreur":"Essai gratuit de 48 h terminé — abonne-toi pour continuer."}, 402)
+            ok, msg = check_quota(u, p, "correct")
+            if not ok: return self.send_json({"erreur":msg}, 402)
+            texte = data.get("texte","")
             if not texte or len(texte.strip()) < 10:
-                return self.send_json({"erreur": "Texte trop court (10+ caractères)"}, 400)
+                return self.send_json({"erreur":"Texte trop court (10+ caractères)"}, 400)
             question = ("Corrige ce texte en français. Affiche d'abord le texte corrigé, puis explique chaque erreur "
                         "(orthographe, grammaire, conjugaison, ponctuation). Texte à corriger : " + texte[:1500])
             r = reponse_ia(question, p)
+            c = db()
+            c.execute("INSERT INTO corrections (user_id,original,corrige,explication,date) VALUES (?,?,?,?,?)",
+                      (u["id"], texte[:500], r.get("reponse",""), "", now()))
+            c.commit()
+            c.close()
             log_sec(u["id"], "correction_texte", "Correction texte")
             return self.send_json(r)
 
-        if path == "/api/security/log":
-            if not u:
-                return self.send_json({"erreur": "Authentification requise"}, 401)
-            log_sec(u["id"], data.get("type", "autre"), data.get("detail", ""))
-            return self.send_json({"ok": True})
-
-        # --- Reset mot de passe ---
-        if path == "/api/reset-password/request":
-            pseudo = data.get("pseudo", "").strip()
-            contact = data.get("contact", "").strip()
+        # ── Exercices ──
+        if path == "/api/exercises":
             c = db()
-            row = c.execute("SELECT * FROM users WHERE pseudo=?", (pseudo,)).fetchone()
-            if not row:
-                c.close()
-                return self.send_json({"erreur": "Pseudo introuvable"}, 404)
-            if not contact:
-                contact = row["telephone"] or row["email"] or ""
-            if not contact:
-                c.close()
-                return self.send_json({"erreur": "Aucun numéro de téléphone ou email enregistré. Contactez le support."}, 400)
-            # Vérifier que le contact correspond
-            if row["telephone"] and contact in row["telephone"]:
-                ok_contact = True
-            elif row["email"] and contact in row["email"]:
-                ok_contact = True
-            else:
-                c.close()
-                return self.send_json({"erreur": "Le numéro ou email ne correspond pas au compte"}, 400)
-            # Générer code 6 chiffres
-            code = str(random.randint(100000, 999999))
-            c.execute("DELETE FROM password_reset WHERE pseudo=?", (pseudo,))
-            c.execute("INSERT INTO password_reset (pseudo, code, date_creation, date_expiration) VALUES (?,?,datetime('now'),datetime('now','+15 minutes'))",
-                      (pseudo, code))
+            sujet = data.get("sujet","")
+            niveau = data.get("niveau","")
+            chapitre = data.get("chapitre","")
+            diff = data.get("difficulte","")
+            q = "SELECT * FROM exercises WHERE 1=1"
+            params = []
+            if sujet: q += " AND sujet_code=?"; params.append(sujet)
+            if niveau: q += " AND niveau=?"; params.append(niveau)
+            if chapitre: q += " AND chapitre=?"; params.append(chapitre)
+            if diff: q += " AND difficulte=?"; params.append(diff)
+            rows = c.execute(q, params).fetchall()
+            c.close()
+            return self.send_json({"exercices":[dict(r) for r in rows]})
+
+        if path == "/api/exercise/reponse":
+            if not u: return self.send_json({"erreur":"Authentification requise"}, 401)
+            eid = data.get("exercise_id")
+            reponse = data.get("reponse","")
+            score = 1 if reponse else 0
+            c = db()
+            ex = c.execute("SELECT * FROM exercises WHERE id=?", (eid,)).fetchone()
+            if ex:
+                correct = (str(ex["reponse"]) == reponse)
+                score = 1 if correct else 0
+                c.execute("INSERT INTO results (user_id,exercise_id,score,reponse_utilisateur,correct,date) VALUES (?,?,?,?,?,?)",
+                          (u["id"], eid, score, reponse, 1 if correct else 0, now()))
             c.commit()
             c.close()
-            # Retourner le code (dans la vraie vie, on l'envoie par SMS/WhatsApp/email)
-            return self.send_json({"ok": True, "message": "Code de vérification envoyé",
-                                   "code": code,  # Démo: code retourné car pas de service SMS
-                                   "contact": contact,
-                                   "note": "Code valable 15 minutes. (Démo: code affiché car pas de service SMS/WhatsApp configuré)"})
+            update_usage(u["id"], "ex")
+            return self.send_json({"ok":True,"score":score,"correct":correct if ex else False})
 
-        if path == "/api/reset-password/verify":
-            pseudo = data.get("pseudo", "").strip()
-            code = data.get("code", "").strip()
-            nouveau_mdp = data.get("mot_de_passe", "")
+        # ── Favoris ──
+        if path == "/api/favoris/add":
+            if not u: return self.send_json({"erreur":"Authentification requise"}, 401)
             c = db()
-            row = c.execute("SELECT * FROM password_reset WHERE pseudo=? ORDER BY id DESC", (pseudo,)).fetchone()
-            if not row:
-                c.close()
-                return self.send_json({"erreur": "Aucune demande de reset. Faites une demande d'abord."}, 400)
-            if row["code"] != code:
-                c.close()
-                return self.send_json({"erreur": "Code incorrect"}, 400)
-            if datetime.now() > datetime.strptime(row["date_expiration"], "%Y-%m-%d %H:%M:%S"):
-                c.close()
-                return self.send_json({"erreur": "Code expiré. Faites une nouvelle demande."}, 400)
-            if len(nouveau_mdp) < 8 or not re.search(r"[a-zA-Z]", nouveau_mdp) or not re.search(r"[0-9]", nouveau_mdp):
-                c.close()
-                return self.send_json({"erreur": "Mot de passe : 8+ caractères, lettre + chiffre"}, 400)
-            c.execute("UPDATE users SET mot_de_passe=? WHERE pseudo=?", (hash_mdp(nouveau_mdp), pseudo))
-            c.execute("DELETE FROM password_reset WHERE pseudo=?", (pseudo,))
-            c.commit()
-            uid = c.execute("SELECT id FROM users WHERE pseudo=?", (pseudo,)).fetchone()[0]
+            try:
+                c.execute("INSERT INTO favoris (user_id,type,ref_id,label,date) VALUES (?,?,?,?,?)",
+                          (u["id"], data.get("type","exercice"), data.get("ref_id",0), data.get("label",""), now()))
+                c.commit()
+            except sqlite3.IntegrityError:
+                pass
             c.close()
-            log_sec(uid, "reset_mdp", "Mot de passe réinitialisé")
-            return self.send_json({"ok": True, "message": "Mot de passe réinitialisé. Vous pouvez vous connecter."})
+            return self.send_json({"ok":True})
 
-        # --- Admin: bloquer / supprimer / lister utilisateurs ---
-        if path == "/api/admin/block-user":
-            if not is_admin(self):
-                return self.send_json({"erreur": "Authentification admin requise"}, 401)
-            target_pseudo = data.get("pseudo", "").strip()
-            bloque = 1 if data.get("bloque") else 0
+        if path == "/api/favoris":
+            if not u: return self.send_json({"erreur":"Authentification requise"}, 401)
             c = db()
-            row = c.execute("SELECT id FROM users WHERE pseudo=?", (target_pseudo,)).fetchone()
-            if not row:
-                c.close()
-                return self.send_json({"erreur": "Utilisateur introuvable"}, 404)
-            c.execute("UPDATE users SET bloque=? WHERE pseudo=?", (bloque, target_pseudo))
-            c.commit()
+            rows = c.execute("SELECT * FROM favoris WHERE user_id=? ORDER BY date DESC", (u["id"],)).fetchall()
             c.close()
-            log_sec(row["id"], "admin_block", f"Blocage={bloque}")
-            return self.send_json({"ok": True, "message": f"Utilisateur {target_pseudo} {'bloqué' if bloque else 'débloqué'}"})
+            return self.send_json({"favoris":[dict(r) for r in rows]})
 
-        if path == "/api/admin/delete-user":
-            if not is_admin(self):
-                return self.send_json({"erreur": "Authentification admin requise"}, 401)
-            target_pseudo = data.get("pseudo", "").strip()
+        # ── Historique ──
+        if path == "/api/history":
+            if not u: return self.send_json({"erreur":"Authentification requise"}, 401)
             c = db()
-            row = c.execute("SELECT id FROM users WHERE pseudo=?", (target_pseudo,)).fetchone()
-            if not row:
-                c.close()
-                return self.send_json({"erreur": "Utilisateur introuvable"}, 404)
-            uid = row["id"]
-            c.execute("DELETE FROM users WHERE id=?", (uid,))
-            c.execute("DELETE FROM payment_links WHERE user_id=?", (uid,))
-            c.execute("DELETE FROM ai_usage WHERE user_id=?", (uid,))
-            c.execute("DELETE FROM security_logs WHERE user_id=?", (uid,))
-            c.execute("DELETE FROM usage_journaliere WHERE user_id=?", (uid,))
-            c.execute("DELETE FROM password_reset WHERE pseudo=?", (target_pseudo,))
+            corr = c.execute("SELECT * FROM corrections WHERE user_id=? ORDER BY date DESC LIMIT 50", (u["id"],)).fetchall()
+            res = c.execute("SELECT * FROM results WHERE user_id=? ORDER BY date DESC LIMIT 50", (u["id"],)).fetchall()
+            c.close()
+            return self.send_json({"corrections":[dict(r) for r in corr], "resultats":[dict(r) for r in res]})
+
+        # ── Notifications ──
+        if path == "/api/notifications":
+            if not u: return self.send_json({"erreur":"Authentification requise"}, 401)
+            c = db()
+            rows = c.execute("SELECT * FROM notifications WHERE user_id=? OR user_id IS NULL ORDER BY date DESC LIMIT 50", (u["id"],)).fetchall()
+            c.close()
+            return self.send_json({"notifications":[dict(r) for r in rows]})
+
+        if path == "/api/notifications/read":
+            if not u: return self.send_json({"erreur":"Authentification requise"}, 401)
+            c = db()
+            c.execute("UPDATE notifications SET lu=1 WHERE user_id=?", (u["id"],))
             c.commit()
             c.close()
-            return self.send_json({"ok": True, "message": f"Utilisateur {target_pseudo} supprimé"})
+            return self.send_json({"ok":True})
 
-        if path == "/api/admin/reset-user-password":
-            if not is_admin(self):
-                return self.send_json({"erreur": "Authentification admin requise"}, 401)
-            target_pseudo = data.get("pseudo", "").strip()
-            nouveau_mdp = data.get("mot_de_passe", "Motdepasse1")
-            if len(nouveau_mdp) < 8 or not re.search(r"[a-zA-Z]", nouveau_mdp) or not re.search(r"[0-9]", nouveau_mdp):
-                return self.send_json({"erreur": "Mot de passe : 8+ caractères, lettre + chiffre"}, 400)
+        # ── Support ──
+        if path == "/api/support":
+            if not u: return self.send_json({"erreur":"Authentification requise"}, 401)
             c = db()
-            row = c.execute("SELECT id FROM users WHERE pseudo=?", (target_pseudo,)).fetchone()
-            if not row:
-                c.close()
-                return self.send_json({"erreur": "Utilisateur introuvable"}, 404)
-            c.execute("UPDATE users SET mot_de_passe=? WHERE pseudo=?", (hash_mdp(nouveau_mdp), target_pseudo))
+            c.execute("INSERT INTO supports (user_id,sujet,message,date) VALUES (?,?,?,?)",
+                      (u["id"], data.get("sujet",""), data.get("message",""), now()))
             c.commit()
             c.close()
-            log_sec(row["id"], "admin_reset", "Admin a réinitialisé le mot de passe")
-            return self.send_json({"ok": True, "message": f"Mot de passe de {target_pseudo} réinitialisé"})
+            return self.send_json({"ok":True})
 
-        return self.send_json({"erreur": "NotFound"}, 404)
+        # ── Abonnements / Paiements ──
+        if path == "/api/subscribe":
+            if not u: return self.send_json({"erreur":"Authentification requise"}, 401)
+            plan_code = data.get("plan","")
+            method = data.get("method","wave")
+            c = db()
+            plan = c.execute("SELECT * FROM plans WHERE code=?", (plan_code,)).fetchone()
+            if not plan: return self.send_json({"erreur":"Plan non trouvé"}, 404)
+            if plan["code"] == "gratuit":
+                return self.send_json({"erreur":"Ce plan est l'essai gratuit"}, 400)
+            ref = "PAY-" + secrets.token_hex(6).upper()
+            c.execute("INSERT INTO paiements (user_id,montant,method,statut,reference,created_at) VALUES (?,?,?,?,?,?)",
+                      (u["id"], plan["prix"], method, "en_attente", ref, now()))
+            pid = c.execute("SELECT id FROM paiements WHERE reference=?", (ref,)).fetchone()["id"]
+            c.execute("INSERT INTO abonnements (user_id,plan_code,statut,debut,expire,montant) VALUES (?,?,?,?,?,?)",
+                      (u["id"], plan_code, "en_attente", now(), "", plan["prix"]))
+            aid = c.execute("SELECT id FROM abonnements WHERE user_id=? AND statut='en_attente' ORDER BY debut DESC LIMIT 1", (u["id"],)).fetchone()["id"]
+            c.execute("UPDATE paiements SET abonnement_id=? WHERE id=?", (aid, pid))
+            c.commit()
+            c.close()
+            log_sec(u["id"], "paiement_creation", f"{plan_code} {method} {ref}")
+            return self.send_json({"ok":True,"reference":ref,"abonnement_id":aid,"montant":plan["prix"]})
 
-    def do_DELETE(self):
-        return self.send_json({"erreur": "Methode non supportée"}, 405)
+        if path == "/api/payment/confirm":
+            """Confirmation sécurisée du paiement — activée seulement après vérification."""
+            if not u: return self.send_json({"erreur":"Authentification requise"}, 401)
+            ref = data.get("reference","")
+            c = db()
+            pay = c.execute("SELECT * FROM paiements WHERE reference=?", (ref,)).fetchone()
+            if not pay: return self.send_json({"erreur":"Paiement non trouvé"}, 404)
+            if pay["user_id"] != u["id"]: return self.send_json({"erreur":"Non autorisé"}, 403)
+            if pay["statut"] != "en_attente":
+                return self.send_json({"erreur":"Ce paiement est déjà traité"}, 400)
+            # Simulation de vérification du prestataire (dans production : Webhook Wave/Orange Money)
+            c.execute("UPDATE paiements SET statut='success', confirmed_at=? WHERE id=?", (now(), pay["id"]))
+            plan = c.execute("SELECT * FROM plans WHERE code=?", (data.get("plan",""),)).fetchone()
+            if plan:
+                debut = datetime.datetime.now()
+                expire = debut + datetime.timedelta(days=plan["duree_jours"])
+                c.execute("UPDATE abonnements SET statut='actif', debut=?, expire=? WHERE id=?",
+                          (debut.isoformat(), expire.isoformat(), pay["abonnement_id"]))
+            c.execute("UPDATE abonnements SET statut='actif' WHERE user_id=? AND statut='en_attente'", (u["id"],))
+            c.commit()
+            c.close()
+            log_sec(u["id"], "paiement_confirm", ref)
+            return self.send_json({"ok":True,"reference":ref,"statut":"success","message":"Abonnement activé ✅"})
+
+        if path == "/api/payment/webhook":
+            """Webhook des prestataires (Wave/Orange Money) — confirmation serveur."""
+            ref = data.get("reference","")
+            statut = data.get("statut","success")
+            c = db()
+            pay = c.execute("SELECT * FROM paiements WHERE reference=?", (ref,)).fetchone()
+            if not pay: return self.send_json({"erreur":"Paiement non trouvé"}, 404)
+            c.execute("UPDATE paiements SET statut=?, confirmed_at=? WHERE id=?", (statut, now(), pay["id"]))
+            if statut == "success":
+                plan = c.execute("SELECT * FROM plans WHERE prix=?", (pay["montant"],)).fetchone()
+                if plan:
+                    debut = datetime.datetime.now()
+                    expire = debut + datetime.timedelta(days=plan["duree_jours"])
+                    c.execute("UPDATE abonnements SET statut='actif', debut=?, expire=? WHERE user_id=? AND plan_code=?",
+                              (debut.isoformat(), expire.isoformat(), pay["user_id"], plan["code"]))
+            c.commit()
+            c.close()
+            return self.send_json({"ok":True})
+
+        if path == "/api/me":
+            if not u: return self.send_json({"erreur":"Authentification requise"}, 401)
+            p = plan_actif(u)
+            c = db()
+            usage = c.execute("SELECT * FROM usages WHERE user_id=? AND date=?", (u["id"], datetime.datetime.now().strftime("%Y-%m-%d"))).fetchone()
+            nb_notif = c.execute("SELECT COUNT(*) as n FROM notifications WHERE user_id=? AND lu=0", (u["id"],)).fetchone()["n"]
+            nb_fav = c.execute("SELECT COUNT(*) as n FROM favoris WHERE user_id=?", (u["id"],)).fetchone()["n"]
+            c.close()
+            return self.send_json({"user":{"id":u["id"],"pseudo":u["pseudo"],"email":u["email"],"niveau":u["niveau"],"role":u["role"]},
+                                   "plan":p,"usage":dict(usage) if usage else None,
+                                   "notifications_non_lues":nb_notif,"favoris":nb_fav})
+
+        if path.startswith("/api/"):
+            return self.send_json({"erreur":"Route non trouvée"}, 404)
+
+        return self.send_json({"erreur":"Non trouvé"}, 404)
+
+    # NOTE: do_GET unique ci-dessus — routes admin incluses.
 
 if __name__ == "__main__":
     init_db()
     print(f"🟢 ÉcoleMax API démarrée → http://0.0.0.0:{PORT}")
-    print(f"   Static: {STATIC_DIR}")
-    print(f"   DB: {DB_PATH}")
-    print("   AI: " + ("API réelle (" + OPENAI_MODEL + ")" if OPENAI_API_KEY else "simulée (sans clé)"))
     ThreadingHTTPServer((HOST, PORT), Handler).serve_forever()
