@@ -245,6 +245,33 @@ footer{background:var(--card);border-top:1px solid var(--line);padding:40px 0 24
   </div>
 </section>
 
+<!-- TRADUCTION IA -->
+<section id="traduction">
+  <div class="container">
+    <h2>🌍 Traduction IA — 10 langues mondiales</h2>
+    <p class="subtitle">Français, Anglais, Espagnol, Portugais, Arabe, Allemand, Mandarin, Hindi, Russe, Japonais</p>
+    <div class="grid grid-3" id="tradLangsSite"></div>
+    <div style="max-width:680px;margin:24px auto 0" id="tradSiteContainer">
+      <div class="form-card">
+        <h3>Traduire un texte</h3>
+        <div class="alert" id="tradSiteAlert"></div>
+        <div class="field"><label>Texte à traduire</label>
+          <textarea id="tradSiteInput" rows="4" placeholder="Écris ou colle le texte à traduire..." required></textarea>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <div class="field" style="flex:1"><label>Langue cible</label>
+            <select id="tradSiteLang" required>
+              <option value="">— Choisir une langue —</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-block" onclick="traduireSite()">🌐 Traduire</button>
+        <div id="tradSiteResult" style="margin-top:16px"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- MATIERES ET NIVEAUX -->
 <section id="matieres" style="background:var(--card)">
   <div class="container">
@@ -575,6 +602,55 @@ function answerSiteQuiz(idx){
   const cats=[["Toutes","🎯"],["Géographie","🌍"],["Sciences","🔬"],["Histoire","📚"],["Maths","➗"],["Français","✍️"],["Anglais","🇬🇧"],["Physique","⚡"],["Chimie","🧪"],["SVT","🧬"],["Informatique","💻"],["Économie","💰"],["Philosophie","🤔"]];
   const el=document.getElementById("quizCats");
   if(el){el.innerHTML=cats.map(c=>'<div class="card" onclick="startSiteQuiz("'+c[0]+'")"><div style="font-size:32px;margin-bottom:8px">'+c[1]+'</div><div style="font-weight:700">'+c[0]+'</div></div>').join("");}
+})();
+
+// ── Traduction IA (Site) ──
+let TRAD_LANGS_SITE=[];
+async function loadTradLangsSite(){
+  try {
+    const r=await fetch("/api/languages");
+    const d=await r.json();
+    TRAD_LANGS_SITE=d.langues||[];
+    const grid=document.getElementById("tradLangsSite");
+    const sel=document.getElementById("tradSiteLang");
+    if(grid){
+      grid.innerHTML=TRAD_LANGS_SITE.map(l=>'<div class="card" style="text-align:center;cursor:pointer" onclick="document.getElementById('tradSiteLang').value=''+l.code+'';document.getElementById('tradSiteInput').focus()"><div style="font-size:32px;margin-bottom:8px">'+l.emoji+'</div><div style="font-weight:700">'+l.nom+'</div></div>').join("");
+    }
+    if(sel){
+      sel.innerHTML='<option value="">— Choisir une langue —</option>'+TRAD_LANGS_SITE.map(l=>'<option value="'+l.code+'">'+l.emoji+' '+l.nom+'</option>').join("");
+    }
+  } catch(e){}
+}
+
+async function traduireSite(){
+  const texte=document.getElementById("tradSiteInput").value.trim();
+  const lang=document.getElementById("tradSiteLang").value;
+  const alert=document.getElementById("tradSiteAlert");
+  if(!texte){alert.textContent="Entre un texte à traduire";alert.className="alert err";return;}
+  if(!lang){alert.textContent="Choisis une langue de traduction";alert.className="alert err";return;}
+  alert.textContent="🌐 Traduction en cours...";alert.className="alert ok";
+  try {
+    // Inscription rapide si pas connecté
+    let token=localStorage.getItem("em_token");
+    if(!token){
+      const pseudo="trad_"+Math.random().toString(36).substr(2,8);
+      const reg=await fetch("/api/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo,email:pseudo+"@trad.sn",mot_de_passe:"Test1234",niveau:"CM1"})});
+      const regD=await reg.json();
+      if(regD.ok) token=regD.token;
+    }
+    const r=await fetch("/api/ai/translate",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+(token||"")},body:JSON.stringify({texte,langue:lang})});
+    const d=await r.json();
+    if(d.erreur){alert.textContent="❌ "+d.erreur;alert.className="alert err";return;}
+    alert.textContent="✅ Traduction terminée";alert.className="alert ok";
+    document.getElementById("tradSiteResult").innerHTML='<div class="card"><h3>🌐 Traduction</h3><p style="font-size:16px;line-height:1.6">'+d.reponse+'</p><p style="font-size:12px;color:var(--ink-soft);margin-top:8px">📡 '+d.source+' — '+d.langue+'</p></div>';
+  } catch(err){
+    alert.textContent="⚠️ Erreur réseau: "+err.message;alert.className="alert err";
+  }
+}
+
+// ── Initialiser les langues de traduction ──
+(async function(){
+  try { loadTradLangsSite(); } catch(e){}
 })();
 
 </script>

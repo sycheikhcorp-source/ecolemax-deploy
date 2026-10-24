@@ -375,6 +375,150 @@ def init_db():
         ('chim','Organique','qcm','Le méthane contient quel atome de carbone?',json.dumps(['1','2','3','4'],),'0','1','Université S2','Chimie organique',5),
         ('fr','Dissertation','ouvert','Écris une introduction de dissertation sur le travail.','','Le travail est une activité humaine fondamentale...','Une introduction présente le sujet, la problématique et l\'annonce du plan.','Université S2','Rédaction',4),
         ('ec','PIB','qcm','Le PIB réel est?',json.dumps(['PIB à prix constants','PIB à prix courants','PIB nominal','PIB nominal'],),'0','PIB à prix constants','Université S2','Économie',4),
+        # ── Exercices supplémentaires v5.0 ──
+        ('maths','Addition','qcm','8+7=?',json.dumps(['13','14','15','16']),'2','8+7=15','CM1','Arithmétique',1),
+        ('maths','Soustraction','qcm','15-9=?',json.dumps(['5','6','7','8']),'2','15-9=6','CM1','Arithmétique',1),
+        ('fr','Vocabulaire','qcm','« chien » est?',json.dumps(['un animal','un vélo','une maison','un fruit']),'0','un animal','CM1','Vocabulaire',1),
+        ('svt','Animaux','qcm','Que boit un chat?',json.dumps(['Du lait',"De l'eau",'Du jus','Du thé']),1,'De l\'eau.','CM1','Animaux',1),
+        ('maths','Comptage','qcm','Combien font 3+4+2?',json.dumps(['7','8','9','10']),'2','9','CM1','Arithmétique',1),
+        ('fr','Couleur','qcm','« rouge » est?',json.dumps(['une couleur','un animal','un fruit','un chiffre']),'0','une couleur','CM1','Vocabulaire',1),
+        ('maths','Forme','qcm','Combien de côtés a un triangle?',json.dumps(['2','3','4','5']),'1','3','CM1','Géométrie',1),
+        ('svt','Animaux','qcm','Que fait un oiseau?',json.dumps(['Il nage','Il vole','Il court','Il dort']),1,'Il vole.','CM1','Animaux',1),
+        ('maths','Multiplication','qcm','7×8=?',json.dumps(['54','56','58','60']),'1','7×8=56','CM2','Produit',1),
+        ('maths','Division','qcm','64/8=?',json.dumps(['6','7','8','9']),'2','64/8=8','CM2','Division',1),
+        ('fr','Conjugaison','qcm','« Je ___ un livre »?',json.dumps(['lis','lit','lise','lu']),'0','lis','CM2','Conjugaison',1),
+        ('hist','Drapeau','qcm','Quelle couleur est au centre du drapeau sénégalais?',json.dumps(['Rouge','Vert','Jaune','Bleu']),'2','Jaune','CM2','Sénégal',1),
+        ('maths','Fractions','qcm','2/4 = ?',json.dumps(['1/2','1/4','2/2','1/3']),'0','1/2','CM2','Fractions',2),
+        ('fr','Mot','qcm','« soleil » signifie?',json.dumps(['un astre','un animal','une plante','un mineral']),'0','un astre','CM2','Vocabulaire',1),
+        ('maths','Problème ouvert','ouvert','Résous : 5×3 = ?','','15','5×3=15','CM2','Produit',1),
+        ('maths','Division','qcm','144/12=?',json.dumps(['10','12','14','16']),'1','144/12=12','6ème','Division',2),
+        ('maths','Fractions','qcm','3/4 - 1/4 = ?',json.dumps(['1/2','1/4','2/4','1']),'2','2/4 = 1/2','6ème','Fractions',2),
+        ('fr','Accord','qcm','« Les filles ___ heureuses »?',json.dumps(['est','sont','été','être']),'1','sont','6ème','Accord',2),
+        ('svt','Corps','qcm','Où se trouve le foie?',json.dumps(['Tête','Poitrine','Abdomen','Bras']),'2','Abdomen','6ème','Anatomie',2),
+        ('ang','Salutation','qcm','« Good morning » signifie?',json.dumps(['Bonjour','Bonsoir','Au revoir','Merci']),'0','Bonjour','6ème','Vocabulaire',1),
+        ('maths','PGCD','qcm','PGCD de 8 et 12?',json.dumps(['2','4','6','8']),'1','4','6ème','PGCD',2),
+        ('fr','Conjugaison','qcm','« Nous ___ à l\'école »?',json.dumps(['vais','vas','allons','allez']),'2','allons','6ème','Conjugaison',2),
+        ('maths','Nombres','qcm','Combien font 100-47?',json.dumps(['43','53','57','63']),'0','53','6ème','Soustraction',2),
+        ('fr','Genre','qcm','« une pomme » est?',json.dumps(['masculin','féminin','neutre','ambigu']),'1','féminin','6ème','Genre',2),
+        ('svt','Système','qcm','Quel système transporte le sang?',json.dumps(['Respiratoire','Cardiovasculaire','Neuronal','Digestif']),'1','Cardiovasculaire','6ème','Biologie',2),
+        ('maths','Angles','qcm','Un angle droit mesure?',json.dumps(['45°','90°','180°','360°']),'1','90°','6ème','Géométrie',2),
+        ('maths','Puissance','qcm','4³=?',json.dumps(['16','64','32','12']),'1','4³=64','5ème','Puissances',2),
+        ('maths','Nombres relatifs','qcm','-8 + 3 = ?',json.dumps(['-11','-5','5','11']),'1','-5','5ème','Nombres relatifs',2),
+        ('phys','Vitesse','qcm','Quelle est la formule de la vitesse?',json.dumps(['v=d/t','v=m×a','v=F/m','v=mc²']),'0','v = d/t','5ème','Physique',2),
+        ('info','Algorithme','qcm','Une suite d\'instructions s\'appelle?',json.dumps(['Un algorithme','Un programme','Un code','Un site']),'0','Un algorithme','5ème','Informatique',2),
+        ('fr','Temps','qcm','« Demain, je ___ »?',json.dumps(['vais','irai','suis allé','allais']),'1','irai','5ème','Temps',2),
+        ('maths','Équations','qcm','x + 7 = 15 → x = ?',json.dumps(['7','8','15','22']),'1','x=8','5ème','Équations',2),
+        ('phys','Unités','qcm','L\'unité de la masse est?',json.dumps(['m','kg','N','J']),'1','kg','5ème','Unités',2),
+        ('fr','Conjugaison','qcm','« Elle ___ le chat »?',json.dumps(['mange','manges','mangeons','manganent']),'0','mange','5ème','Conjugaison',2),
+        ('maths','Problème ouvert','ouvert','Résous : 3x = 21','','x=7','3x=21 → x=7','5ème','Équations',2),
+        ('fr','Orthographe','qcm','« Je veux aller ___ Paris »?',json.dumps(['à','a','en','au']),'0','à','5ème','Orthographe',2),
+        ('maths','Problème ouvert','ouvert','Combien font 7×9?','','63','7×9=63','5ème','Produit',2),
+        ('svt','Cellule','qcm','La mitochondrie produit?',json.dumps(['Énergie','Glucose','Oxygène','ADN']),'0','Énergie (ATP)','5ème','Biologie',3),
+        ('maths','Proportion','qcm','Si 2 crayons coûtent 500 FCFA, 4 coûtent?',json.dumps(['500','1000','1500','2000']),'1','1 000 FCFA','5ème','Proportion',2),
+        ('maths','Équations','qcm','2x - 4 = 10 → x = ?',json.dumps(['5','7','10','14']),'1','x=7','4ème','Équations',3),
+        ('maths','Problème ouvert','ouvert','Résous : x/3 = 5','','x=15','x/3=5 → x=15','4ème','Équations',3),
+        ('fr','Orthographe','qcm','« aller ___ l\'école »?',json.dumps(['à','a','en','au']),'0','à','4ème','Orthographe',2),
+        ('svt','Cellule','qcm','La cellule se divise en?',json.dumps(['Mitose','Métamorphose','Évolution','Photosynthèse']),'0','Mitose','4ème','Biologie',3),
+        ('maths','PGCD','qcm','PGCD de 15 et 25?',json.dumps(['3','5','15','25']),'1','5','4ème','PGCD',3),
+        ('maths','PCM','qcm','PCM de 4 et 6?',json.dumps(['6','12','4','2']),'1','12','4ème','PCM',3),
+        ('fr','Temps','qcm','« Hier, je ___ »?',json.dumps(['suis allé','allais','irai','vais']),'1','allais','4ème','Temps',3),
+        ('maths','Fonction','qcm','Pour f(x)=2x-3, f(4)=?',json.dumps(['5','6','7','8']),'1','5','4ème','Fonctions',3),
+        ('phys','Force','qcm','F = m × a est la loi de?',json.dumps(['Newton','Einstein','Pascal','Archimède']),'0','Newton','4ème','Physique',3),
+        ('fr','Conjugaison','qcm','« Ils ___ des livres »?',json.dumps(['lit','lis','lisent','lisons']),'2','lisent','4ème','Conjugaison',3),
+        ('maths','Triangle','qcm','Dans un triangle équilatéral, tous les côtés sont?',json.dumps(['Identiques','Égaux','Distincts','Inconnus']),'0','Identiques','4ème','Géométrie',3),
+        ('svt','Respiration','qcm','Le poumon absorbe?',json.dumps(['O₂','CO₂','N₂','H₂O']),'0','O₂','4ème','Biologie',2),
+        ('maths','Problème ouvert','ouvert','Résous : 5x + 3 = 18','','x=3','5x+3=18 → x=3','4ème','Équations',3),
+        ('fr','Grammaire','qcm','« Les enfants » est un?',json.dumps(['Nom','Adjectif','Verbe','Adverbe']),'0','Nom','4ème','Grammaire',2),
+        ('maths','Angles','qcm','La somme des angles d\'un triangle vaut?',json.dumps(['90°','180°','270°','360°']),'1','180°','4ème','Géométrie',3),
+        ('phys','Énergie','qcm','L\'énergie mécanique = ?',json.dumps(['Énergie potentielle','Énergie cinétique','Énergie potentielle + cinétique','Énergie thermique']),'2','Énergie potentielle + cinétique','4ème','Physique',3),
+        ('maths','Fonction','qcm','Pour f(x)=x²+1, f(3)=?',json.dumps(['6','7','8','9']),'1','10','3ème','Fonctions',3),
+        ('maths','Pythagore','qcm','Si a=6, b=8, c=?',json.dumps(['10','14','√28','100']),'0','c=10','3ème','Pythagore',3),
+        ('fr','Part du passé','qcm','« Il ___ finir »?',json.dumps(['a fini','finit','finissait','finira']),'0','a fini','3ème','Temps',3),
+        ('hist','Indépendance','qcm','Le Sénégal a obtenu l\'indépendance en?',json.dumps(['1958','1960','1965','1970']),'1','1960','3ème','Histoire',2),
+        ('geo','République','qcm','Le Sénégal est une?',json.dumps(['Monarchie','République','Dictature','Empire']),'1','République','3ème','Géographie',2),
+        ('svt','Photosynthèse','qcm','La photosynthèse produit?',json.dumps(['O₂','CO₂','N₂','H₂O']),'0','O₂','3ème','Biologie',2),
+        ('maths','Inégalité','qcm','Résous : 3x < 12 → x < ?',json.dumps(['2','3','4','5']),'2','x<4','3ème','Inéquations',3),
+        ('maths','Probabilités','qcm','P(obtenir un 3 avec un dé)?',json.dumps(['1/3','1/6','1/2','1/12']),'1','1/6','3ème','Probabilités',3),
+        ('phys','Newton','qcm','La masse est mesurée en?',json.dumps(['kg','N','J','W']),'0','kg','3ème','Physique',2),
+        ('fr','Conjugaison','qcm','« Nous ___ le travail »?',json.dumps(['faisons','fait','fais','font']),'0','faisons','3ème','Conjugaison',3),
+        ('maths','Statistique','qcm','La moyenne de (2, 4, 6) est?',json.dumps(['3','4','5','6']),'1','4','3ème','Statistiques',3),
+        ('maths','Problème ouvert','ouvert','Résous : x² = 25','','x=5','x=5 (ou -5)','3ème','Équations',3),
+        ('svt','Respiration','qcm','Où se fait l\'échange gazeux?',json.dumps(['Dans le cœur','Dans les poumons','Dans le foie','Dans les reins']),'1','Dans les poumons','3ème','Biologie',2),
+        ('hist','Capitale','qcm','Quelle était la capitale du Sénégal avant Dakar?',json.dumps(['Saint-Louis','Thiès','Kaolack','Ziguinchor']),'0','Saint-Louis','3ème','Histoire',2),
+        ('maths','Triangle','qcm','Un triangle rectangle a un angle de?',json.dumps(['30°','45°','60°','90°']),'3','90°','3ème','Géométrie',3),
+        ('phys','Mouvement','qcm','L\'unité de la vitesse est?',json.dumps(['m/s','m','s','kg']),'0','m/s','3ème','Physique',2),
+        ('fr','Part du passé','qcm','« Elle ___ hier »?',json.dumps(['vient','venait','est venue','viendra']),'2','est venue','3ème','Temps',3),
+        ('maths','Problème ouvert','ouvert','Résous : 2x + 5 = 15','','x=5','2x+5=15 → x=5','3ème','Équations',3),
+        ('maths','Dérivée','qcm','Dérivée de x³?',json.dumps(['3x²','x²','3','x³']),'0','3x²','2nde','Calcul',4),
+        ('fr','Conjugaison','qcm','Passé composé de « aller »?',json.dumps(['allé','ai allé','es allé','allons']),'1','ai allé','2nde','Conjugaison',2),
+        ('phys','Newton','qcm','La force F = ?',json.dumps(['m+a','m×a','m/a','m-a']),'1','m×a','2nde','Mécanique',3),
+        ('chim','Eau','qcm','Formule de l\'eau est?',json.dumps(['CO₂','H₂O','O₂','H₂']),'1','H₂O','2nde','Chimie',2),
+        ('ang','Grammar','qcm','« She ___ a book »?',json.dumps(['read','reads','reading','have read']),'0','read','2nde','Grammar',2),
+        ('es','Saludos','qcm','« Hola » signifie?',json.dumps(['Au revoir','Bonjour','Merci','Oui']),'1','Bonjour','2nde','Vocabulaire',1),
+        ('maths','Fonction','qcm','Pour f(x)=3x-2, f(2)=?',json.dumps(['2','4','6','8']),'1','4','2nde','Fonctions',4),
+        ('fr','Participe','qcm','Participe passé de « venir »?',json.dumps(['venu','vient','venant','viendra']),'0','venu','2nde','Conjugaison',2),
+        ('phys','Énergie','qcm','La formule de l\'énergie potentielle est?',json.dumps(['Ep=mgh','Ep=½mv²','Ep=mc²','Ep=Fd']),'0','Ep=mgh','2nde','Énergie',3),
+        ('chim','Molécule','qcm','L\'azote moléculaire est?',json.dumps(['N','N₂','NO','NH₃']),'1','N₂','2nde','Chimie',2),
+        ('info','Algorithme','qcm','Quelle est la complexité du tri à bulles?',json.dumps(['O(n)','O(n log n)','O(n²)','O(log n)']),'2','O(n²)','2nde','Informatique',3),
+        ('fr','Conjugaison','qcm','« Ils ___ le chat »?',json.dumps(['lit','lis','lisons','lisent']),'3','lisent','2nde','Conjugaison',2),
+        ('maths','Inégalité','qcm','Résous : 4x > 12 → x > ?',json.dumps(['2','3','4','5']),'2','x>3','2nde','Inéquations',4),
+        ('phys','Force','qcm','La masse est mesurée en?',json.dumps(['kg','N','J','W']),'0','kg','2nde','Physique',2),
+        ('maths','Problème ouvert','ouvert','Calcule la dérivée de 5x²','','10x','d/dx(5x²) = 10x','2nde','Calcul',4),
+        ('fr','Rédaction','ouvert','Écris une phrase avec « cependant ».','','Cependant, il pleuvait.','La conjonction « cependant » introduit une opposition.','2nde','Rédaction',2),
+        ('maths','Inégalité','qcm','Résous : 2x-3 > 7 → x > ?',json.dumps(['2','5','7','10']),'1','x>5','Première','Inéquations',4),
+        ('maths','Probabilités','qcm','P(obtenir un 1 ou un 6 avec un dé)?',json.dumps(['1/3','1/6','1/2','1/12']),'0','1/3','Première','Probabilités',4),
+        ('phys','Énergie','qcm','L\'énergie cinétique = ?',json.dumps(['mv','½mv²','mgh','Fd']),'1','½mv²','Première','Énergie',4),
+        ('chim','Tableau','qcm','Dans le tableau périodique, O a numéro?',json.dumps(['1','6','8','16']),'2','8','Première','Chimie',3),
+        ('info','Python','qcm','En Python, comment déclarer une variable?',json.dumps(['var x=5','x=5','x:5','set x=5']),'1','x=5','Première','Informatique',3),
+        ('ec','Inflation','qcm','L\'inflation est une?',json.dumps(['Hausse des prix','Baisse des prix','Stabilité','Déflation']),'0','Hausse des prix','Première','Économie',3),
+        ('maths','Dérivée','qcm','Dérivée de 3x²?',json.dumps(['3x','6x','6','3']),'1','6x','Première','Calcul',4),
+        ('fr','Conjugaison','qcm','« Il a ___ » (participe passé de « faire »)?',json.dumps(['fais','fait','fait','fera']),'1','fait','Première','Conjugaison',3),
+        ('phys','Mouvement','qcm','L\'accélération est mesurée en?',json.dumps(['m/s','m/s²','kg','N']),'1','m/s²','Première','Physique',4),
+        ('chim','Réaction','qcm','La photosynthèse produit?',json.dumps(['O₂','CO₂','N₂','H₂']),'0','O₂','Première','Chimie',3),
+        ('maths','Problème ouvert','ouvert','Calcule l\'intégrale de 2x','','x²+C','∫2x dx = x²+C','Première','Calcul',4),
+        ('fr','Rédaction','ouvert','Écris un paragraphe sur la liberté.','','La liberté est un droit fondamental...','La liberté permet l\'épanouissement personnel.','Première','Rédaction',3),
+        ('info','Algorithme','qcm','Quelle est la complexité du tri rapide?',json.dumps(['O(n)','O(n log n)','O(n²)','O(log n)']),'1','O(n log n)','Première','Informatique',3),
+        ('maths','Statistique','qcm','La variance est toujours?',json.dumps(['Positive','Négative','Zéro','Infinie']),'0','Positive','Première','Statistiques',4),
+        ('phys','Énergie','qcm','L\'énergie potentielle gravitationnelle = ?',json.dumps(['mv','½mv²','mgh','Fd']),'2','mgh','Première','Énergie',4),
+        ('maths','Dérivée 2','qcm','Dérivée de cos(x)?',json.dumps(['cos(x)','-cos(x)','-sin(x)','sin(x)']),'1','-sin(x)','Terminale','Calcul',5),
+        ('maths','Intégrale','qcm','∫ cos(x) dx = ?',json.dumps(['sin(x)+C','-sin(x)+C','cos(x)+C','-cos(x)+C']),'0','sin(x)+C','Terminale','Calcul',5),
+        ('phys','Relativité','qcm','E = mc² est la formule d\'énergie de?',json.dumps(['Newton','Einstein','Planck','Bohr']),'1','Einstein','Terminale','Physique',5),
+        ('ara','Alif','qcm','Quelle lettre est la première de l\'alphabet arabe?',json.dumps(['Alif','Ba','Dal','Sad']),'0','Alif','Terminale','Arabe',2),
+        ('maths','Dérivée 3','qcm','Dérivée de ln(x)?',json.dumps(['1/x','ln(x)','x','1']),'0','1/x','Terminale','Calcul',5),
+        ('fr','Argument','ouvert','Écris un argument sur la liberté d\'expression.','','La liberté d\'expression est un droit fondamental...','Argumenter = fournir des raisons pour défendre une position.','Terminale','Rédaction',4),
+        ('phys','Énergie','qcm','La formule d\'énergie potentielle élastique est?',json.dumps(['Ep=½kx²','Ep=mgh','Ep=mc²','Ep=½mv²']),'0','Ep=½kx²','Terminale','Physique',5),
+        ('chim','Organique','qcm','Le méthane (CH₄) est un?',json.dumps(['Aldéhyde','Alcool','Alcan','Acide']),'2','Alcan','Terminale','Chimie',4),
+        ('maths','Intégrale 2','qcm','∫ 1/x dx = ?',json.dumps(['x+C','ln(x)+C','1+C','-1/x+C']),'1','ln(x)+C','Terminale','Calcul',5),
+        ('info','Base','qcm','Quel langage pour gérer une base SQL?',json.dumps(['HTML','Python','SQL','CSS']),'2','SQL','Terminale','Informatique',4),
+        ('ec','Bitcoin','qcm','Le Bitcoin est une?',json.dumps(['Monnaie numérique','Action','Obligation','Matière']),'0','Monnaie numérique','Terminale','Économie',4),
+        ('maths','Limite','qcm','lim(x→0) sin(x)/x = ?',json.dumps(['0','1','∞','x']),'1','1','Terminale','Analyse',5),
+        ('phys','Thermo','qcm','La loi de Fourier concerne?',json.dumps(['Convection','Conduction','Radiation','Évaporation']),'1','Conduction','Terminale','Physique',5),
+        ('fr','Rédaction','ouvert','Écris une conclusion de dissertation.','','En conclusion, nous avons vu que...','Une conclusion résume et ouvre sur une problématique plus large.','Terminale','Rédaction',4),
+        ('maths','Problème ouvert','ouvert','Calcule la limite de (x²-1)/(x-1) quand x→1','','2','(x²-1)/(x-1) = x+1 → lim = 2','Terminale','Analyse',5),
+        ('chim','Cinétique','qcm','La vitesse de réaction dépend de?',json.dumps(['Température','Pression','Volume','Masse']),'0','Température','Terminale','Chimie',4),
+        ('phys','Électromag','qcm','La loi d\'Ohm est V = ?',json.dumps(['R/I','I×R','I/R','R×I²']),'1','I×R','Terminale','Physique',5),
+        ('maths','Dérivée partielle','qcm','∂/∂x (x²y) = ?',json.dumps(['2xy','x²y','2y','xy²']),'0','2xy','Université','Analyse',5),
+        ('info','Tri','qcm','La complexité du tri rapide est?',json.dumps(['O(n)','O(n log n)','O(n²)','O(log n)']),'1','O(n log n)','Université','Algorithmes',5),
+        ('chim','Orbitale','qcm','Nombre d\'orbitales dans la couche n=2?',json.dumps(['1','2','4','8']),'2','4','Université','Chimie',5),
+        ('ec','Monnaie','qcm','Qu\'est-ce que le Bitcoin?',json.dumps(['Monnaie numérique','Action','Obligation','Matière']),'0','Monnaie numérique','Université','Économie',4),
+        ('maths','Statistique','qcm','La variance de X est Var(X)=?',json.dumps(['E(X)','E(X²)','E(X²)-E(X)²','E(X)-E(X²)']),'2','E(X²)-E(X)²','Université S1','Statistiques',5),
+        ('info','Base','qcm','Quel langage pour gérer une base SQL?',json.dumps(['HTML','Python','SQL','CSS']),'2','SQL','Université S1','Bases de données',4),
+        ('phys','Thermo','qcm','La loi de Fourier concerne?',json.dumps(['Convection','Conduction','Radiation','Évaporation']),'1','Conduction','Université S1','Thermodynamique',5),
+        ('chim','Cinétique','qcm','La vitesse de réaction dépend de?',json.dumps(['Température','Pression','Volume','Masse']),'0','Température','Université S1','Chimie',4),
+        ('fr','Analyse','ouvert','Analyse le registre d un texte scientifique.','','Un texte scientifique utilise un registre formel, impersonnel, précis.','Analyser un registre = identifier le niveau de langue, le ton, le style.','Université S1','Analyse',4),
+        ('ec','Théorie','qcm','Qu est-ce que la monnaie fiduciaire?',json.dumps(['Monnaie électronique','Monnaie scripturale','Monnaie basée sur la confiance','Monnaie collante']),'2','Monnaie basée sur la confiance','Université S1','Économie',4),
+        ('maths','Statistique','qcm','La moyenne de (2,4,6,8) est?',json.dumps(['4','5','6','7']),'0','5','Université S2','Statistiques',5),
+        ('info','SQL','qcm','Quel langage pour interroger une base SQL?',json.dumps(['HTML','Python','SQL','CSS']),'2','SQL','Université S2','Bases de données',4),
+        ('phys','Ohm','qcm','La loi d\'Ohm est V = ?',json.dumps(['R/I','I×R','I/R','R×I²']),'1','I×R','Université S2','Électricité',5),
+        ('chim','Organique','qcm','Le méthane contient quel atome de carbone?',json.dumps(['1','2','3','4']),'0','1','Université S2','Chimie organique',5),
+        ('fr','Dissertation','ouvert','Écris une introduction de dissertation sur le travail.','','Le travail est une activité humaine fondamentale...','Une introduction présente le sujet, la problématique et l\'annonce du plan.','Université S2','Rédaction',4),
+        ('ec','PIB','qcm','Le PIB réel est?',json.dumps(['PIB à prix constants','PIB à prix courants','PIB nominal','PIB nominal']),'0','PIB à prix constants','Université S2','Économie',4),
+        ('maths','Problème ouvert','ouvert','Calcule la dérivée de x⁴','','4x³','d/dx(x⁴) = 4x³','Université S2','Calcul',5),
+        ('info','Algorithme','qcm','Quelle structure de données est FIFO?',json.dumps(['Stack','Queue','Tree','Graph']),'1','Queue','Université S2','Algorithmes',4),
+        ('phys','Électromag','qcm','La vitesse de la lumière dans le vide est?',json.dumps(['3×10⁸ m/s','3×10⁶ m/s','3×10¹⁰ m/s','3×10⁴ m/s']),'0','≈ 3×10⁸ m/s','Université S2','Physique',5),
+        ('chim','Organique','qcm','Quel groupe fonctionnel contient l\'éthane?',json.dumps(['Aldéhyde','Alcool','Alcan','Acide']),'2','Alcan','Université S2','Chimie organique',5),
+        ('fr','Argument','ouvert','Rédige un plan de dissertation (intro-dév-concl).','','Introduction : définition + problématique. Développement : arguments + exemples. Conclusion : synthèse + ouverture.','Un plan de dissertation suit une structure tripartite.','Université S2','Rédaction',4),
+        ('ec','Étude','qcm','Qu est-ce que le PIB nominal?',json.dumps(['PIB à prix constants','PIB à prix courants','PIB réel','PIB en volume']),'1','PIB à prix courants','Université S2','Économie',4),
     ]
     for e in exercices:
         c.execute("INSERT OR IGNORE INTO exercises (sujet_code,titre,type,qtext,options,reponse,explication,niveau,chapitre,difficulte) VALUES (?,?,?,?,?,?,?,?,?,?)", e)
@@ -608,6 +752,21 @@ def _ai_call(messages, max_tokens=600, timeout=25):
             if attempt < 2: time.sleep(2 * (attempt + 1))
     return None
 
+def reponse_traduction(texte, lang_cible, plan=None):
+    """Traduction IA dans 10 langues mondiales."""
+    langs = {
+        "fr": "français", "en": "anglais", "es": "espagnol", "pt": "portugais",
+        "ar": "arabe", "de": "allemand", "zh": "mandarin", "hi": "hindi",
+        "ru": "russe", "ja": "japonais",
+    }
+    nom = langs.get(lang_cible, lang_cible)
+    messages = [{"role":"system","content":f"Tu es Traducteur IA d'ÉcoleMax. Traduis le texte suivant en {nom}. Réponds uniquement avec la traduction, sans ajouter de commentaires. Si tu ne peux pas traduire, dis-le brièvement."},
+                {"role":"user","content":texte}]
+    content = _ai_call(messages, max_tokens=800, timeout=30)
+    if content:
+        return {"reponse": content, "langue": nom, "source": "IA Traduction"}
+    return {"reponse": "⚠️ Traduction momentanément indisponible. Réessaille dans 30 secondes.", "langue": nom, "source": "hors ligne"}
+
 def reponse_ia(question, plan=None):
     """Assistant IA réel : calculateur local → bibliothèque → Pollinations /openai → repli."""
     # 1. Calcul local
@@ -622,7 +781,7 @@ def reponse_ia(question, plan=None):
     # 3. Pollinations IA avec retry
     messages = [{"role":"system","content":"Tu es Professeur IA d'ÉcoleMax, expert pédagogique. Tu réponds en français (ou dans la langue demandée), clair, précis et structuré. Adapte ton niveau à l'élève (CM1 à Université). Structure obligatoire : 1) Réponse directe et exacte, 2) Explication détaillée, 3) Étapes ou exemple concret. Pour les maths : montre le calcul étape par étape. Pour les langues : traduction + usage + exemple. Pour les sciences : définition + propriétés + exemple. Sois complet mais concis (max 200 mots). Vérifie toujours la justesse factuelle de tes réponses."},
                 {"role":"user","content":question}]
-    content = _ai_call(messages, max_tokens=1500, timeout=40)
+    content = _ai_call(messages, max_tokens=3000, timeout=40)
     if content:
         return {"reponse": content, "source": "IA"}
     return {"reponse": "⚠️ IA momentanément saturée (trop d'élèves en même temps). Essaye un calcul (2+2), ou demande un sujet du cours. Réessaille dans 30 secondes.",
@@ -636,7 +795,7 @@ def reponse_ia_vision(question, image_b64, plan=None):
                     {"type":"text","text":question},
                     {"type":"image_url","image_url":{"url":f"data:image/jpeg;base64,{image_b64}"}}
                 ]}]
-    content = _ai_call(messages, max_tokens=1500, timeout=45)
+    content = _ai_call(messages, max_tokens=3000, timeout=45)
     if content:
         return {"reponse": content, "source": "IA Vision (Qwen2.5-VL)"}
     return {"reponse": "⚠️ IA Vision momentanément saturée. Vérifie la luminosité et reprends une photo claire, ou envoie l'énoncé en texte. Réessaille dans 30 secondes.", "source": "hors ligne"}
@@ -649,7 +808,7 @@ def reponse_ia_photo(question, image_b64, plan=None):
                     {"type":"text","text":question},
                     {"type":"image_url","image_url":{"url":f"data:image/jpeg;base64,{image_b64}"}}
                 ]}]
-    content = _ai_call(messages, max_tokens=1200, timeout=40)
+    content = _ai_call(messages, max_tokens=2500, timeout=40)
     if content:
         return {"reponse": content, "source": "IA Vision"}
     return {"reponse": "⚠️ IA Vision momentanément saturée. Vérifie la luminosité et reprends une photo claire, ou envoie l'énoncé en texte. Réessaille dans 30 secondes.", "source": "hors ligne"}
@@ -1017,6 +1176,20 @@ class Handler(BaseHTTPRequestHandler):
             q = data.get("question","")
             r = reponse_ia_photo(q, img, p)
             log_sec(u["id"], "ia_photo", "Correction photo")
+            return self.send_json(r)
+
+        # ── IA — Traduction ──
+        if path == "/api/ai/translate":
+            if not u: return self.send_json({"erreur":"Authentification requise"}, 401)
+            p = plan_actif(u)
+            if not p: return self.send_json({"erreur":"Essai gratuit de 48 h terminé — abonne-toi pour continuer."}, 402)
+            ok, msg = check_quota(u, p, "ia")
+            if not ok: return self.send_json({"erreur":msg}, 402)
+            texte = data.get("texte","")
+            lang = data.get("langue","fr")
+            if not texte or len(texte.strip()) < 2: return self.send_json({"erreur":"Texte trop court"}, 400)
+            r = reponse_traduction(texte, lang, p)
+            log_sec(u["id"], "traduction", f"{lang}: {texte[:80]}")
             return self.send_json(r)
 
         # ── IA — Correcteur de texte ──
