@@ -1,0 +1,60 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          sdk-version: '34'
+          build-tools-version: '34.0.0'
+
+      - name: Prepare assets
+        run: |
+          chmod +x apk-build/prepare-assets.sh
+          bash apk-build/prepare-assets.sh https://ecolemax.onrender.com
+
+      - name: Build APK
+        run: |
+          chmod +x apk-build/construire-apk.sh
+          bash apk-build/construire-apk.sh
+
+      - name: Copy APK to deployment
+        run: |
+          mkdir -p projet/telechargements
+          cp apk-build/sortie/EcoleMax-1.0.0.apk projet/telechargements/EcoleMax-1.0.0.apk
+          ls -lh projet/telechargements/
+
+      - name: Commit APK
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add projet/telechargements/EcoleMax-1.0.0.apk
+          if git diff --cached --quiet; then
+            echo "APK unchanged — nothing to commit"
+          else
+            git commit -m "Rebuild APK [skip ci] — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git push
+          fi
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: EcoleMax-1.0.0.apk
+          path: apk-build/sortie/EcoleMax-1.0.0.apk

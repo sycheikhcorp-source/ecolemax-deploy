@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#15a05a">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%2315a05a'/%3E%3Ctext x='50' y='72' font-size='52' text-anchor='middle' fill='white' font-family='Arial' font-weight='bold'%3EEM%3C/text%3E%3C/svg%3E">
+<title>ÉcoleMax — App élève</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#f8f9fc;--card:#ffffff;--line:#e5e7eb;
+  --primary:#15a05a;--primary-d:#0d6e3e;--primary-l:#e8f5ee;
+  --accent:#2dd4bf;--accent-l:#e0f7f3;
+  --ink:#1a1a2e;--ink-soft:#6b7280;
+  --blue:#3b82f6;--blue-l:#e8f0fe;
+  --orange:#f59e0b;--orange-l:#fef3e2;
+  --purple:#8b5cf6;--purple-l:#f3e8ff;
+  --red:#ef4444;--red-l:#fee2e2;
+  --grad:linear-gradient(135deg,#15a05a 0%,#2dd4bf 100%);
+  --shadow:0 2px 12px rgba(0,0,0,.06);
+  --shadow-lg:0 8px 30px rgba(0,0,0,.1);
+}
+body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif;font-size:15px;min-height:100vh;overflow-x:hidden}
+#app{max-width:500px;margin:0 auto;min-height:100vh;position:relative;background:var(--bg)}
+.screen{display:none;padding:16px;padding-bottom:90px;animation:fade .3s}
+.screen.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ===== AUTH + BACKGROUND ===== */
+.auth-wrap{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px;overflow:hidden}
+.bg-math{position:absolute;top:0;left:0;right:0;bottom:0;z-index:0;pointer-events:none;overflow:hidden}
+.bg-math svg{position:absolute;width:100%;height:100%}
+.bg-shape{position:absolute;opacity:.08;pointer-events:none}
+.bg-shape.s1{top:-20px;right:-20px;width:160px;height:160px;border:24px solid var(--primary);border-radius:50%;opacity:.06}
+.bg-shape.s2{bottom:-30px;left:-30px;width:200px;height:200px;background:var(--accent);opacity:.05;transform:rotate(45deg)}
+.bg-shape.s3{top:40%;left:50%;width:120px;height:120px;border:16px solid var(--blue);border-radius:50%;opacity:.04;transform:translate(-50%,-50%)}
+.bg-sym{position:absolute;font-size:28px;color:var(--primary);opacity:.07;font-weight:bold;font-family:Georgia,serif;pointer-events:none}
+.auth-wrap>*:not(.bg-math):not(.bg-shape):not(.bg-sym){position:relative;z-index:1}
+.auth-sub{color:var(--ink-soft);font-size:14px;margin-bottom:24px;text-align:center}
+.auth-tabs{display:flex;gap:8px;margin-bottom:20px;width:100%;max-width:340px}
+.auth-tab{flex:1;padding:12px;text-align:center;border-radius:12px;font-weight:700;font-size:14px;background:#fff;color:var(--ink-soft);cursor:pointer;border:2px solid var(--line);transition:.2s}
+.auth-tab.active{background:var(--grad);color:#fff;border-color:rgba(255,255,255,.2)}
+.auth-form{width:100%;max-width:340px;display:flex;flex-direction:column;gap:12px}
+.field{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px;transition:.2s;position:relative}
+.field:focus-within{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-l)}
+.field label{display:block;font-size:12px;color:var(--ink-soft);margin-bottom:4px;font-weight:600}
+.field input,.field select{width:100%;background:none;border:none;outline:none;color:var(--ink);font-size:15px;font-family:inherit}
+.field input::placeholder{color:var(--ink-soft);opacity:.6}
+.pwd-toggle{position:absolute;right:14px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:18px;user-select:none;opacity:.6;padding:4px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px 20px;border-radius:12px;font-weight:700;font-size:15px;border:none;cursor:pointer;transition:.2s;text-decoration:none;width:100%}
+.btn-primary{background:var(--grad);color:#fff}
+.btn-primary:active{transform:scale(.97)}
+.btn-ghost{background:#fff;color:var(--ink);border:2px solid var(--line)}
+.btn-danger{background:var(--red-l);color:var(--red);border:1px solid rgba(239,68,68,.2)}
+.auth-err{color:var(--red);font-size:13px;text-align:center;padding:8px;background:var(--red-l);border-radius:8px;display:none}
+.auth-err.show{display:block}
+.auth-ok{color:var(--primary);font-size:13px;text-align:center;padding:8px;background:var(--primary-l);border-radius:8px;display:none}
+.auth-ok.show{display:block}
+.auth-note{font-size:11px;color:var(--ink-soft);text-align:center;margin-top:12px}
+
+/* ===== HOME DESC ===== */
+.home-desc{background:linear-gradient(135deg,var(--primary-l) 0%,var(--accent-l) 100%);border-radius:16px;padding:16px;margin-bottom:16px;border:1px solid rgba(21,160,90,.15)}
+.home-desc .hd-title{font-size:15px;font-weight:800;color:var(--primary-d);margin-bottom:4px}
+.home-desc .hd-sub{font-size:12px;color:var(--ink-soft);line-height:1.5}
+
+/* ===== AUTH ===== */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:8px 0 16px}
+.topbar .greet{font-size:20px;font-weight:800}
+.topbar .sub{font-size:13px;color:var(--ink-soft)}
+.banner{border-radius:14px;padding:16px;margin-bottom:20px;border:1px solid}
+.banner.gratuit{background:var(--orange-l);border-color:rgba(245,158,11,.2)}
+.banner.payant{background:var(--primary-l);border-color:rgba(21,160,90,.2)}
+.banner.illimite{background:var(--purple-l);border-color:rgba(139,92,246,.2)}
+.banner .b-title{font-size:14px;font-weight:700;margin-bottom:4px}
+.banner .b-sub{font-size:12px;color:var(--ink-soft)}
+.banner .b-cta{margin-top:10px;font-size:13px;font-weight:700}
+.sec-title{font-size:16px;font-weight:800;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.subj-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:24px}
+.subj-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 8px;text-align:center;cursor:pointer;transition:.2s;box-shadow:var(--shadow)}
+.subj-card:active{transform:scale(.95)}
+.subj-card .ic{font-size:28px;margin-bottom:6px}
+.subj-card .nm{font-size:12px;font-weight:600}
+.subj-card .nb{font-size:10px;color:var(--ink-soft)}
+.quick-row{display:flex;gap:10px;margin-bottom:24px}
+.quick-btn{flex:1;background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer;transition:.2s;box-shadow:var(--shadow)}
+.quick-btn:active{transform:scale(.97)}
+.quick-btn .ic{font-size:24px;margin-bottom:4px}
+.quick-btn .lb{font-size:12px;font-weight:600}
+
+/* ===== CHAT ===== */
+.chat-screen{display:flex;flex-direction:column;height:calc(100vh - 90px);min-height:500px}
+.chat-header{padding:8px 0 12px;border-bottom:1px solid var(--line);margin-bottom:12px}
+.chat-header h3{font-size:16px;font-weight:800}
+.chat-header p{font-size:12px;color:var(--ink-soft)}
+.chat-msgs{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding-bottom:80px}
+.msg{max-width:85%;padding:10px 14px;border-radius:16px;font-size:14px;line-height:1.5;animation:fade .3s;word-wrap:break-word}
+.msg.user{align-self:flex-end;background:var(--grad);color:#fff;border-bottom-right-radius:4px}
+.msg.bot{align-self:flex-start;background:#fff;border:1px solid var(--line);border-bottom-left-radius:4px;box-shadow:var(--shadow)}
+.msg.bot .src{display:block;font-size:11px;color:var(--ink-soft);margin-top:6px;padding-top:6px;border-top:1px solid var(--line)}
+.msg.err{align-self:center;background:var(--red-l);color:var(--red);font-size:13px;text-align:center;border-radius:12px;max-width:100%}
+.msg.loading{align-self:flex-start;background:#fff;border:1px solid var(--line);border-radius:16px;border-bottom-left-radius:4px;padding:12px 16px}
+.msg.loading .dot{display:inline-block;animation:bounce 1.2s infinite}
+@keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
+.suggest-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.suggest-chip{background:#fff;border:1px solid var(--line);border-radius:16px;padding:6px 12px;font-size:12px;cursor:pointer;color:var(--ink-soft);white-space:nowrap}
+.chat-input-row{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:500px;background:#fff;border-top:1px solid var(--line);padding:10px 12px;display:flex;gap:8px;z-index:10}
+.chat-input-row input{flex:1;background:var(--bg);border:1px solid var(--line);border-radius:20px;padding:10px 16px;color:var(--ink);font-size:14px;outline:none}
+.chat-input-row button{width:44px;height:44px;border-radius:50%;background:var(--grad);border:none;color:#fff;font-size:18px;cursor:pointer;display:grid;place-items:center;flex-shrink:0}
+
+/* ===== PHOTO ===== */
+.photo-area{margin-bottom:20px}
+.photo-btn{width:100%;background:#fff;border:2px dashed var(--line);border-radius:16px;padding:32px;text-align:center;cursor:pointer;transition:.2s}
+.photo-btn:active{transform:scale(.98)}
+.photo-btn .ic{font-size:40px;margin-bottom:8px}
+.photo-btn .lb{font-size:14px;font-weight:600;color:var(--ink-soft)}
+.photo-preview{width:100%;max-width:300px;margin:16px auto;display:none;border-radius:12px;border:2px solid var(--line)}
+.photo-preview.show{display:block}
+
+/* ===== PROFILE ===== */
+.prof-header{text-align:center;padding:20px 0}
+.prof-avatar{font-size:48px;margin-bottom:8px}
+.prof-name{font-size:20px;font-weight:800}
+.prof-plan{font-size:13px;color:var(--ink-soft);margin-top:4px}
+.prof-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:var(--shadow)}
+.prof-row{display:flex;justify-content:space-between;padding:8px 0;font-size:14px}
+.prof-row .k{color:var(--ink-soft)}
+.prof-row .v{font-weight:600}
+.prof-row .v.ok{color:var(--primary)}
+.prof-row .v.warn{color:var(--orange)}
+.quota-bar{height:6px;background:var(--bg);border-radius:3px;margin-top:6px;overflow:hidden}
+.quota-fill{height:100%;background:var(--grad);border-radius:3px;transition:width .5s}
+
+/* ===== IA ADMIN ===== */
+.ia-targets{display:flex;gap:6px;margin-bottom:10px}
+.tag{padding:4px 10px;border-radius:12px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid}
+.tag-site{background:var(--blue-l);border-color:rgba(59,130,246,.2);color:var(--blue)}
+.tag-app{background:var(--orange-l);border-color:rgba(245,158,11,.2);color:var(--orange)}
+.tag-all{background:var(--primary-l);border-color:rgba(21,160,90,.2);color:var(--primary)}
+.ia-msgs{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding-bottom:80px;margin-bottom:8px}
+.ia-msg{max-width:90%;padding:8px 12px;border-radius:14px;font-size:13px;line-height:1.5}
+.ia-msg.user{align-self:flex-end;background:var(--grad);color:#fff;border-bottom-right-radius:4px}
+.ia-msg.bot{align-self:flex-start;background:#fff;border:1px solid var(--line);border-bottom-left-radius:4px}
+.ia-msg.bot .src{display:block;font-size:10px;color:var(--ink-soft);margin-top:4px}
+.ia-input-row{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:500px;background:#fff;border-top:1px solid var(--line);padding:8px 12px;display:flex;gap:8px;z-index:10}
+.ia-input-row input{flex:1;background:var(--bg);border:1px solid var(--line);border-radius:20px;padding:10px 16px;color:var(--ink);font-size:14px;outline:none}
+.ia-input-row button{width:44px;height:44px;border-radius:50%;background:var(--grad);border:none;color:#fff;font-size:18px;cursor:pointer}
+
+/* ===== TAB BAR ===== */
+.tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:500px;background:#fff;border-top:1px solid var(--line);display:flex;z-index:20;padding-bottom:env(safe-area-inset-bottom)}
+.tabbar.hidden{display:none}
+.tab{flex:1;text-align:center;padding:10px 0 12px;cursor:pointer;color:var(--ink-soft);font-size:11px;font-weight:600;transition:.2s;display:flex;flex-direction:column;align-items:center;gap:2px}
+.tab .ic{font-size:22px}
+.tab.active{color:var(--primary)}
+
+/* ===== PLAN SHEET ===== */
+.sheet-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);z-index:50;display:none;align-items:flex-end;justify-content:center}
+.sheet-overlay.show{display:flex}
+.sheet{background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:500px;padding:24px;max-height:80vh;overflow-y:auto}
+.sheet h3{font-size:18px;font-weight:800;margin-bottom:8px}
+.sheet .sub{font-size:13px;color:var(--ink-soft);margin-bottom:16px}
+.plan-card{background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px}
+.plan-card.actif{border-color:var(--primary);background:var(--primary-l)}
+.plan-card .p-name{font-size:16px;font-weight:700;margin-bottom:4px}
+.plan-card .p-price{font-size:20px;font-weight:800;color:var(--primary);margin-bottom:8px}
+.plan-card .p-feats{font-size:12px;color:var(--ink-soft);line-height:1.6}
+
+.hidden{display:none!important}
+</style>
+<script>window.__ECOLEMAX_API__ = "https://ecolemax.onrender.com";</script>
+</head>
+<body>
+<div id="app">
+
+<!-- ==================== AUTH ==================== -->
+<div class="auth-wrap screen active" id="screen-auth">
+  <div class="bg-math">
+    <div class="bg-shape s1"></div>
+    <div class="bg-shape s2"></div>
+    <div class="bg-shape s3"></div>
+    <div class="bg-sym" style="top:15%;left:10%">π</div>
+    <div class="bg-sym" style="top:25%;right:15%">∑</div>
+    <div class="bg-sym" style="top:60%;left:8%">∫</div>
+    <div class="bg-sym" style="top:70%;right:10%">√</div>
+    <div class="bg-sym" style="top:45%;left:5%">Δ</div>
+    <div class="bg-sym" style="bottom:20%;right:20%">∞</div>
+    <div class="bg-sym" style="top:85%;left:30%">π</div>
+    <div class="bg-sym" style="top:10%;left:60%">∑</div>
+  </div>
+  <svg class="logo-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#15a05a"/>
+        <stop offset="100%" stop-color="#2dd4bf"/>
+      </linearGradient>
+    </defs>
+    <circle cx="50" cy="50" r="44" fill="url(#lg)"/>
+    <path d="M30 68 L30 36 L50 44 L70 36 L70 68" stroke="white" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="50" cy="28" r="6" fill="white"/>
+    <path d="M44 28 L50 34 L56 28" stroke="#15a05a" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <div class="logo-text">ÉcoleMax</div>
+  <p class="auth-sub">L'AI gratuite qui aide les élèves du Sénégal à réussir</p>
+  <div class="auth-tabs">
+    <div class="auth-tab active" onclick="switchAuth('register')">S'inscrire</div>
+    <div class="auth-tab" onclick="switchAuth('login')">Se connecter</div>
+  </div>
+  <div class="auth-err" id="authErr"></div>
+  <div class="auth-ok" id="authOk"></div>
+  <form class="auth-form" onsubmit="return false" id="authForm">
+    <div id="regFields">
+      <div class="field"><label>Pseudo</label><input type="text" id="pseudo" placeholder="3+ caractères" autocomplete="off"></div>
+      <div class="field"><label>Mot de passe</label><input type="password" id="mdp" placeholder="8+ lettre + chiffre"><span class="pwd-toggle" onclick="togglePwd('mdp',this)">👁️</span></div>
+      <div class="field"><label>Niveau</label>
+        <select id="niveau">
+          <option value="Collège">Collège</option>
+          <option value="Lycée">Lycée</option>
+          <option value="Terminale">Terminale</option>
+          <option value="Bac">Bac (1ère/2ème)</option>
+          <option value="Université">Université</option>
+        </select>
+      </div>
+    </div>
+    <div id="loginFields" class="hidden">
+      <div class="field"><label>Pseudo</label><input type="text" id="loginPseudo" placeholder="Ex: Aminata" autocomplete="off"></div>
+      <div class="field"><label>Mot de passe</label><input type="password" id="loginMdp" placeholder="Mot de passe"><span class="pwd-toggle" onclick="togglePwd('loginMdp',this)">👁️</span></div>
+      <button class="btn btn-ghost" style="font-size:13px;padding:8px" onclick="showReset()">🔑 Mot de passe oublié ?</button>
+    </div>
+    <button class="btn btn-primary" id="authBtn" onclick="doAuth()">S'inscrire</button>
+  </form>
+  <button class="btn btn-ghost" style="width:100%;margin-top:10px;font-size:14px" onclick="enterGuest()">💬 Poser une question sans inscription</button>
+  <p class="auth-note">Essai gratuit 24 h — tout débloqué. Aucun paiement requis.</p>
+  <p class="auth-note">Créé par <strong>SycheikhCorp</strong> © 2026</p>
+</div>
+
+<!-- ==================== RESET ==================== -->
+<div class="auth-wrap screen" id="screen-reset">
+  <div class="bg-math">
+    <div class="bg-shape s1"></div>
+    <div class="bg-shape s2"></div>
+    <div class="bg-sym" style="top:15%;left:10%">π</div>
+    <div class="bg-sym" style="top:25%;right:15%">∑</div>
+    <div class="bg-sym" style="top:60%;left:8%">∫</div>
+    <div class="bg-sym" style="top:70%;right:10%">√</div>
+  </div>
+  <svg class="logo-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="50" cy="50" r="44" fill="url(#lg)"/>
+    <path d="M30 68 L30 36 L50 44 L70 36 L70 68" stroke="white" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="50" cy="28" r="6" fill="white"/>
+    <path d="M44 28 L50 34 L56 28" stroke="#15a05a" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <div class="logo-text">Réinitialiser</div>
+  <div class="reset-steps">
+    <div id="resetStep1">
+      <div class="field"><label>Pseudo</label><input type="text" id="resetPseudo" placeholder="Pseudo" autocomplete="off"></div>
+      <div class="field"><label>Contact (email ou téléphone)</label><input type="text" id="resetContact" placeholder="Ex: 770000000"></div>
+      <div class="auth-err" id="resetErr"></div>
+      <div class="auth-ok" id="resetOk"></div>
+      <button class="btn btn-primary" onclick="resetRequest()">Envoyer code</button>
+    </div>
+    <div id="resetStep2" class="hidden">
+      <div class="field"><label>Code</label><input type="text" id="resetCode" placeholder="Code reçu"></div>
+      <div class="field"><label>Nouveau mot de passe</label><input type="password" id="resetMdp" placeholder="8+ lettre + chiffre"><span class="pwd-toggle" onclick="togglePwd('resetMdp',this)">👁️</span></div>
+      <div class="auth-err" id="resetErr2"></div>
+      <div class="auth-ok" id="resetOk2"></div>
+      <button class="btn btn-primary" onclick="resetVerify()">Réinitialiser</button>
+    </div>
+  </div>
+  <button class="btn btn-ghost" style="margin-top:12px" onclick="switchAuth('login')">← Retour</button>
+</div>
+
+<!-- ==================== HOME ==================== -->
+<div class="screen" id="screen-home">
+  <div class="bg-math">
+    <div class="bg-shape s1"></div>
+    <div class="bg-shape s2"></div>
+    <div class="bg-sym" style="top:5%;right:8%">π</div>
+    <div class="bg-sym" style="top:20%;left:5%">∑</div>
+    <div class="bg-sym" style="top:50%;right:3%">√</div>
+    <div class="bg-sym" style="bottom:10%;left:10%">∫</div>
+  </div>
+  <div style="position:relative;z-index:1">
+  <div class="topbar">
+    <div><div class="greet" id="greetName">👋</div><div class="sub" id="greetSub">—</div></div>
+  </div>
+  <div class="home-desc">
+    <div class="hd-title">📚 Bienvenue sur ÉcoleMax</div>
+    <div class="hd-sub">L'assistant IA gratuit qui aide les élèves du Sénégal à comprendre et réussir leurs études — en wolof et en français.</div>
+  </div>
+  <div class="banner" id="planBanner">
+    <div class="b-title" id="bannerTitle">—</div>
+    <div class="b-sub" id="bannerSub">—</div>
+    <div class="b-cta" id="bannerCta"></div>
+  </div>
+  <div class="quick-row">
+    <div class="quick-btn" onclick="goToTab('chat')"><div class="ic">🤖</div><div class="lb">IA Chat</div></div>
+    <div class="quick-btn" onclick="goToTab('photo')"><div class="ic">📸</div><div class="lb">Photo</div></div>
+    <div class="quick-btn" onclick="goToTab('profile')"><div class="ic">👤</div><div class="lb">Profil</div></div>
+  </div>
+  <div class="sec-title">🎓 Matières</div>
+  <div class="subj-grid" id="subjGrid"></div>
+  </div>
+</div>
+
+<!-- ==================== SUBJECT ==================== -->
+<div class="screen" id="screen-subject">
+  <div class="topbar"><div class="greet" id="subjTitle">Matière</div><div class="lang-toggle" onclick="goToTab('home')">← Retour</div></div>
+  <div id="chapList"></div>
+</div>
+
+<!-- ==================== CHAT ==================== -->
+<div class="screen chat-screen" id="screen-chat">
+  <div class="chat-header"><h3>🤖 Assistant IA</h3><p>Posez vos questions en wolof ou français.</p></div>
+  <div class="suggest-row">
+    <div class="suggest-chip" onclick="askSuggest('Quelle est la capitale du Sénégal ?')">Capitale Sénégal</div>
+    <div class="suggest-chip" onclick="askSuggest('Explique la photosynthèse.')">Photosynthèse</div>
+    <div class="suggest-chip" onclick="askSuggest('Dérivée de x² ?')">Dérivée</div>
+    <div class="suggest-chip" onclick="askSuggest('sutu rekk')">Wolof</div>
+  </div>
+  <div class="chat-msgs" id="chatMsgs"></div>
+  <div class="chat-input-row">
+    <input type="text" id="chatInput" placeholder="Posez une question..." onkeydown="if(event.key==='Enter')sendChat()">
+    <button onclick="sendChat()">➤</button>
+  </div>
+</div>
+
+<!-- ==================== PHOTO ==================== -->
+<div class="screen chat-screen" id="screen-photo">
+  <div class="chat-header"><h3>📸 Correction Photo</h3><p>Prenez en photo votre problème.</p></div>
+  <div class="photo-area">
+    <label class="photo-btn">
+      <div class="ic">📷</div>
+      <div class="lb">Prendre une photo</div>
+      <input type="file" accept="image/*" capture="environment" onchange="onPhotoSelected(event)" style="display:none">
+    </label>
+    <img class="photo-preview" id="photoPreview">
+  </div>
+  <div class="field"><label>Question (optionnel)</label><input type="text" id="photoQuestion" placeholder="Ex: Explique et corrige."></div>
+  <div id="photoResult" style="margin-top:12px"></div>
+  <button class="btn btn-primary" id="photoBtnSend" style="margin-top:12px" disabled onclick="sendPhoto()">Corriger</button>
+</div>
+
+<!-- ==================== PROFILE ==================== -->
+<div class="screen" id="screen-profile">
+  <div class="prof-header"><div class="prof-avatar">👤</div><div class="prof-name" id="profName">—</div><div class="prof-plan" id="profPlan">—</div></div>
+  <div class="prof-card">
+    <div class="sec-title">📊 Usage aujourd'hui</div>
+    <div class="prof-row"><span class="k">Questions IA</span><span class="v" id="quotaIA">—</span></div>
+    <div class="quota-bar"><div class="quota-fill" id="quotaBar" style="width:0%"></div></div>
+  </div>
+  <div class="prof-card">
+    <div class="sec-title">💳 Abonnement</div>
+    <div class="prof-row"><span class="k">Plan</span><span class="v" id="planName">—</span></div>
+    <div class="prof-row"><span class="k">Niveau</span><span class="v" id="profNiveau">—</span></div>
+    <div class="prof-row"><span class="k">Expiration</span><span class="v" id="planExp">—</span></div>
+    <div class="prof-row"><span class="k">Statut</span><span class="v" id="planStatus">—</span></div>
+    <div style="margin-top:12px"><button class="btn btn-ghost" onclick="showPlans()">🔍 Voir les plans</button></div>
+  </div>
+  <div class="prof-card"><button class="btn btn-ghost" onclick="goToTab('iaadmin')">🤖 IA Admin — Poser des questions</button></div>
+  <div class="prof-card"><button class="btn btn-danger" onclick="logout()">🚪 Déconnexion</button></div>
+  <p style="text-align:center;font-size:10px;color:var(--ink-soft);padding:16px">ÉcoleMax — Créé par <strong>SycheikhCorp</strong> © 2026</p>
+</div>
+
+<!-- ==================== IA ADMIN ==================== -->
+<div class="screen chat-screen" id="screen-ia-admin">
+  <div class="chat-header"><h3>🤖 IA Admin</h3><p>Posez une question pour le site et l'application.</p></div>
+  <div class="suggest-row">
+    <div class="suggest-chip" onclick="iaAsk('Quelle est la capitale du Sénégal ?')">Capitale Sénégal</div>
+    <div class="suggest-chip" onclick="iaAsk('Explique la photosynthèse.')">Photosynthèse</div>
+    <div class="suggest-chip" onclick="iaAsk('Dérivée de x² ?')">Dérivée</div>
+  </div>
+  <div class="ia-targets">
+    <span class="tag tag-site" onclick="iaSetTarget('site')">🌐 Site</span>
+    <span class="tag tag-app" onclick="iaSetTarget('app')">📱 App</span>
+    <span class="tag tag-all" onclick="iaSetTarget('all')">✅ Tous</span>
+  </div>
+  <div class="ia-msgs" id="iaMsgs"></div>
+  <div class="ia-input-row">
+    <input type="text" id="iaInput" placeholder="Posez une question..." onkeydown="if(event.key==='Enter')iaSend()">
+    <button onclick="iaSend()">➤</button>
+  </div>
+</div>
+
+<!-- ==================== TAB BAR ==================== -->
+<div class="tabbar" id="tabbar">
+  <div class="tab active" onclick="goToTab('home')"><span class="ic">🏠</span>Accueil</div>
+  <div class="tab" onclick="goToTab('chat')"><span class="ic">🤖</span>IA</div>
+  <div class="tab" onclick="goToTab('photo')"><span class="ic">📸</span>Photo</div>
+  <div class="tab" onclick="goToTab('profile')"><span class="ic">👤</span>Profil</div>
+</div>
+
+<!-- ==================== PLAN SHEET ==================== -->
+<div class="sheet-overlay" id="planSheet" onclick="if(event.target===this)closePlans()">
+  <div class="sheet">
+    <h3>📋 Plans d'abonnement</h3>
+    <p class="sub">Essai gratuit 24 h déjà actif. Passez à un plan pour continuer après.</p>
+    <div id="planList"></div>
+    <button class="btn btn-ghost" style="margin-top:12px" onclick="closePlans()">Fermer</button>
+  </div>
+</div>
+
+</div>
+
+<script>
+var API=window.__ECOLEMAX_API__||"https://ecolemax.onrender.com";
+var token=localStorage.getItem("ecolemax_token")||"";
+var user=null;
+var SUBJECTS=[
+  {ic:"📐",nm:"Maths",nb:"Calcul"},
+  {ic:"🔬",nm:"Physique",nb:"Mécanique"},
+  {ic:"🧪",nm:"Chimie",nb:"Réactions"},
+  {ic:"🧬",nm:"SVT",nb:"Biologie"},
+  {ic:"🌍",nm:"Géographie",nb:"Sénégal"},
+  {ic:"📜",nm:"Histoire",nb:"Afrique"},
+  {ic:"📖",nm:"Français",nb:"Grammaire"},
+  {ic:"🇬🇧",nm:"Anglais",nb:"Vocabulary"},
+  {ic:"🇸🇳",nm:"Wolof",nb:"Sunu yëngu"},
+  {ic:"🕌",nm:"Arabe",nb:"Islam"},
+  {ic:"🤔",nm:"Philosophie",nb:"Réflexion"},
+  {ic:"💰",nm:"Économie",nb:"Market"},
+  {ic:"💻",nm:"Informatique",nb:"Code"},
+  {ic:"🔢",nm:"Algèbre",nb:"Équations"},
+  {ic:"📊",nm:"Statistiques",nb:"Données"},
+  {ic:"⚗️",nm:"Géométrie",nb:"Formes"},
+  {ic:"🧠",nm:"Méthodes",nb:"Apprentissage"},
+  {ic:"🎓",nm:"Examens",nb:"Annales"}
+];
+var CHAPTERS={
+  "Maths":["Algèbre","Analyse","Géométrie","Statistiques","Logique"],
+  "Physique":["Mécanique","Optique","Thermodynamique","Électricité","Ondes"],
+  "Chimie":["Chimie organique","Chimie minérale","Stoechiométrie","Thermodynamique","Electrochimie"],
+  "SVT":["Anatomie","Physiologie","Botanique","Zoologie","Écologie"],
+  "Géographie":["Sénégal","Afrique","Cartographie","Climat","Économie"],
+  "Histoire":["Sénégal","Afrique","Monde","Guerres","Révolutions"],
+  "Français":["Grammaire","Conjugaison","Vocabulaire","Compréhension","Production"],
+  "Anglais":["Grammar","Vocabulary","Reading","Writing","Speaking"],
+  "Wolof":["Sutura","Jànguwaal","Jariin","Yam","Laj"],
+  "Arabe":["Grammar","Vocabulary","Quran","Hadith","Aqida"],
+  "Philosophie":["Logique","Éthique","Métaphysique","Politique","Esthétique"],
+  "Économie":["Microéconomie","Macroéconomie","Market","Finance","Commerce"],
+  "Informatique":["Algorithmes","Python","Base de données","Web","Cybersécurité"],
+  "Algèbre":["Équations","Inéquations","Polynômes","Fonctions","Logarithmes"],
+  "Statistiques":["Probabilités","Régression","Tests","Données","Prévision"],
+  "Géométrie":["Triangles","Cercles","Vecteurs","Transformations","Solides"],
+  "Méthodes":["Apprentissage","Concentration","Mémorisation","Révisions","Examens"],
+  "Examens":["Bac S","Bac ES","Bac L","Terminale","1ère"]
+};
+var PLAN_INFO=[
+  {id:0,nm:"Essai Gratuit",price:"0 FCFA",feats:["24 h tout débloqué","IA 24 questions/jour","Correction photo 5/jour","Aucun paiement"]},
+  {id:1,nm:"Basic",price:"250 FCFA/mois",feats:["IA 50 questions/jour","Correction photo 15/jour","Rédactions 2/jour"]},
+  {id:2,nm:"Pro",price:"500 FCFA/mois",feats:["IA 150 questions/jour","Correction photo 50/jour","Rédactions 10/jour","Téléchargement PDF"]},
+  {id:3,nm:"Illimité",price:"1500 FCFA/mois",feats:["IA illimité","Correction photo illimitée","Rédactions illimitées","Tout débloqué"]}
+];
+
+function togglePwd(id,el){var e=document.getElementById(id);e.type=e.type==="password"?"text":"password";}
+function switchAuth(mode){
+  var reg=document.getElementById("regFields");var login=document.getElementById("loginFields");
+  if(mode==="register"){reg.classList.remove("hidden");login.classList.add("hidden");document.getElementById("authBtn").textContent="S'inscrire";}
+  else{reg.classList.add("hidden");login.classList.remove("hidden");document.getElementById("authBtn").textContent="Se connecter";}
+  document.querySelectorAll(".auth-tab").forEach(function(t){t.classList.remove("active");});
+  document.querySelector('.auth-tab:nth-child('+(mode==="register"?1:2)+')').classList.add("active");
+  document.getElementById("authErr").classList.remove("show");
+  document.getElementById("authOk").classList.remove("show");
+}
+
+async function doAuth(){
+  var mode=document.getElementById("regFields").classList.contains("hidden")?"login":"register";
+  var errEl=document.getElementById("authErr");var okEl=document.getElementById("authOk");
+  errEl.classList.remove("show");okEl.classList.remove("show");
+  if(mode==="register"){
+    var pseudo=document.getElementById("pseudo").value.trim();
+    var mdp=document.getElementById("mdp").value;
+    var niveau=document.getElementById("niveau").value;
+    if(!pseudo||pseudo.length<3){errEl.textContent="Veuillez saisir un pseudo (3+ caractères)";errEl.classList.add("show");return;}
+    if(mdp.length<8||!/[a-zA-Z]/.test(mdp)||!/[0-9]/.test(mdp)){errEl.textContent="MDP : 8+ lettre + chiffre";errEl.classList.add("show");return;}
+    try{
+      var r=await fetch(API+"/api/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo,mot_de_passe:mdp,niveau})});
+      var d=await r.json();
+      if(!r.ok){errEl.textContent=d.erreur||"Erreur";errEl.classList.add("show");return;}
+      token=d.token;user=d.user;
+      localStorage.setItem("ecolemax_token",token);
+      localStorage.setItem("ecolemax_pseudo",pseudo);
+      localStorage.setItem("ecolemax_niveau",niveau);
+      okEl.textContent="✅ Inscription réussie ! Bienvenue "+pseudo+".";okEl.classList.add("show");
+      setTimeout(function(){enterApp();},500);
+    }catch(e){errEl.textContent="Serveur inaccessible";errEl.classList.add("show");}
+  }else{
+    var pseudo=document.getElementById("loginPseudo").value.trim();
+    var mdp=document.getElementById("loginMdp").value;
+    if(!pseudo||!mdp){errEl.textContent="Remplissez tous les champs";errEl.classList.add("show");return;}
+    try{
+      var r=await fetch(API+"/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo,mot_de_passe:mdp})});
+      var d=await r.json();
+      if(!r.ok){errEl.textContent=d.erreur||"Identifiants invalides";errEl.classList.add("show");return;}
+      token=d.token;user=d.user;
+      localStorage.setItem("ecolemax_token",token);
+      localStorage.setItem("ecolemax_pseudo",pseudo);
+      enterApp();
+    }catch(e){errEl.textContent="Serveur inaccessible";errEl.classList.add("show");}
+  }
+}
+
+function logout(){
+  token="";user=null;
+  localStorage.removeItem("ecolemax_token");
+  localStorage.removeItem("ecolemax_pseudo");
+  localStorage.removeItem("ecolemax_niveau");
+  document.getElementById("screen-auth").classList.add("active");
+  document.getElementById("tabbar").classList.add("hidden");
+  document.querySelectorAll(".screen").forEach(function(s){if(s.id!=="screen-auth")s.classList.remove("active");});
+}
+
+function enterGuest(){
+  token="";
+  user=null;
+  document.getElementById("screen-auth").classList.remove("active");
+  document.getElementById("tabbar").classList.remove("hidden");
+  goToTab("chat");
+}
+
+async function enterApp(){
+  document.getElementById("screen-auth").classList.remove("active");
+  document.getElementById("tabbar").classList.remove("hidden");
+  goToTab("home");
+  await refreshSubscription();
+}
+
+function goToTab(tab){
+  document.querySelectorAll(".screen").forEach(function(s){s.classList.remove("active");});
+  document.querySelectorAll(".tab").forEach(function(t){t.classList.remove("active");});
+  if(tab==="iaadmin"){
+    document.getElementById("screen-ia-admin").classList.add("active");
+    document.getElementById("iaInput").focus();
+    return;
+  }
+  var tabs={home:"screen-home",chat:"screen-chat",photo:"screen-photo",profile:"screen-profile"};
+  document.getElementById(tabs[tab]).classList.add("active");
+  document.querySelectorAll(".tab")[{home:0,chat:1,photo:2,profile:3}[tab]].classList.add("active");
+  if(tab==="home"){renderSubjects();refreshSubscription();}
+  if(tab==="chat"){document.getElementById("chatInput").focus();}
+}
+
+function renderSubjects(){document.getElementById("subjGrid").innerHTML=SUBJECTS.map(function(s){return '<div class="subj-card" onclick="openSubject(\\''+s.nm+'\\')"><div class="ic">'+s.ic+'</div><div class="nm">'+s.nm+'</div><div class="nb">'+s.nb+'</div></div>';}).join("");}
+
+function openSubject(name){
+  document.getElementById("subjTitle").textContent=name;
+  var chapters=CHAPTERS[name]||["Chapitre 1","Chapitre 2","Chapitre 3"];
+  document.getElementById("chapList").innerHTML=chapters.map(function(c){return '<div class="chap-item" style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="goToTab(\\'chat\\')"><div style="font-size:20px;width:40px;height:40px;background:var(--primary-l);border-radius:10px;display:grid;place-items:center">📖</div><div style="flex:1"><div style="font-size:14px;font-weight:600">'+c+'</div><div style="font-size:12px;color:var(--ink-soft)">'+(Math.floor(Math.random()*30)+5)+' exercices</div></div></div>';}).join("");
+  document.querySelectorAll(".screen").forEach(function(s){s.classList.remove("active");});
+  document.getElementById("screen-subject").classList.add("active");
+  document.querySelectorAll(".tab").forEach(function(t){t.classList.remove("active");});
+}
+
+async function sendChat(){
+  var input=document.getElementById("chatInput");
+  var question=input.value.trim();
+  if(!question)return;
+  input.value="";
+  addMsg(question,"user");
+  addMsg("","bot","loading");
+  try{
+    var endpoint = token ? API+"/api/ai/ask" : API+"/api/ai/guest";
+    var headers = {"Content-Type":"application/json"};
+    if(token)headers["Authorization"]="Bearer "+token;
+    var r=await fetch(endpoint,{method:"POST",headers:headers,body:JSON.stringify({question})});
+    var d=await r.json();
+    if(!r.ok){throw new Error(d.erreur||"Erreur");}
+    removeLastLoading();
+    var src=d.source==="IA"?"🤖 IA":"📚 Base";
+    addMsg(d.reponse||"Pas de réponse.","bot",null,src);
+  }catch(e){removeLastLoading();addMsg(e.message,"err");}
+}
+
+function askSuggest(q){document.getElementById("chatInput").value=q;sendChat();}
+
+function addMsg(text,type,loading,src){
+  var msgs=document.getElementById("chatMsgs");
+  if(loading==="loading"){msgs.insertAdjacentHTML("beforeend",'<div class="msg loading"><span class="dot">●</span> <span class="dot" style="animation-delay:.2s">●</span> <span class="dot" style="animation-delay:.4s">●</span></div>');msgs.scrollTop=msgs.scrollHeight;return;}
+  var html='<div class="msg '+type+'">'+escapeHtml(text);
+  if(src)html+='<span class="src">'+src+'</span>';
+  html+='</div>';
+  msgs.insertAdjacentHTML("beforeend",html);
+  msgs.scrollTop=msgs.scrollHeight;
+}
+
+function removeLastLoading(){var m=document.getElementById("chatMsgs").querySelector(".msg.loading");if(m)m.remove();}
+function escapeHtml(s){var d=document.createElement("div");d.textContent=s;return d.innerHTML;}
+
+// ---- Photo ----
+var photoData=null;
+function onPhotoSelected(event){
+  var file=event.target.files[0];if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){document.getElementById("photoPreview").src=e.target.result;document.getElementById("photoPreview").classList.add("show");photoData=e.target.result.split(",")[1];document.getElementById("photoBtnSend").disabled=false;};
+  reader.readAsDataURL(file);
+}
+
+async function sendPhoto(){
+  if(!photoData)return;
+  var question=document.getElementById("photoQuestion").value.trim();
+  var btn=document.getElementById("photoBtnSend");var result=document.getElementById("photoResult");
+  btn.disabled=true;btn.textContent="⏳ Analyse...";
+  result.innerHTML='<div class="msg loading"><span class="dot">●</span> <span class="dot" style="animation-delay:.2s">●</span> <span class="dot" style="animation-delay:.4s">●</span> Correction...</div>';
+  try{
+    var r=await fetch(API+"/api/ai/photo",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({question:question||"Explique et corrige.",image_b64:photoData})});
+    var d=await r.json();
+    if(!r.ok){throw new Error(d.erreur||"Erreur");}
+    var src=d.source==="IA"?"🤖 IA Vision":"📷 Base";
+    result.innerHTML='<div class="msg bot">'+escapeHtml(d.reponse||"Pas de réponse.")+'<span class="src">'+src+'</span></div>';
+  }catch(e){result.innerHTML='<div class="msg err">'+escapeHtml(e.message)+'</div>';}
+  btn.disabled=false;btn.textContent="Corriger";
+}
+
+async function refreshSubscription(){
+  try{
+    var r=await fetch(API+"/api/subscription/me",{headers:{"Authorization":"Bearer "+token}});
+    var d=await r.json();
+    var pseudo=localStorage.getItem("ecolemax_pseudo")||"";
+    document.getElementById("greetName").textContent="👋 "+pseudo;
+    document.getElementById("greetSub").textContent=(d.plan&&d.plan.nom)||"";
+    var banner=document.getElementById("planBanner");
+    var plan=d.plan||{};
+    var isFree=(plan.id===0);
+    banner.className="banner "+(isFree?"gratuit":"payant");
+    document.getElementById("bannerTitle").textContent=(plan.nom||"—");
+    document.getElementById("bannerSub").textContent=(plan.limite_ia_jour?plan.limite_ia_jour+" questions IA/jour":"");
+    document.getElementById("bannerCta").textContent=isFree?"⏳ Essai gratuit 24 h — tout débloqué":"";
+    document.getElementById("planName").textContent=(plan.nom||"—");
+    document.getElementById("profNiveau").textContent=localStorage.getItem("ecolemax_niveau")||"—";
+    document.getElementById("planExp").textContent=d.date_expiration||"—";
+    document.getElementById("planStatus").textContent=(plan.id===0?"Actif":"Actif");
+    var quota=d.quota_ia_restant||0;var limit=plan.limite_ia_jour||24;
+    document.getElementById("quotaIA").textContent=quota+"/"+limit;
+    var pct=Math.round((1-quota/limit)*100);
+    document.getElementById("quotaBar").style.width=Math.min(100,Math.max(0,pct))+"%";
+    document.getElementById("profName").textContent=pseudo;
+  }catch(e){document.getElementById("greetSub").textContent="Connexion...";}
+}
+
+function showPlans(){
+  document.getElementById("planList").innerHTML=PLAN_INFO.map(function(p){return '<div class="plan-card"><div class="p-name">'+p.nm+'</div><div class="p-price">'+p.price+'</div><div class="p-feats">'+p.feats.join("<br>• ")+'</div></div>';}).join("");
+  document.getElementById("planSheet").classList.add("show");
+}
+function closePlans(){document.getElementById("planSheet").classList.remove("show");}
+
+// ---- IA Admin ----
+var iaTarget="all";
+function iaSetTarget(t){iaTarget=t;var tags=document.querySelectorAll(".ia-targets .tag");tags.forEach(function(el){el.style.opacity=".5";});var map={site:"tag-site",app:"tag-app",all:"tag-all"};var sel=document.querySelector(".ia-targets .tag."+map[t]);if(sel)sel.style.opacity="1";}
+function iaAddMsg(text,type,src){var m=document.getElementById("iaMsgs");var html='<div class="ia-msg '+type+'">'+escapeHtml(text);if(src)html+='<span class="src">'+src+'</span>';html+='</div>';m.insertAdjacentHTML("beforeend",html);m.scrollTop=m.scrollHeight;}
+function iaAsk(q){document.getElementById("iaInput").value=q;iaSend();}
+async function iaSend(){
+  var input=document.getElementById("iaInput");
+  var question=input.value.trim();
+  if(!question)return;
+  input.value="";
+  iaAddMsg(question,"user");
+  iaAddMsg("","bot","loading");
+  try{
+    var r=await fetch(API+"/api/ai/ask",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({question:question,niveau:localStorage.getItem("ecolemax_niveau")||"Terminale",target:iaTarget})});
+    var d=await r.json();
+    if(!r.ok){throw new Error(d.erreur||"Erreur");}
+    var src=d.source==="IA"?"🤖 IA":"📚 Base";
+    iaAddMsg(d.reponse||"Pas de réponse.","bot",src);
+  }catch(e){iaAddMsg(e.message,"err");}
+}
+
+// ---- Reset ----
+function showReset(){
+  document.getElementById("screen-auth").classList.remove("active");
+  document.getElementById("screen-reset").classList.add("active");
+  document.getElementById("resetStep1").classList.remove("hidden");
+  document.getElementById("resetStep2").classList.add("hidden");
+  document.getElementById("rs1").classList.add("active");
+  document.getElementById("rs2").classList.remove("active");
+  document.getElementById("resetErr").classList.remove("show");
+  document.getElementById("resetOk").classList.remove("show");
+  document.getElementById("resetErr2").classList.remove("show");
+  document.getElementById("resetOk2").classList.remove("show");
+}
+
+async function resetRequest(){
+  var pseudo=document.getElementById("resetPseudo").value.trim();
+  var contact=document.getElementById("resetContact").value.trim();
+  var errEl=document.getElementById("resetErr");var okEl=document.getElementById("resetOk");
+  errEl.classList.remove("show");okEl.classList.remove("show");
+  if(!pseudo||!contact){errEl.textContent="Remplissez pseudo + contact";errEl.classList.add("show");return;}
+  try{
+    var r=await fetch(API+"/api/reset-password/request",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo,contact})});
+    var d=await r.json();
+    if(!r.ok){errEl.textContent=d.erreur||"Erreur";errEl.classList.add("show");return;}
+    okEl.innerHTML="✅ "+d.message+"<br><br>Code: <strong style='font-size:20px;color:var(--primary)'>"+d.code+"</strong><br><span style='font-size:11px'>"+d.note+"</span>";
+    okEl.classList.add("show");
+    document.getElementById("resetStep1").classList.add("hidden");
+    document.getElementById("resetStep2").classList.remove("hidden");
+    document.getElementById("rs1").classList.remove("active");
+    document.getElementById("rs2").classList.add("active");
+  }catch(e){errEl.textContent="Serveur inaccessible";errEl.classList.add("show");}
+}
+
+async function resetVerify(){
+  var pseudo=document.getElementById("resetPseudo").value.trim();
+  var code=document.getElementById("resetCode").value.trim();
+  var mdp=document.getElementById("resetMdp").value;
+  var errEl=document.getElementById("resetErr2");var okEl=document.getElementById("resetOk2");
+  errEl.classList.remove("show");okEl.classList.remove("show");
+  if(!code||!mdp){errEl.textContent="Remplissez code + MDP";errEl.classList.add("show");return;}
+  if(mdp.length<8||!/[a-zA-Z]/.test(mdp)||!/[0-9]/.test(mdp)){errEl.textContent="MDP : 8+ lettre + chiffre";errEl.classList.add("show");return;}
+  try{
+    var r=await fetch(API+"/api/reset-password/verify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo,code,mot_de_passe:mdp})});
+    var d=await r.json();
+    if(!r.ok){errEl.textContent=d.erreur||"Erreur";errEl.classList.add("show");return;}
+    okEl.textContent="✅ Mot de passe réinitialisé ! Connectez-vous.";okEl.classList.add("show");
+    setTimeout(function(){switchAuth("login");},1500);
+  }catch(e){errEl.textContent="Serveur inaccessible";errEl.classList.add("show");}
+}
+
+(async function init(){
+  if(token){
+    try{
+      var r=await fetch(API+"/api/subscription/me",{headers:{"Authorization":"Bearer "+token}});
+      if(r.ok){await enterApp();return;}
+    }catch(e){}
+    logout();
+  }
+  if(location.hash==="#connecter"){switchAuth("login");}
+})();
+</script>
+</body>
+</html>
