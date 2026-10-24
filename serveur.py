@@ -429,7 +429,7 @@ def reponse_ia(question, plan):
         cached["source"] = str(cached.get("source", "")) + " (cache)"
         return cached
     # 0. Pollinations (PRIORITÉ — gratuit, sans clé, GPT-OSS 20B)
-    for attempt in range(4):
+    for attempt in range(2):
         try:
             headers = {"Content-Type": "application/json"}
             if POLLINATIONS_KEY:
@@ -438,16 +438,13 @@ def reponse_ia(question, plan):
                 "https://text.pollinations.ai/",
                 data=json.dumps({"messages": _llm_messages(question), "model": "openai"}).encode(),
                 headers=headers)
-            with urllib.request.urlopen(req, timeout=45) as r:
+            with urllib.request.urlopen(req, timeout=30) as r:
                 raw = r.read().decode()
             try:
                 txt = json.loads(raw)["choices"][0]["message"]["content"]
             except Exception:
                 txt = raw.strip()
             if "limit" in txt.lower() or "too many" in txt.lower():
-                if attempt < 3:
-                    time.sleep(3 + attempt * 3)
-                    continue
                 local = reponses_locales.chercher(question)
                 if local:
                     return local
@@ -456,8 +453,8 @@ def reponse_ia(question, plan):
         except Exception as e:
             msg = str(e)
             if any(k in msg.lower() for k in ("rate", "limit", "every", "429", "402", "too many")):
-                if attempt < 3:
-                    time.sleep(3 + attempt * 3)
+                if attempt < 1:
+                    time.sleep(2)
                     continue
                 local = reponses_locales.chercher(question)
                 if local:

@@ -227,6 +227,7 @@ body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSys
     </div>
     <button class="btn btn-primary" id="authBtn" onclick="doAuth()">S'inscrire</button>
   </form>
+  <button class="btn btn-ghost" style="width:100%;margin-top:10px;font-size:14px" onclick="enterGuest()">💬 Poser une question sans inscription</button>
   <p class="auth-note">Essai gratuit 24 h — tout débloqué. Aucun paiement requis.</p>
   <p class="auth-note">Créé par <strong>SycheikhCorp</strong> © 2026</p>
 </div>
@@ -508,6 +509,14 @@ function logout(){
   document.querySelectorAll(".screen").forEach(function(s){if(s.id!=="screen-auth")s.classList.remove("active");});
 }
 
+function enterGuest(){
+  token="";
+  user=null;
+  document.getElementById("screen-auth").classList.remove("active");
+  document.getElementById("tabbar").classList.remove("hidden");
+  goToTab("chat");
+}
+
 async function enterApp(){
   document.getElementById("screen-auth").classList.remove("active");
   document.getElementById("tabbar").classList.remove("hidden");
@@ -549,7 +558,10 @@ async function sendChat(){
   addMsg(question,"user");
   addMsg("","bot","loading");
   try{
-    var r=await fetch(API+"/api/ai/ask",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({question})});
+    var endpoint = token ? API+"/api/ai/ask" : API+"/api/ai/guest";
+    var headers = {"Content-Type":"application/json"};
+    if(token)headers["Authorization"]="Bearer "+token;
+    var r=await fetch(endpoint,{method:"POST",headers:headers,body:JSON.stringify({question})});
     var d=await r.json();
     if(!r.ok){throw new Error(d.erreur||"Erreur");}
     removeLastLoading();
