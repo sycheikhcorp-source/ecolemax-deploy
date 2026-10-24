@@ -346,6 +346,21 @@ def log_sec(user_id, type_, detail):
 # Intelligence IA (multi-fournisseur + cache + repli)
 # ------------------------------------------------------------------
 _IA_CACHE = {}
+_GUEST_QUOTA = {}
+_GUEST_LIMIT = 10
+_GUEST_WINDOW = 900  # 15 min
+
+def _guest_allowed(ip):
+    """Quota IA pour les visiteurs du site (widget public) : 10 questions / 15 min."""
+    import time as _t
+    now = _t.time()
+    lst = [t for t in _GUEST_QUOTA.get(ip, []) if now - t < _GUEST_WINDOW]
+    if len(lst) >= _GUEST_LIMIT:
+        _GUEST_QUOTA[ip] = lst
+        return False
+    lst.append(now)
+    _GUEST_QUOTA[ip] = lst
+    return True
 
 def _repli_mock(question):
     """Repli hors ligne intelligent."""
@@ -632,6 +647,15 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         path = self.path.split("?")[0]
 
+        # Health check rapide (keep-alive / cron / load balancers)
+        if path == "/health":
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(b'{"status":"ok","service":"ecolemax","time":"' + datetime.now().isoformat().encode() + b'"}')
+            return
+
         if path.startswith("/api/"):
             token = self.headers.get("Authorization", "").replace("Bearer ", "")
             u = user_by_token(token)
@@ -679,6 +703,18 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json({"ca": ca, "abonnes_actifs": actifs, "nouveaux_aujourdhui": nouveaux,
                                        "total_users": total_users, "conversion": conversion,
                                        "objectif": 3000000})
+
+            if path == "/api/admin/plans-stats":
+                if not is_admin(self):
+                    return self.send_json({"erreur": "Authentification admin requise"}, 401)
+                c = db()
+                stats = []
+                for p in c.execute("SELECT * FROM plans ORDER BY prix").fetchall():
+                    nb = c.execute("SELECT COUNT(*) FROM users WHERE plan_id=? AND date_expiration > date('now')", (p["id"],)).fetchone()[0]
+                    ca = c.execute("SELECT COALESCE(SUM(montant),0) FROM payment_links WHERE plan_id=? AND statut='valide'", (p["id"],)).fetchone()[0] or 0
+                    stats.append({"id": p["id"], "nom": p["nom"], "prix": p["prix"], "abonnes": nb, "ca": ca})
+                c.close()
+                return self.send_json({"plans": stats})
 
             if path == "/api/admin/subscribers":
                 if not is_admin(self):
@@ -755,6 +791,20 @@ class Handler(BaseHTTPRequestHandler):
         data = self.body()
         token = self.headers.get("Authorization", "").replace("Bearer ", "")
         u = user_by_token(token)
+
+        if path == "/api/ai/guest":
+            # Widget IA public du site — pas d'authentification, quota IP (10 / 15 min)
+            question = data.get("question", "")
+            if not question or len(question.strip()) < 3:
+                return self.send_json({"erreur": "Question trop courte"}, 400)
+            ip = self.client_address[0] if self.client_address else "?"
+            if not _guest_allowed(ip):
+                return self.send_json({"erreur": "Quota atteint (10 questions / 15 min). Inscrivez-vous pour continuer."}, 429)
+            c = db()
+            p = c.execute("SELECT * FROM plans WHERE code='gratuit'").fetchone()
+            c.close()
+            r = reponse_ia(question, p)
+            return self.send_json(r)
 
         if path == "/api/register":
             pseudo = (data.get("pseudo", "") or data.get("prenom", "")).strip()

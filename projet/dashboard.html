@@ -156,6 +156,22 @@ tr:hover td{background:var(--green-l)}
       </div>
     </div>
 
+    <!-- Plans abonnement -->
+    <div class="section">
+      <div class="section-header" onclick="this.parentElement.classList.toggle('collapsed')">
+        <h2>📊 Plans d'abonnement</h2>
+        <span class="arrow">▼</span>
+      </div>
+      <div class="section-body">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Plan</th><th>Prix</th><th>Abonnés actifs</th><th>CA validé</th></tr></thead>
+            <tbody id="plansTable"><tr><td colspan="4" style="color:var(--soft);padding:20px;text-align:center">Chargement…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- Subscribers -->
     <div class="section">
       <div class="section-header" onclick="this.parentElement.classList.toggle('collapsed')">
@@ -315,9 +331,21 @@ function startPolling(){
 
 function fetchAll(){
   fetchStats();
+  fetchPlans();
   fetchSubscribers();
   fetchPayments();
   fetchUsers();
+}
+
+function fetchPlans(){
+  api("/api/admin/plans-stats").then(d=>{
+    const t=document.getElementById("plansTable");
+    if(!d.plans||d.plans.length===0){t.innerHTML='<tr><td colspan="4" style="color:var(--soft);padding:20px;text-align:center">Aucun plan…</td></tr>';return;}
+    t.innerHTML=d.plans.map(p=>{
+      const badge=p.prix>0?'<span class="badge blue">'+p.nom+'</span>':'<span class="badge orange">Gratuit</span>';
+      return `<tr><td data-label="Plan">${badge}</td><td data-label="Prix">${p.prix>0?Math.round(p.prix)+" FCFA":"—"}</td><td data-label="Abonnés">${p.abonnes||0}</td><td data-label="CA">${Math.round(p.ca||0)} FCFA</td></tr>`;
+    }).join("");
+  }).catch(()=>{});
 }
 
 function fetchStats(){

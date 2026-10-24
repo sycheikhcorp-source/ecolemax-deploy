@@ -139,6 +139,33 @@ footer .ft-links a:hover{color:#fff}
   .hero-illust{order:-1}
   .illust-card{width:100%;max-width:340px}
 }
+/* ===== AI CHAT WIDGET ===== */
+#aiFab{position:fixed;right:20px;bottom:24px;width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--accent));color:#fff;border:none;font-size:26px;cursor:pointer;box-shadow:0 6px 20px rgba(21,160,90,.4);z-index:9000;display:grid;place-items:center;transition:.2s;animation:aiPulse 2.5s infinite}
+#aiFab:hover{transform:scale(1.1)}
+@keyframes aiPulse{0%,100%{box-shadow:0 6px 20px rgba(21,160,90,.4)}50%{box-shadow:0 6px 20px rgba(21,160,90,.4),0 0 0 12px rgba(21,160,90,.08)}}
+#aiPanel{position:fixed;right:20px;bottom:96px;width:380px;max-width:calc(100vw - 40px);height:560px;max-height:calc(100vh - 140px);background:#fff;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.2);z-index:9001;display:none;flex-direction:column;overflow:hidden}
+#aiPanel.open{display:flex;animation:aiIn .25s}
+@keyframes aiIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+#aiHead{background:linear-gradient(135deg,var(--primary),var(--accent));color:#fff;padding:16px 20px;display:flex;align-items:center;justify-content:space-between}
+#aiHead .hd-ti{font-weight:800;font-size:16px;display:flex;align-items:center;gap:8px}
+#aiHead .hd-x{background:rgba(255,255,255,.2);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:14px}
+#aiMsgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;background:var(--bg)}
+.ai-msg{max-width:85%;padding:10px 14px;border-radius:14px;font-size:14px;line-height:1.5}
+.ai-msg.bot{background:#fff;border:1px solid var(--line);align-self:flex-start;border-bottom-left-radius:4px}
+.ai-msg.user{background:var(--primary);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+.ai-msg.err{background:#fee2e2;color:#b91c1c;align-self:center;font-size:12px}
+.ai-msg.load{background:#fff;border:1px solid var(--line);align-self:flex-start;border-radius:14px;padding:10px 14px}
+.ai-msg.load .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--primary);margin:0 2px;animation:blink 1.2s infinite}
+@keyframes blink{0%,100%{opacity:.3}50%{opacity:1}}
+#aiSuggest{display:flex;gap:6px;flex-wrap:wrap;padding:0 16px 8px;background:var(--bg)}
+.ai-sug{background:#fff;border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-size:12px;cursor:pointer;color:var(--soft)}
+.ai-sug:hover{border-color:var(--primary);color:var(--primary)}
+#aiInputRow{display:flex;gap:8px;padding:12px;background:#fff;border-top:1px solid var(--line)}
+#aiInput{flex:1;border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-size:14px;outline:none}
+#aiInput:focus{border-color:var(--primary)}
+#aiSend{background:var(--primary);color:#fff;border:none;border-radius:12px;width:46px;cursor:pointer;font-size:18px}
+#aiSend:hover{background:var(--primary-d)}
+@media(max-width:480px){#aiFab{right:14px;bottom:14px;width:54px;height:54px;font-size:22px}#aiPanel{right:8px;bottom:78px}}
 </style>
 </head>
 <body>
@@ -394,6 +421,26 @@ footer .ft-links a:hover{color:#fff}
   </div>
 </footer>
 
+<!-- AI Chat Widget -->
+<button id="aiFab" onclick="toggleAI()">🤖</button>
+<div id="aiPanel">
+  <div id="aiHead">
+    <div class="hd-ti">🤖 Assistant IA</div>
+    <button class="hd-x" onclick="toggleAI()">✕</button>
+  </div>
+  <div id="aiMsgs"></div>
+  <div id="aiSuggest">
+    <span class="ai-sug" onclick="askAI('Quelle est la capitale du Sénégal ?')">Capitale Sénégal</span>
+    <span class="ai-sug" onclick="askAI('Explique la photosynthèse.')">Photosynthèse</span>
+    <span class="ai-sug" onclick="askAI('Dérivée de x² ?')">Dérivée</span>
+    <span class="ai-sug" onclick="askAI('sutu rekk')">Wolof</span>
+  </div>
+  <div id="aiInputRow">
+    <input id="aiInput" placeholder="Posez une question..." onkeydown="if(event.key==='Enter')sendAI()">
+    <button id="aiSend" onclick="sendAI()">➤</button>
+  </div>
+</div>
+
 <script>
 const API = (window.__ECOLEMAX_API__||"").replace(/\/$/,"");
 function togglePwd(inputId,btn){
@@ -446,6 +493,56 @@ async function doAuth(){
 function showReset(){
   alert("Pour réinitialiser votre mot de passe :\n\n1. Ouvrez l'application (app.html)\n2. Cliquez sur « Mot de passe oublié ? »\n3. Suivez les étapes\n\nVous pouvez aussi contacter l'administrateur.");
 }
+
+// ===== AI CHAT WIDGET (site) =====
+function toggleAI(){
+  document.getElementById("aiPanel").classList.toggle("open");
+  if(document.getElementById("aiPanel").classList.contains("open")){
+    document.getElementById("aiInput").focus();
+    if(!document.getElementById("aiMsgs").dataset.init){
+      document.getElementById("aiMsgs").dataset.init="1";
+      addAIMsg("👋 Bonjour ! Je suis l'assistant IA d'ÉcoleMax. Posez-moi vos questions de cours — en français ou en wolof.","bot");
+    }
+  }
+}
+function addAIMsg(text,type){
+  var m=document.createElement("div");
+  m.className="ai-msg "+type;
+  m.textContent=text;
+  document.getElementById("aiMsgs").appendChild(m);
+  document.getElementById("aiMsgs").scrollTop=document.getElementById("aiMsgs").scrollHeight;
+}
+function addAILoad(){
+  var m=document.createElement("div");
+  m.className="ai-msg load";
+  m.innerHTML='<span class="dot"></span><span class="dot" style="animation-delay:.2s"></span><span class="dot" style="animation-delay:.4s"></span>';
+  document.getElementById("aiMsgs").appendChild(m);
+  document.getElementById("aiMsgs").scrollTop=document.getElementById("aiMsgs").scrollHeight;
+  return m;
+}
+async function sendAI(){
+  var inp=document.getElementById("aiInput");
+  var q=inp.value.trim();
+  if(!q)return;
+  inp.value="";
+  addAIMsg(q,"user");
+  var load=addAILoad();
+  try{
+    var r=await fetch(API+"/api/ai/guest",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:q})});
+    var d=await r.json();
+    load.remove();
+    if(!r.ok){
+      addAIMsg(d.erreur||"Erreur serveur","err");
+      return;
+    }
+    var src=d.source==="IA"?"🤖 IA":"📚 Base";
+    addAIMsg(d.reponse||"Pas de réponse.","bot");
+  }catch(e){
+    load.remove();
+    addAIMsg("Serveur inaccessible","err");
+  }
+}
+function askAI(q){document.getElementById("aiInput").value=q;sendAI();}
 </script>
 </body>
 </html>

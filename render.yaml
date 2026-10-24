@@ -12,3 +12,11 @@ services:
         value: ecolemax2026
       - key: PYTHONUNBUFFERED
         value: "1"
+
+  - type: cron
+    name: ecolemax-keepalive
+    runtime: python
+    plan: free
+    schedule: "*/10 * * * *"
+    command: "python -c \"import urllib.request;urllib.request.urlopen('https://ecolemax.onrender.com/health', timeout=20).read()\""
+    restartPolicy: always
