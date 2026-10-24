@@ -1,847 +1,883 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" data-theme="clair">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#15a05a">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%2315a05a'/%3E%3Ctext x='50' y='72' font-size='52' text-anchor='middle' fill='white' font-family='Arial' font-weight='bold'%3EEM%3C/text%3E%3C/svg%3E">
-<title>ÉcoleMax — App élève</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>ÉcoleMax — Espace Élève</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{
-  --bg:#f8f9fc;--card:#ffffff;--line:#e5e7eb;
-  --primary:#15a05a;--primary-d:#0d6e3e;--primary-l:#e8f5ee;
-  --accent:#2dd4bf;--accent-l:#e0f7f3;
-  --ink:#1a1a2e;--ink-soft:#6b7280;
-  --blue:#3b82f6;--blue-l:#e8f0fe;
-  --orange:#f59e0b;--orange-l:#fef3e2;
-  --purple:#8b5cf6;--purple-l:#f3e8ff;
-  --red:#ef4444;--red-l:#fee2e2;
-  --grad:linear-gradient(135deg,#15a05a 0%,#2dd4bf 100%);
-  --shadow:0 2px 12px rgba(0,0,0,.06);
-  --shadow-lg:0 8px 30px rgba(0,0,0,.1);
+  --bleu:#1565d8;--bleu-dark:#0d47a1;--bleu-light:#e8f1ff;
+  --violet:#7c3aed;--violet-light:#ede9fe;
+  --bg:#f8fafc;--card:#fff;--ink:#0f172a;--ink-soft:#475569;--line:#e2e8f0;
+  --ok:#16a34a;--warn:#f59e0b;--err:#dc2626;--radius:16px;
+  --shadow:0 4px 20px rgba(15,23,42,.08);--shadow-lg:0 12px 40px rgba(15,23,42,.12);
+  --grad:linear-gradient(135deg,#1565d8 0%,#7c3aed 100%);
 }
-body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif;font-size:15px;min-height:100vh;overflow-x:hidden}
-#app{max-width:500px;margin:0 auto;min-height:100vh;position:relative;background:var(--bg)}
-.screen{display:none;padding:16px;padding-bottom:90px;animation:fade .3s}
-.screen.active{display:block}
-@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+[data-theme="sombre"]{
+  --bg:#0f172a;--card:#1e293b;--ink:#f1f5f9;--ink-soft:#94a3b8;--line:#334155;
+  --bleu-light:#1e3a5f;--violet-light:#2d1b4e;--shadow:0 4px 20px rgba(0,0,0,.3);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5;overflow-x:hidden}
+button{font-family:inherit;cursor:pointer;border:none}
+input,textarea,select{font-family:inherit}
 
-/* ===== AUTH + BACKGROUND ===== */
-.auth-wrap{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px;overflow:hidden}
-.bg-math{position:absolute;top:0;left:0;right:0;bottom:0;z-index:0;pointer-events:none;overflow:hidden}
-.bg-math svg{position:absolute;width:100%;height:100%}
-.bg-shape{position:absolute;opacity:.08;pointer-events:none}
-.bg-shape.s1{top:-20px;right:-20px;width:160px;height:160px;border:24px solid var(--primary);border-radius:50%;opacity:.06}
-.bg-shape.s2{bottom:-30px;left:-30px;width:200px;height:200px;background:var(--accent);opacity:.05;transform:rotate(45deg)}
-.bg-shape.s3{top:40%;left:50%;width:120px;height:120px;border:16px solid var(--blue);border-radius:50%;opacity:.04;transform:translate(-50%,-50%)}
-.bg-sym{position:absolute;font-size:28px;color:var(--primary);opacity:.07;font-weight:bold;font-family:Georgia,serif;pointer-events:none}
-.auth-wrap>*:not(.bg-math):not(.bg-shape):not(.bg-sym){position:relative;z-index:1}
-.auth-sub{color:var(--ink-soft);font-size:14px;margin-bottom:24px;text-align:center}
-.auth-tabs{display:flex;gap:8px;margin-bottom:20px;width:100%;max-width:340px}
-.auth-tab{flex:1;padding:12px;text-align:center;border-radius:12px;font-weight:700;font-size:14px;background:#fff;color:var(--ink-soft);cursor:pointer;border:2px solid var(--line);transition:.2s}
-.auth-tab.active{background:var(--grad);color:#fff;border-color:rgba(255,255,255,.2)}
-.auth-form{width:100%;max-width:340px;display:flex;flex-direction:column;gap:12px}
-.field{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px;transition:.2s;position:relative}
-.field:focus-within{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-l)}
-.field label{display:block;font-size:12px;color:var(--ink-soft);margin-bottom:4px;font-weight:600}
-.field input,.field select{width:100%;background:none;border:none;outline:none;color:var(--ink);font-size:15px;font-family:inherit}
-.field input::placeholder{color:var(--ink-soft);opacity:.6}
-.pwd-toggle{position:absolute;right:14px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:18px;user-select:none;opacity:.6;padding:4px}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px 20px;border-radius:12px;font-weight:700;font-size:15px;border:none;cursor:pointer;transition:.2s;text-decoration:none;width:100%}
+/* Logo */
+.logo-svg{width:36px;height:36px;flex-shrink:0}
+
+/* Screen system */
+.screen{display:none;min-height:calc(100vh - 140px);padding:16px}
+.screen.active{display:block}
+
+/* Header */
+.app-header{background:var(--card);border-bottom:1px solid var(--line);padding:12px 16px;position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;box-shadow:var(--shadow)}
+.app-header .logo-row{display:flex;align-items:center;gap:8px}
+.app-header .logo-text{font-size:18px;font-weight:900}
+.app-header .logo-text span{color:var(--violet)}
+.header-right{display:flex;align-items:center;gap:8px}
+.icon-btn{width:38px;height:38px;border-radius:10px;background:var(--bg);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:18px;transition:.2s}
+.icon-btn:hover{border-color:var(--bleu)}
+.notif-badge{position:relative}
+.notif-badge .dot{position:absolute;top:-4px;right:-4px;background:var(--err);color:#fff;font-size:10px;border-radius:10px;padding:1px 5px;font-weight:700}
+
+/* Auth screen */
+#screen-auth{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--grad)}
+#screen-auth .auth-card{background:var(--card);border-radius:20px;padding:32px 24px;width:100%;max-width:380px;box-shadow:var(--shadow-lg)}
+#screen-auth .auth-card .logo-row{display:flex;flex-direction:column;align-items:center;gap:8px;margin-bottom:24px}
+#screen-auth .auth-card .logo-row .lt{font-size:24px;font-weight:900;text-align:center}
+#screen-auth .auth-card .logo-row .lt span{color:var(--violet)}
+#screen-auth h3{text-align:center;margin-bottom:20px;font-size:20px}
+
+/* Tabbar */
+.tabbar{display:flex;background:var(--card);border-top:1px solid var(--line);position:fixed;bottom:0;left:0;right:0;z-index:100;box-shadow:0 -4px 20px rgba(15,23,42,.06)}
+.tabbar button{flex:1;background:none;padding:8px 4px 12px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;color:var(--ink-soft);transition:.2s;border-top:2px solid transparent}
+.tabbar button .ic{font-size:22px}
+.tabbar button.active{color:var(--bleu);border-top-color:var(--bleu)}
+
+/* Cards & elements */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);margin-bottom:12px}
+.card h3{font-size:16px;font-weight:700;margin-bottom:8px}
+.section-title{font-size:15px;font-weight:700;margin:20px 0 10px;color:var(--ink-soft)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 18px;border-radius:10px;font-weight:600;font-size:14px;transition:.2s;border:none}
 .btn-primary{background:var(--grad);color:#fff}
 .btn-primary:active{transform:scale(.97)}
-.btn-ghost{background:#fff;color:var(--ink);border:2px solid var(--line)}
-.btn-danger{background:var(--red-l);color:var(--red);border:1px solid rgba(239,68,68,.2)}
-.auth-err{color:var(--red);font-size:13px;text-align:center;padding:8px;background:var(--red-l);border-radius:8px;display:none}
-.auth-err.show{display:block}
-.auth-ok{color:var(--primary);font-size:13px;text-align:center;padding:8px;background:var(--primary-l);border-radius:8px;display:none}
-.auth-ok.show{display:block}
-.auth-note{font-size:11px;color:var(--ink-soft);text-align:center;margin-top:12px}
+.btn-outline{background:var(--card);border:2px solid var(--bleu);color:var(--bleu)}
+.btn-violet{background:var(--violet);color:#fff}
+.btn-danger{background:#fee2e2;color:#991b1b}
+.btn-block{width:100%}
+.btn:disabled{opacity:.5}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:var(--ink-soft)}
+.field input,.field textarea,.field select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font-size:14px}
+.field input:focus,.field textarea:focus{outline:none;border-color:var(--bleu);box-shadow:0 0 0 3px var(--bleu-light)}
+.alert{padding:10px 14px;border-radius:10px;font-size:13px;margin-bottom:12px;display:none}
+.alert.err{background:#fee2e2;color:#991b1b;display:block}
+.alert.ok{background:#dcfce7;color:#166534;display:block}
+.alert.info{background:var(--bleu-light);color:var(--bleu-dark);display:block}
 
-/* ===== HOME DESC ===== */
-.home-desc{background:linear-gradient(135deg,var(--primary-l) 0%,var(--accent-l) 100%);border-radius:16px;padding:16px;margin-bottom:16px;border:1px solid rgba(21,160,90,.15)}
-.home-desc .hd-title{font-size:15px;font-weight:800;color:var(--primary-d);margin-bottom:4px}
-.home-desc .hd-sub{font-size:12px;color:var(--ink-soft);line-height:1.5}
+/* Dashboard */
+.dash-hero{background:var(--grad);color:#fff;border-radius:var(--radius);padding:20px;margin-bottom:16px}
+.dash-hero h2{font-size:20px;font-weight:800}
+.dash-hero p{opacity:.9;font-size:13px;margin-top:4px}
+.stat-row{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px}
+.stat-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;box-shadow:var(--shadow)}
+.stat-card .v{font-size:24px;font-weight:800;color:var(--bleu)}
+.stat-card .l{font-size:11px;color:var(--ink-soft);margin-top:2px}
+.quick-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.quick-btn{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 8px;text-align:center;cursor:pointer;transition:.2s;box-shadow:var(--shadow)}
+.quick-btn:active{transform:scale(.95)}
+.quick-btn .ic{font-size:24px;margin-bottom:6px}
+.quick-btn .lb{font-size:11px;font-weight:600;color:var(--ink-soft)}
+.quick-btn:hover{border-color:var(--violet)}
 
-/* ===== AUTH ===== */
-.topbar{display:flex;align-items:center;justify-content:space-between;padding:8px 0 16px}
-.topbar .greet{font-size:20px;font-weight:800}
-.topbar .sub{font-size:13px;color:var(--ink-soft)}
-.banner{border-radius:14px;padding:16px;margin-bottom:20px;border:1px solid}
-.banner.gratuit{background:var(--orange-l);border-color:rgba(245,158,11,.2)}
-.banner.payant{background:var(--primary-l);border-color:rgba(21,160,90,.2)}
-.banner.illimite{background:var(--purple-l);border-color:rgba(139,92,246,.2)}
-.banner .b-title{font-size:14px;font-weight:700;margin-bottom:4px}
-.banner .b-sub{font-size:12px;color:var(--ink-soft)}
-.banner .b-cta{margin-top:10px;font-size:13px;font-weight:700}
-.sec-title{font-size:16px;font-weight:800;margin-bottom:12px;display:flex;align-items:center;gap:6px}
-.subj-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:24px}
-.subj-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 8px;text-align:center;cursor:pointer;transition:.2s;box-shadow:var(--shadow)}
-.subj-card:active{transform:scale(.95)}
-.subj-card .ic{font-size:28px;margin-bottom:6px}
-.subj-card .nm{font-size:12px;font-weight:600}
-.subj-card .nb{font-size:10px;color:var(--ink-soft)}
-.quick-row{display:flex;gap:10px;margin-bottom:24px}
-.quick-btn{flex:1;background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer;transition:.2s;box-shadow:var(--shadow)}
-.quick-btn:active{transform:scale(.97)}
-.quick-btn .ic{font-size:24px;margin-bottom:4px}
-.quick-btn .lb{font-size:12px;font-weight:600}
+/* Chat IA */
+.chat-header{background:var(--grad);color:#fff;padding:16px;border-radius:var(--radius) var(--radius) 0 0;text-align:center}
+.chat-header h3{font-size:16px;font-weight:700}
+.chat-header p{font-size:12px;opacity:.9;margin-top:2px}
+.chat-messages{background:var(--card);border:1px solid var(--line);border-top:none;border-radius:0 0 var(--radius) var(--radius);padding:16px;min-height:300px;max-height:50vh;overflow-y:auto;margin-bottom:12px}
+.msg{margin-bottom:12px;padding:10px 14px;border-radius:14px;font-size:14px;max-width:85%;word-wrap:break-word}
+.msg.user{background:var(--bleu);color:#fff;margin-left:auto;border-bottom-right-radius:4px}
+.msg.bot{background:var(--bg);border:1px solid var(--line);border-bottom-left-radius:4px}
+.msg.bot .src{display:block;font-size:10px;color:var(--violet);margin-top:6px;font-weight:600}
+.msg.loading{background:var(--bg);border:1px solid var(--line);border-bottom-left-radius:4px;color:var(--ink-soft);font-style:italic}
+.chat-input-row{display:flex;gap:8px;margin-bottom:16px}
+.chat-input-row input{flex:1}
+.suggest-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.suggest-chip{background:var(--card);border:1px solid var(--line);padding:6px 12px;border-radius:20px;font-size:12px;cursor:pointer;transition:.2s}
+.suggest-chip:hover{border-color:var(--violet);color:var(--violet)}
 
-/* ===== CHAT ===== */
-.chat-screen{display:flex;flex-direction:column;height:calc(100vh - 90px);min-height:500px}
-.chat-header{padding:8px 0 12px;border-bottom:1px solid var(--line);margin-bottom:12px}
-.chat-header h3{font-size:16px;font-weight:800}
-.chat-header p{font-size:12px;color:var(--ink-soft)}
-.chat-msgs{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding-bottom:80px}
-.msg{max-width:85%;padding:10px 14px;border-radius:16px;font-size:14px;line-height:1.5;animation:fade .3s;word-wrap:break-word}
-.msg.user{align-self:flex-end;background:var(--grad);color:#fff;border-bottom-right-radius:4px}
-.msg.bot{align-self:flex-start;background:#fff;border:1px solid var(--line);border-bottom-left-radius:4px;box-shadow:var(--shadow)}
-.msg.bot .src{display:block;font-size:11px;color:var(--ink-soft);margin-top:6px;padding-top:6px;border-top:1px solid var(--line)}
-.msg.err{align-self:center;background:var(--red-l);color:var(--red);font-size:13px;text-align:center;border-radius:12px;max-width:100%}
-.msg.loading{align-self:flex-start;background:#fff;border:1px solid var(--line);border-radius:16px;border-bottom-left-radius:4px;padding:12px 16px}
-.msg.loading .dot{display:inline-block;animation:bounce 1.2s infinite}
-@keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
-.suggest-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
-.suggest-chip{background:#fff;border:1px solid var(--line);border-radius:16px;padding:6px 12px;font-size:12px;cursor:pointer;color:var(--ink-soft);white-space:nowrap}
-.chat-input-row{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:500px;background:#fff;border-top:1px solid var(--line);padding:10px 12px;display:flex;gap:8px;z-index:10}
-.chat-input-row input{flex:1;background:var(--bg);border:1px solid var(--line);border-radius:20px;padding:10px 16px;color:var(--ink);font-size:14px;outline:none}
-.chat-input-row button{width:44px;height:44px;border-radius:50%;background:var(--grad);border:none;color:#fff;font-size:18px;cursor:pointer;display:grid;place-items:center;flex-shrink:0}
-
-/* ===== PHOTO ===== */
-.photo-area{margin-bottom:20px}
-.photo-btn{width:100%;background:#fff;border:2px dashed var(--line);border-radius:16px;padding:32px;text-align:center;cursor:pointer;transition:.2s}
+/* Photo */
+.photo-area{margin-bottom:16px}
+.photo-btn{width:100%;background:var(--card);border:2px dashed var(--line);border-radius:14px;padding:32px;text-align:center;cursor:pointer;transition:.2s}
 .photo-btn:active{transform:scale(.98)}
-.photo-btn .ic{font-size:40px;margin-bottom:8px}
-.photo-btn .lb{font-size:14px;font-weight:600;color:var(--ink-soft)}
-.photo-preview{width:100%;max-width:300px;margin:16px auto;display:none;border-radius:12px;border:2px solid var(--line)}
+.photo-btn .ic{font-size:36px;margin-bottom:8px}
+.photo-btn .lb{font-size:13px;font-weight:600;color:var(--ink-soft)}
+.photo-preview{width:100%;max-width:300px;margin:14px auto;display:none;border-radius:12px;border:2px solid var(--line)}
 .photo-preview.show{display:block}
 
-/* ===== PROFILE ===== */
-.prof-header{text-align:center;padding:20px 0}
-.prof-avatar{font-size:48px;margin-bottom:8px}
-.prof-name{font-size:20px;font-weight:800}
-.prof-plan{font-size:13px;color:var(--ink-soft);margin-top:4px}
-.prof-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:var(--shadow)}
-.prof-row{display:flex;justify-content:space-between;padding:8px 0;font-size:14px}
-.prof-row .k{color:var(--ink-soft)}
-.prof-row .v{font-weight:600}
-.prof-row .v.ok{color:var(--primary)}
-.prof-row .v.warn{color:var(--orange)}
-.quota-bar{height:6px;background:var(--bg);border-radius:3px;margin-top:6px;overflow:hidden}
-.quota-fill{height:100%;background:var(--grad);border-radius:3px;transition:width .5s}
+/* Exercices */
+.ex-item{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px;box-shadow:var(--shadow);transition:.2s}
+.ex-item:hover{border-color:var(--bleu)}
+.ex-item .q{font-weight:600;font-size:14px;margin-bottom:8px}
+.ex-item .meta{font-size:11px;color:var(--ink-soft)}
+.ex-q{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px}
+.ex-q .q{font-weight:600;font-size:15px;margin-bottom:12px}
+.ex-opt{display:block;width:100%;text-align:left;background:var(--bg);border:1px solid var(--line);padding:10px 12px;border-radius:10px;margin-bottom:8px;font-size:14px;transition:.2s}
+.ex-opt:active{transform:scale(.98)}
+.ex-opt.correct{background:#dcfce7;border-color:var(--ok);color:#166534}
+.ex-opt.wrong{background:#fee2e2;border-color:var(--err);color:#991b1b}
+.ex-explication{background:var(--violet-light);border-left:3px solid var(--violet);padding:10px 14px;border-radius:0 10px 10px 0;font-size:13px;margin-top:8px}
 
-/* ===== IA ADMIN ===== */
-.ia-targets{display:flex;gap:6px;margin-bottom:10px}
-.tag{padding:4px 10px;border-radius:12px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid}
-.tag-site{background:var(--blue-l);border-color:rgba(59,130,246,.2);color:var(--blue)}
-.tag-app{background:var(--orange-l);border-color:rgba(245,158,11,.2);color:var(--orange)}
-.tag-all{background:var(--primary-l);border-color:rgba(21,160,90,.2);color:var(--primary)}
-.ia-msgs{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding-bottom:80px;margin-bottom:8px}
-.ia-msg{max-width:90%;padding:8px 12px;border-radius:14px;font-size:13px;line-height:1.5}
-.ia-msg.user{align-self:flex-end;background:var(--grad);color:#fff;border-bottom-right-radius:4px}
-.ia-msg.bot{align-self:flex-start;background:#fff;border:1px solid var(--line);border-bottom-left-radius:4px}
-.ia-msg.bot .src{display:block;font-size:10px;color:var(--ink-soft);margin-top:4px}
-.ia-input-row{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:500px;background:#fff;border-top:1px solid var(--line);padding:8px 12px;display:flex;gap:8px;z-index:10}
-.ia-input-row input{flex:1;background:var(--bg);border:1px solid var(--line);border-radius:20px;padding:10px 16px;color:var(--ink);font-size:14px;outline:none}
-.ia-input-row button{width:44px;height:44px;border-radius:50%;background:var(--grad);border:none;color:#fff;font-size:18px;cursor:pointer}
+/* Matières */
+.subject-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.subject-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;text-align:center;cursor:pointer;transition:.2s;box-shadow:var(--shadow)}
+.subject-card:active{transform:scale(.96)}
+.subject-card .ic{font-size:28px;margin-bottom:6px}
+.subject-card .nm{font-size:13px;font-weight:600}
 
-/* ===== TAB BAR ===== */
-.tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:500px;background:#fff;border-top:1px solid var(--line);display:flex;z-index:20;padding-bottom:env(safe-area-inset-bottom)}
-.tabbar.hidden{display:none}
-.tab{flex:1;text-align:center;padding:10px 0 12px;cursor:pointer;color:var(--ink-soft);font-size:11px;font-weight:600;transition:.2s;display:flex;flex-direction:column;align-items:center;gap:2px}
-.tab .ic{font-size:22px}
-.tab.active{color:var(--primary)}
+/* Résultats */
+.result-item{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:8px;display:flex;align-items:center;gap:10px}
+.result-item .score{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0}
+.score.ok{background:#dcfce7;color:#166534}
+.score.no{background:#fee2e2;color:#991b1b}
 
-/* ===== PLAN SHEET ===== */
-.sheet-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);z-index:50;display:none;align-items:flex-end;justify-content:center}
-.sheet-overlay.show{display:flex}
-.sheet{background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:500px;padding:24px;max-height:80vh;overflow-y:auto}
-.sheet h3{font-size:18px;font-weight:800;margin-bottom:8px}
-.sheet .sub{font-size:13px;color:var(--ink-soft);margin-bottom:16px}
-.plan-card{background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px}
-.plan-card.actif{border-color:var(--primary);background:var(--primary-l)}
-.plan-card .p-name{font-size:16px;font-weight:700;margin-bottom:4px}
-.plan-card .p-price{font-size:20px;font-weight:800;color:var(--primary);margin-bottom:8px}
-.plan-card .p-feats{font-size:12px;color:var(--ink-soft);line-height:1.6}
+/* Historique */
+.hist-item{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:8px}
+.hist-item .t{font-size:12px;color:var(--ink-soft)}
+.hist-item .c{font-size:13px;margin-top:4px}
 
-.hidden{display:none!important}
+/* Abonnement */
+.plan-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin-bottom:12px;box-shadow:var(--shadow)}
+.plan-card.current{border:2px solid var(--violet);background:var(--violet-light)}
+.plan-card .nm{font-size:16px;font-weight:700}
+.plan-card .pr{font-size:24px;font-weight:800;color:var(--bleu);margin:4px 0}
+.plan-card .desc{font-size:12px;color:var(--ink-soft);margin-bottom:8px}
+.quota-bar{background:var(--bg);border-radius:8px;height:8px;overflow:hidden;margin:6px 0}
+.quota-bar .fill{height:100%;background:var(--grad);border-radius:8px;transition:.3s}
+
+/* Profil */
+.prof-header{background:var(--grad);color:#fff;border-radius:var(--radius);padding:20px;text-align:center;margin-bottom:16px}
+.prof-header .av{width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 10px}
+.prof-header .nm{font-size:18px;font-weight:800}
+.prof-header .lv{font-size:13px;opacity:.9;margin-top:2px}
+.prof-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;align-items:center;gap:12px;cursor:pointer;margin-bottom:8px;transition:.2s}
+.prof-card:active{transform:scale(.98)}
+.prof-card .ic{font-size:22px}
+.prof-card .lb{font-size:14px;font-weight:600;flex:1}
+.prof-card .val{font-size:13px;color:var(--ink-soft)}
+
+/* More menu */
+.more-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.more-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 12px;text-align:center;cursor:pointer;transition:.2s;box-shadow:var(--shadow)}
+.more-card:active{transform:scale(.96)}
+.more-card .ic{font-size:32px;margin-bottom:8px}
+.more-card .lb{font-size:13px;font-weight:600}
+
+/* Back button */
+.back-row{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.back-btn{background:var(--card);border:1px solid var(--line);width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
+
+/* Footer (pied de page) */
+.app-footer{padding:20px 16px 70px;text-align:center;font-size:11px;color:var(--ink-soft);border-top:1px solid var(--line);margin-top:20px}
+.app-footer .logo-row{display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:6px}
+.app-footer .logo-text{font-size:14px;font-weight:900}
+.app-footer .logo-text span{color:var(--violet)}
+.app-footer p{margin-top:4px}
+
+@media(min-width:768px){
+  body{max-width:480px;margin:0 auto;box-shadow:var(--shadow-lg)}
+  .tabbar{max-width:480px;left:50%;transform:translateX(-50%)}
+}
+
+  .lang-item{padding:14px 16px;border-bottom:1px solid var(--line);cursor:pointer;font-size:15px;display:flex;align-items:center;gap:10px}
+  .lang-item:hover{background:var(--violet-light)}
+  .lang-item span{font-size:20px}
 </style>
 <script>window.__ECOLEMAX_API__ = "https://ecolemax.onrender.com";</script>
 </head>
 <body>
-<div id="app">
 
-<!-- ==================== AUTH ==================== -->
-<div class="auth-wrap screen active" id="screen-auth">
-  <div class="bg-math">
-    <div class="bg-shape s1"></div>
-    <div class="bg-shape s2"></div>
-    <div class="bg-shape s3"></div>
-    <div class="bg-sym" style="top:15%;left:10%">π</div>
-    <div class="bg-sym" style="top:25%;right:15%">∑</div>
-    <div class="bg-sym" style="top:60%;left:8%">∫</div>
-    <div class="bg-sym" style="top:70%;right:10%">√</div>
-    <div class="bg-sym" style="top:45%;left:5%">Δ</div>
-    <div class="bg-sym" style="bottom:20%;right:20%">∞</div>
-    <div class="bg-sym" style="top:85%;left:30%">π</div>
-    <div class="bg-sym" style="top:10%;left:60%">∑</div>
+<!-- LOGO intégré (SVG) -->
+<svg style="position:absolute;top:-9999px" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <defs><linearGradient id="lgA" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0%" stop-color="#1565d8"/><stop offset="100%" stop-color="#7c3aed"/>
+  </linearGradient></defs>
+  <rect width="100" height="100" rx="22" fill="url(#lgA)"/>
+  <text x="50" y="70" font-size="46" text-anchor="middle" fill="white" font-family="Arial" font-weight="bold">EM</text>
+</svg>
+
+<!-- AUTH -->
+<div class="screen active" id="screen-auth">
+  <div class="auth-card">
+    <div class="logo-row">
+      <svg class="logo-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <rect width="100" height="100" rx="22" fill="url(#lgA)"/>
+        <text x="50" y="70" font-size="46" text-anchor="middle" fill="white" font-family="Arial" font-weight="bold">EM</text>
+      </svg>
+      <div class="lt">École<span>Max</span></div>
+    </div>
+    <h3>🎓 Espace Élève</h3>
+    <div class="alert" id="authAlert"></div>
+    <div id="authForm">
+      <form onsubmit="doLogin(event)">
+        <div class="field"><label>Pseudo</label><input id="lPseudo" required placeholder="Ton pseudo"></div>
+        <div class="field"><label>Mot de passe</label><input id="lMdp" type="password" required placeholder="8+ caractères"></div>
+        <button class="btn btn-primary btn-block" type="submit">Se connecter</button>
+      </form>
+      <p style="text-align:center;margin-top:14px;font-size:13px;color:var(--ink-soft)">Pas encore inscrit ? <a href="#" onclick="showRegister();return false">S'inscrire — Essai 48 H gratuit</a></p>
+      <p style="text-align:center;margin-top:8px;font-size:12px;color:var(--ink-soft)"><a href="#" onclick="doReset();return false">Mot de passe oublié ?</a></p>
+    </div>
+    <div id="authRegister" style="display:none">
+      <form onsubmit="doRegister(event)">
+        <div class="field"><label>Pseudo</label><input id="rPseudo" required placeholder="3+ caractères"></div>
+        <div class="field"><label>Email (optionnel)</label><input id="rEmail" type="email"></div>
+        <div class="field"><label>Mot de passe</label><input id="rMdp" type="password" required placeholder="8+ caractères, lettre + chiffre"></div>
+        <div class="field"><label>Niveau</label>
+          <select id="rNiveau"><option>CM1</option><option>CM2</option><option>6ème</option><option>5ème</option><option>4ème</option><option>3ème</option><option>2nde</option><option>1ère</option><option>Terminale</option><option>Université L1</option><option>Université L2</option><option>Université L3</option></select>
+        </div>
+        <button class="btn btn-primary btn-block" type="submit">Créer mon compte</button>
+      </form>
+      <p style="text-align:center;margin-top:14px;font-size:13px;color:var(--ink-soft)">Déjà inscrit ? <a href="#" onclick="showLogin();return false">Se connecter</a></p>
+    </div>
   </div>
-  <svg class="logo-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stop-color="#15a05a"/>
-        <stop offset="100%" stop-color="#2dd4bf"/>
-      </linearGradient>
-    </defs>
-    <circle cx="50" cy="50" r="44" fill="url(#lg)"/>
-    <path d="M30 68 L30 36 L50 44 L70 36 L70 68" stroke="white" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-    <circle cx="50" cy="28" r="6" fill="white"/>
-    <path d="M44 28 L50 34 L56 28" stroke="#15a05a" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>
-  <div class="logo-text">ÉcoleMax</div>
-  <p class="auth-sub">L'AI gratuite qui aide les élèves du Sénégal à réussir</p>
-  <div class="auth-tabs">
-    <div class="auth-tab active" onclick="switchAuth('register')">S'inscrire</div>
-    <div class="auth-tab" onclick="switchAuth('login')">Se connecter</div>
-  </div>
-  <div class="auth-err" id="authErr"></div>
-  <div class="auth-ok" id="authOk"></div>
-  <form class="auth-form" onsubmit="return false" id="authForm">
-    <div id="regFields">
-      <div class="field"><label>Pseudo</label><input type="text" id="pseudo" placeholder="3+ caractères" autocomplete="off"></div>
-      <div class="field"><label>Mot de passe</label><input type="password" id="mdp" placeholder="8+ lettre + chiffre"><span class="pwd-toggle" onclick="togglePwd('mdp',this)">👁️</span></div>
-      <div class="field"><label>Niveau</label>
-        <select id="niveau">
-          <option value="Collège">Collège</option>
-          <option value="Lycée">Lycée</option>
-          <option value="Terminale">Terminale</option>
-          <option value="Bac">Bac (1ère/2ème)</option>
-          <option value="Université">Université</option>
-        </select>
+</div>
+
+<!-- APP PRINCIPALE (cachée si non connecté) -->
+<div id="appMain" style="display:none">
+  <header class="app-header">
+    <div class="logo-row">
+      <svg class="logo-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <rect width="100" height="100" rx="22" fill="url(#lgA)"/>
+        <text x="50" y="70" font-size="46" text-anchor="middle" fill="white" font-family="Arial" font-weight="bold">EM</text>
+      </svg>
+      <div class="logo-text">École<span>Max</span></div>
+    </div>
+    <div class="header-right">
+      <button class="icon-btn notif-badge" onclick="goToTab('notifs')" id="notifBtn">🔔<span class="dot" id="notifDot" style="display:none">0</span></button>
+      <button class="icon-btn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+    </div>
+  </header>
+
+  <!-- TABLEAU DE BORD -->
+  <div class="screen" id="screen-home">
+    <div class="dash-hero">
+      <h2>Bonjour, <span id="dashPseudo">Élève</span> 👋</h2>
+      <p id="dashPlan">Essai gratuit 48 H · tout débloqué</p>
+    </div>
+    <div class="stat-row">
+      <div class="stat-card"><div class="v" id="statEx">0</div><div class="l">Exercices faits</div></div>
+      <div class="stat-card"><div class="v" id="statCorr">0</div><div class="l">Corrections</div></div>
+      <div class="stat-card"><div class="v" id="statNotif">0</div><div class="l">Notifications</div></div>
+      <div class="stat-card"><div class="v" id="statFav">0</div><div class="l">Favoris</div></div>
+    </div>
+    <div class="section-title">Accès rapide</div>
+    <div class="quick-grid">
+      <div class="quick-btn" onclick="goToTab('chat')"><div class="ic">🤖</div><div class="lb">Professeur IA</div></div>
+      <div class="quick-btn" onclick="goToTab('photo')"><div class="ic">📸</div><div class="lb">Scanner</div></div>
+      <div class="quick-btn" onclick="goToTab('text')"><div class="ic">✍️</div><div class="lb">Correcteur</div></div>
+    </div>
+    <div class="section-title">Menu complet</div>
+    <div class="more-grid">
+      <div class="more-card" onclick="goToTab('exercises')"><div class="ic">📚</div><div class="lb">Exercices</div></div>
+      <div class="more-card" onclick="goToTab('matieres')"><div class="ic">🎨</div><div class="lb">Matières</div></div>
+      <div class="more-card" onclick="goToTab('results')"><div class="ic">📊</div><div class="lb">Résultats</div></div>
+      <div class="more-card" onclick="goToTab('history')"><div class="ic">🕒</div><div class="lb">Historique</div></div>
+      <div class="more-card" onclick="goToTab('abonnement')"><div class="ic">💎</div><div class="lb">Abonnement</div></div>
+      <div class="more-card" onclick="goToTab('more')"><div class="ic">⚙️</div><div class="lb">Paramètres</div></div>
+    </div>
+    <div class="app-footer">
+      <div class="logo-row">
+        <svg class="logo-svg" style="width:24px;height:24px" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <rect width="100" height="100" rx="22" fill="url(#lgA)"/>
+          <text x="50" y="70" font-size="46" text-anchor="middle" fill="white" font-family="Arial" font-weight="bold">EM</text>
+        </svg>
+        <div class="logo-text">École<span>Max</span></div>
       </div>
-    </div>
-    <div id="loginFields" class="hidden">
-      <div class="field"><label>Pseudo</label><input type="text" id="loginPseudo" placeholder="Ex: Aminata" autocomplete="off"></div>
-      <div class="field"><label>Mot de passe</label><input type="password" id="loginMdp" placeholder="Mot de passe"><span class="pwd-toggle" onclick="togglePwd('loginMdp',this)">👁️</span></div>
-      <button class="btn btn-ghost" style="font-size:13px;padding:8px" onclick="showReset()">🔑 Mot de passe oublié ?</button>
-    </div>
-    <button class="btn btn-primary" id="authBtn" onclick="doAuth()">S'inscrire</button>
-  </form>
-  <button class="btn btn-ghost" style="width:100%;margin-top:10px;font-size:14px" onclick="enterGuest()">💬 Poser une question sans inscription</button>
-  <p class="auth-note">Essai gratuit 24 h — tout débloqué. Aucun paiement requis.</p>
-  <p class="auth-note">Créé par <strong>SycheikhCorp</strong> © 2026</p>
-</div>
-
-<!-- ==================== RESET ==================== -->
-<div class="auth-wrap screen" id="screen-reset">
-  <div class="bg-math">
-    <div class="bg-shape s1"></div>
-    <div class="bg-shape s2"></div>
-    <div class="bg-sym" style="top:15%;left:10%">π</div>
-    <div class="bg-sym" style="top:25%;right:15%">∑</div>
-    <div class="bg-sym" style="top:60%;left:8%">∫</div>
-    <div class="bg-sym" style="top:70%;right:10%">√</div>
-  </div>
-  <svg class="logo-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="50" cy="50" r="44" fill="url(#lg)"/>
-    <path d="M30 68 L30 36 L50 44 L70 36 L70 68" stroke="white" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-    <circle cx="50" cy="28" r="6" fill="white"/>
-    <path d="M44 28 L50 34 L56 28" stroke="#15a05a" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>
-  <div class="logo-text">Réinitialiser</div>
-  <div class="reset-steps">
-    <div id="resetStep1">
-      <div class="field"><label>Pseudo</label><input type="text" id="resetPseudo" placeholder="Pseudo" autocomplete="off"></div>
-      <div class="field"><label>Contact (email ou téléphone)</label><input type="text" id="resetContact" placeholder="Ex: 770000000"></div>
-      <div class="auth-err" id="resetErr"></div>
-      <div class="auth-ok" id="resetOk"></div>
-      <button class="btn btn-primary" onclick="resetRequest()">Envoyer code</button>
-    </div>
-    <div id="resetStep2" class="hidden">
-      <div class="field"><label>Code</label><input type="text" id="resetCode" placeholder="Code reçu"></div>
-      <div class="field"><label>Nouveau mot de passe</label><input type="password" id="resetMdp" placeholder="8+ lettre + chiffre"><span class="pwd-toggle" onclick="togglePwd('resetMdp',this)">👁️</span></div>
-      <div class="auth-err" id="resetErr2"></div>
-      <div class="auth-ok" id="resetOk2"></div>
-      <button class="btn btn-primary" onclick="resetVerify()">Réinitialiser</button>
+      <p>Créé par SYCHEIKHCORP · Dakar, Sénégal</p>
     </div>
   </div>
-  <button class="btn btn-ghost" style="margin-top:12px" onclick="switchAuth('login')">← Retour</button>
-</div>
 
-<!-- ==================== HOME ==================== -->
-<div class="screen" id="screen-home">
-  <div class="bg-math">
-    <div class="bg-shape s1"></div>
-    <div class="bg-shape s2"></div>
-    <div class="bg-sym" style="top:5%;right:8%">π</div>
-    <div class="bg-sym" style="top:20%;left:5%">∑</div>
-    <div class="bg-sym" style="top:50%;right:3%">√</div>
-    <div class="bg-sym" style="bottom:10%;left:10%">∫</div>
+  <!-- PROFESSEUR IA -->
+  <div class="screen" id="screen-chat">
+    <div class="chat-header"><h3>🤖 Professeur IA</h3><p>Pose ta question — réponses pédagogiques</p></div>
+    <div class="chat-messages" id="chatMsgs">
+      <div class="msg bot">Bonjour ! Je suis ton Professeur IA d'ÉcoleMax. Pose-moi une question de cours, un exercice, ou demande-moi de résoudre un problème. 💡</div>
+    </div>
+    <div class="suggest-row">
+      <div class="suggest-chip" onclick="askSuggest('Explique la photosynthèse.')">Photosynthèse</div>
+      <div class="suggest-chip" onclick="askSuggest('2+2 = ?')">2+2</div>
+      <div class="suggest-chip" onclick="askSuggest('Explique la loi de Newton F=ma')">Newton</div>
+      <div class="suggest-chip" onclick="askSuggest('Capitale du Sénégal ?')">Dakar</div>
+    </div>
+    <div class="chat-input-row">
+      <input type="text" id="chatInput" placeholder="Ta question..." onkeydown="if(event.key==='Enter')askIA()">
+      <button class="btn btn-primary" onclick="askIA()">➤</button>
+    </div>
   </div>
-  <div style="position:relative;z-index:1">
-  <div class="topbar">
-    <div><div class="greet" id="greetName">👋</div><div class="sub" id="greetSub">—</div></div>
-  </div>
-  <div class="home-desc">
-    <div class="hd-title">📚 Bienvenue sur ÉcoleMax</div>
-    <div class="hd-sub">L'assistant IA gratuit qui aide les élèves du Sénégal à comprendre et réussir leurs études — en wolof et en français.</div>
-  </div>
-  <div class="banner" id="planBanner">
-    <div class="b-title" id="bannerTitle">—</div>
-    <div class="b-sub" id="bannerSub">—</div>
-    <div class="b-cta" id="bannerCta"></div>
-  </div>
-  <div class="quick-row">
-    <div class="quick-btn" onclick="goToTab('chat')"><div class="ic">🤖</div><div class="lb">IA Chat</div></div>
-    <div class="quick-btn" onclick="goToTab('photo')"><div class="ic">📸</div><div class="lb">Photo</div></div>
-    <div class="quick-btn" onclick="goToTab('profile')"><div class="ic">👤</div><div class="lb">Profil</div></div>
-  </div>
-  <div class="sec-title">🎓 Matières</div>
-  <div class="subj-grid" id="subjGrid"></div>
-  </div>
-</div>
 
-<!-- ==================== SUBJECT ==================== -->
-<div class="screen" id="screen-subject">
-  <div class="topbar"><div class="greet" id="subjTitle">Matière</div><div class="lang-toggle" onclick="goToTab('home')">← Retour</div></div>
-  <div id="chapList"></div>
-</div>
+  <!-- SCANNER EXERCICE -->
+  <div class="screen" id="screen-photo">
+    <div class="chat-header"><h3>📸 Scanner un exercice</h3><p>Photo, reconnaissance, résolution étape par étape</p></div>
+    <div class="photo-area">
+      <label class="photo-btn">
+        <div class="ic">📷</div>
+        <div class="lb">Prendre une photo ou choisir dans la galerie</div>
+        <input type="file" accept="image/*" capture="environment" onchange="onPhotoSelected(event)" style="display:none">
+      </label>
+      <img class="photo-preview" id="photoPreview">
+    </div>
+    <div class="field"><label>Question (optionnel)</label><input type="text" id="photoQuestion" placeholder="Ex: Résous et explique étape par étape."></div>
+    <button class="btn btn-primary btn-block" id="photoBtn" onclick="analyzePhoto()" disabled>🔍 Analyser et corriger</button>
+    <div class="alert" id="photoAlert"></div>
+    <div id="photoResult" style="margin-top:12px"></div>
+  </div>
 
-<!-- ==================== CHAT ==================== -->
-<div class="screen chat-screen" id="screen-chat">
-  <div class="chat-header"><h3>🤖 Assistant IA</h3><p>Posez vos questions en wolof ou français.</p></div>
-  <div class="suggest-row">
-    <div class="suggest-chip" onclick="askSuggest('Quelle est la capitale du Sénégal ?')">Capitale Sénégal</div>
-    <div class="suggest-chip" onclick="askSuggest('Explique la photosynthèse.')">Photosynthèse</div>
-    <div class="suggest-chip" onclick="askSuggest('Dérivée de x² ?')">Dérivée</div>
-    <div class="suggest-chip" onclick="askSuggest('sutu rekk')">Wolof</div>
-  </div>
-  <div class="chat-msgs" id="chatMsgs"></div>
-  <div class="chat-input-row">
-    <input type="text" id="chatInput" placeholder="Posez une question..." onkeydown="if(event.key==='Enter')sendChat()">
-    <button onclick="sendChat()">➤</button>
-  </div>
-</div>
-
-<!-- ==================== PHOTO ==================== -->
-<div class="screen chat-screen" id="screen-photo">
-  <div class="chat-header"><h3>📸 Correction Photo</h3><p>Prenez en photo votre problème.</p></div>
-  <div class="photo-area">
-    <label class="photo-btn">
-      <div class="ic">📷</div>
-      <div class="lb">Prendre une photo</div>
-      <input type="file" accept="image/*" capture="environment" onchange="onPhotoSelected(event)" style="display:none">
-    </label>
-    <img class="photo-preview" id="photoPreview">
-  </div>
-  <div class="field"><label>Question (optionnel)</label><input type="text" id="photoQuestion" placeholder="Ex: Explique et corrige."></div>
-  <div id="photoResult" style="margin-top:12px"></div>
-  <button class="btn btn-primary" id="photoBtnSend" style="margin-top:12px" disabled onclick="sendPhoto()">Corriger</button>
-</div>
-
-<!-- ==================== PROFILE ==================== -->
-<div class="screen" id="screen-profile">
-  <div class="prof-header"><div class="prof-avatar">👤</div><div class="prof-name" id="profName">—</div><div class="prof-plan" id="profPlan">—</div></div>
-  <div class="prof-card">
-    <div class="sec-title">📊 Usage aujourd'hui</div>
-    <div class="prof-row"><span class="k">Questions IA</span><span class="v" id="quotaIA">—</span></div>
-    <div class="quota-bar"><div class="quota-fill" id="quotaBar" style="width:0%"></div></div>
-  </div>
-  <div class="prof-card">
-    <div class="sec-title">💳 Abonnement</div>
-    <div class="prof-row"><span class="k">Plan</span><span class="v" id="planName">—</span></div>
-    <div class="prof-row"><span class="k">Niveau</span><span class="v" id="profNiveau">—</span></div>
-    <div class="prof-row"><span class="k">Expiration</span><span class="v" id="planExp">—</span></div>
-    <div class="prof-row"><span class="k">Statut</span><span class="v" id="planStatus">—</span></div>
-    <div style="margin-top:12px"><button class="btn btn-ghost" onclick="showPlans()">🔍 Voir les plans</button></div>
-  </div>
-  <div class="prof-card"><button class="btn btn-ghost" onclick="showHistory()">🕒 Voir l'historique</button></div>
-  <div class="prof-card"><button class="btn btn-ghost" onclick="goToTab('iaadmin')">🤖 IA Admin — Poser des questions</button></div>
-  <div class="prof-card"><button class="btn btn-danger" onclick="logout()">🚪 Déconnexion</button></div>
-  <p style="text-align:center;font-size:10px;color:var(--ink-soft);padding:16px">ÉcoleMax — Créé par <strong>SycheikhCorp</strong> © 2026</p>
-</div>
-
-<!-- ==================== IA ADMIN ==================== -->
-<div class="screen chat-screen" id="screen-ia-admin">
-  <div class="chat-header"><h3>🤖 IA Admin</h3><p>Posez une question pour le site et l'application.</p></div>
-  <div class="suggest-row">
-    <div class="suggest-chip" onclick="iaAsk('Quelle est la capitale du Sénégal ?')">Capitale Sénégal</div>
-    <div class="suggest-chip" onclick="iaAsk('Explique la photosynthèse.')">Photosynthèse</div>
-    <div class="suggest-chip" onclick="iaAsk('Dérivée de x² ?')">Dérivée</div>
-  </div>
-  <div class="ia-targets">
-    <span class="tag tag-site" onclick="iaSetTarget('site')">🌐 Site</span>
-    <span class="tag tag-app" onclick="iaSetTarget('app')">📱 App</span>
-    <span class="tag tag-all" onclick="iaSetTarget('all')">✅ Tous</span>
-  </div>
-  <div class="ia-msgs" id="iaMsgs"></div>
-  <div class="ia-input-row">
-    <input type="text" id="iaInput" placeholder="Posez une question..." onkeydown="if(event.key==='Enter')iaSend()">
-    <button onclick="iaSend()">➤</button>
-  </div>
-</div>
-
-<!-- ==================== CORRECTEUR DE TEXTE ==================== -->
-<div class="screen chat-screen" id="screen-text">
-  <div class="chat-header"><h3>✍️ Correcteur de texte</h3><p>Corrigez votre rédaction</p></div>
-  <div style="padding:12px">
-    <textarea id="textInput" placeholder="Copiez votre texte ici (rédaction, dissertation, grammaire)..." style="width:100%;min-height:120px;border:1px solid var(--line);border-radius:12px;padding:12px;font-family:inherit;font-size:14px;resize:vertical;outline:none"></textarea>
+  <!-- CORRECTEUR DE TEXTE -->
+  <div class="screen" id="screen-text">
+    <div class="chat-header"><h3>✍️ Correcteur de texte</h3><p>Orthographe, grammaire, conjugaison</p></div>
+    <div class="field"><label>Texte à corriger</label>
+      <textarea id="textInput" rows="5" placeholder="Écris ou colle ton texte... (10+ caractères)"></textarea>
+    </div>
     <div style="display:flex;gap:8px;margin-bottom:12px">
-      <button class="btn btn-primary" style="flex:1" onclick="correctText()">✍️ Corriger</button>
-      <button class="btn btn-ghost" onclick="document.getElementById('textInput').value='';document.getElementById('correctResult').style.display='none'">🗑️ Effacer</button>
+      <button class="btn btn-primary" style="flex:1" onclick="correctText()">✅ Corriger</button>
+      <button class="btn btn-outline" onclick="document.getElementById('textInput').value='';document.getElementById('correctResult').innerHTML='';document.getElementById('textInput').focus()">🗑 Effacer</button>
     </div>
-    <div id="correctResult" style="display:none">
-      <div class="sec-title">✅ Texte corrigé</div>
-      <div id="correctTextOut" style="background:var(--primary-l);border-radius:12px;padding:12px;margin-bottom:12px;white-space:pre-wrap"></div>
-      <div class="sec-title">📖 Explications</div>
-      <div id="correctExpl" style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;white-space:pre-wrap"></div>
-      <button class="btn btn-ghost" style="width:100%;margin-top:12px" onclick="saveCorrection()">💾 Enregistrer dans l'historique</button>
+    <div class="alert" id="textAlert"></div>
+    <div id="correctResult"></div>
+    <div style="margin-top:12px">
+      <button class="btn btn-violet btn-block" onclick="saveCorrection()">💾 Enregistrer dans l'historique</button>
     </div>
   </div>
-</div>
 
-<!-- ==================== EXERCICES ==================== -->
-<div class="screen chat-screen" id="screen-exercises">
-  <div class="chat-header"><h3>📚 Exercices</h3><p>Testez vos connaissances</p></div>
-  <div id="exList" style="padding:12px"></div>
-</div>
-
-<!-- ==================== HISTORIQUE ==================== -->
-<div class="screen chat-screen" id="screen-history">
-  <div class="chat-header"><h3>🕒 Historique</h3><p>Vos corrections enregistrées</p></div>
-  <div id="histList" style="padding:12px"></div>
-</div>
-
-<!-- ==================== TAB BAR ==================== -->
-<div class="tabbar" id="tabbar">
-  <div class="tab active" onclick="goToTab('home')"><span class="ic">🏠</span>Accueil</div>
-  <div class="tab" onclick="goToTab('chat')"><span class="ic">🤖</span>IA</div>
-  <div class="tab" onclick="goToTab('text')"><span class="ic">✍️</span>Texte</div>
-  <div class="tab" onclick="goToTab('photo')"><span class="ic">📸</span>Photo</div>
-  <div class="tab" onclick="goToTab('exercises')"><span class="ic">📚</span>Exercices</div>
-  <div class="tab" onclick="goToTab('profile')"><span class="ic">👤</span>Profil</div>
-</div>
-
-<!-- ==================== PLAN SHEET ==================== -->
-<div class="sheet-overlay" id="planSheet" onclick="if(event.target===this)closePlans()">
-  <div class="sheet">
-    <h3>📋 Plans d'abonnement</h3>
-    <p class="sub">Essai gratuit 24 h déjà actif. Passez à un plan pour continuer après.</p>
-    <div id="planList"></div>
-    <button class="btn btn-ghost" style="margin-top:12px" onclick="closePlans()">Fermer</button>
+  <!-- EXERCICES -->
+  <div class="screen" id="screen-exercises">
+    <div class="back-row"><button class="back-btn" onclick="goToTab('home')">←</button><div class="section-title" style="margin:0">📚 Bibliothèque d'exercices</div></div>
+    <div id="exFilters" style="margin-bottom:12px">
+      <div class="field"><label>Filtrer par matière</label><select id="exSujet" onchange="loadExercises()"><option value="">Toutes</option></select></div>
+      <div class="field"><label>Filtrer par niveau</label><select id="exNiveau" onchange="loadExercises()"><option value="">Tous</option><option>CM1</option><option>CM2</option><option>6ème</option><option>5ème</option><option>4ème</option><option>3ème</option><option>2nde</option><option>1ère</option><option>Terminale</option><option>Université L1</option><option>Université L2</option><option>Université L3</option></select></div>
+    </div>
+    <div id="exList"></div>
   </div>
-</div>
 
+  <!-- MATIERES -->
+  <div class="screen" id="screen-matieres">
+    <div class="back-row"><button class="back-btn" onclick="goToTab('home')">←</button><div class="section-title" style="margin:0">🎨 Matières & Cours</div></div>
+    <div class="subject-grid" id="subjectsGrid"></div>
+  </div>
+
+  <!-- RESULTATS -->
+  <div class="screen" id="screen-results">
+    <div class="back-row"><button class="back-btn" onclick="goToTab('home')">←</button><div class="section-title" style="margin:0">📊 Résultats</div></div>
+    <div id="resultsList"></div>
+  </div>
+
+  <!-- HISTORIQUE -->
+  <div class="screen" id="screen-history">
+    <div class="back-row"><button class="back-btn" onclick="goToTab('home')">←</button><div class="section-title" style="margin:0">🕒 Historique des corrections</div></div>
+    <div id="histList"></div>
+  </div>
+
+  <!-- ABONNEMENT -->
+  <div class="screen" id="screen-abonnement">
+    <div class="back-row"><button class="back-btn" onclick="goToTab('home')">←</button><div class="section-title" style="margin:0">💎 Abonnement</div></div>
+    <div class="alert" id="abAlert"></div>
+    <div class="card" id="myPlan"></div>
+    <div class="section-title">Choisis ton abonnement</div>
+    <div id="plansList"></div>
+  </div>
+
+  <!-- PROFIL & PARAMETRES -->
+  <div class="screen" id="screen-profile">
+    <div class="prof-header">
+      <div class="av" id="profAv">👤</div>
+      <div class="nm" id="profPseudo">Élève</div>
+      <div class="lv" id="profNiveau">Terminale</div>
+    </div>
+    <div class="card">
+      <div class="prof-card" onclick="goToTab('more')"><div class="ic">⚙️</div><div class="lb">Paramètres</div><div class="val">→</div></div>
+      <div class="prof-card" onclick="goToTab('abonnement')"><div class="ic">💎</div><div class="lb">Abonnement actuel</div><div class="val" id="profPlan">—</div></div>
+      <div class="prof-card" onclick="goToTab('history')"><div class="ic">🕒</div><div class="lb">Historique</div><div class="val">→</div></div>
+      <div class="prof-card" onclick="goToTab('results')"><div class="ic">📊</div><div class="lb">Résultats</div><div class="val">→</div></div>
+      <div class="prof-card" onclick="goToTab('notifs')"><div class="ic">🔔</div><div class="lb">Notifications</div><div class="val" id="profNotif">0</div></div>
+      <div class="prof-card" onclick="goToTab('text')"><div class="ic">✍️</div><div class="lb">Correcteur de texte</div><div class="val">→</div></div>
+      <div class="prof-card" onclick="goToTab('photo')"><div class="ic">📸</div><div class="lb">Scanner d'exercice</div><div class="val">→</div></div>
+      <div class="prof-card" onclick="openSupport()"><div class="ic">💬</div><div class="lb">Support</div><div class="val">→</div></div>
+      <div class="prof-card" onclick="logout()"><div class="ic" style="color:var(--err)">🚪</div><div class="lb">Déconnexion</div><div class="val">→</div></div>
+    </div>
+  </div>
+
+  <!-- MORE (paramètres) -->
+  <div class="screen" id="screen-more">
+    <div class="back-row"><button class="back-btn" onclick="goToTab('home')">←</button><div class="section-title" style="margin:0">⚙️ Paramètres</div></div>
+    <div class="card">
+      <div class="prof-card" onclick="goToTab('chat')"><div class="ic">🤖</div><div class="lb">Professeur IA</div><div class="val">→</div></div>
+      <div class="prof-card" onclick="goToTab('text')"><div class="ic">✍️</div><div class="lb">Correcteur de texte</div><div class="val">→</div></div>
+      <div class="prof-card" onclick="goToTab('photo')"><div class="ic">📸</div><div class="lb">Scanner exercice</div><div class="val">→</div></div>
+      <div class="prof-card" onclick="goToTab('exercises')"><div class="ic">📚</div><div class="lb">Exercices</div><div class="val">→</div></div>
+      <div class="prof-card" onclick="goToTab('matieres')"><div class="ic">🎨</div><div class="lb">Matières</div><div class="val">→</div></div>
+      <div class="prof-card" onclick="goToTab('results')"><div class="ic">📊</div><div class="lb">Résultats</div><div class="val">→</div></div>
+      <div class="prof-card" onclick="goToTab('history')"><div class="ic">🕒</div><div class="lb">Historique</div><div class="val">→</div></div>
+      <div class="prof-card" onclick="goToTab('notifs')"><div class="ic">🔔</div><div class="lb">Notifications</div><div class="val">→</div></div>
+      <div class="prof-card" onclick="goToTab('abonnement')"><div class="ic">💎</div><div class="lb">Abonnement</div><div class="val">→</div></div>
+      <div class="prof-card" onclick="openSupport()"><div class="ic">💬</div><div class="lb">Support technique</div><div class="val">→</div></div>
+      <div class="prof-card" onclick="toggleTheme()"><div class="ic">🌙</div><div class="lb">Mode clair / sombre</div><div class="val" id="modeVal">clair</div></div>
+      <div class="prof-card" onclick="showLangPicker()"><div class="ic">🌍</div><div class="lb">Langue</div><div class="val" id="langVal">Français</div></div>
+      <div class="prof-card" onclick="goToTab('profile')"><div class="ic">👤</div><div class="lb">Profil</div><div class="val">→</div></div>
+      <div class="prof-card" onclick="logout()"><div class="ic" style="color:var(--err)">🚪</div><div class="lb">Déconnexion</div><div class="val">→</div></div>
+    </div>
+    <div class="app-footer">
+      <div class="logo-row">
+        <svg class="logo-svg" style="width:24px;height:24px" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <rect width="100" height="100" rx="22" fill="url(#lgA)"/>
+          <text x="50" y="70" font-size="46" text-anchor="middle" fill="white" font-family="Arial" font-weight="bold">EM</text>
+        </svg>
+        <div class="logo-text">École<span>Max</span></div>
+      </div>
+      <p>Créé par SYCHEIKHCORP · Dakar, Sénégal</p>
+    </div>
+  </div>
+
+  <!-- NOTIFICATIONS -->
+  <div class="screen" id="screen-notifs">
+    <div class="back-row"><button class="back-btn" onclick="goToTab('home')">←</button><div class="section-title" style="margin:0">🔔 Notifications</div></div>
+    <div id="notifsList"></div>
+  </div>
+
+  <!-- Tabbar -->
+  <nav class="tabbar">
+    <button onclick="goToTab('home')" data-tab="home"><span class="ic">🏠</span>Accueil</button>
+    <button onclick="goToTab('chat')" data-tab="chat"><span class="ic">🤖</span>IA</button>
+    <button onclick="goToTab('exercises')" data-tab="exercises"><span class="ic">📚</span>Exercices</button>
+    <button onclick="goToTab('more')" data-tab="more"><span class="ic">⚙️</span>Plus</button>
+    <button onclick="goToTab('profile')" data-tab="profile"><span class="ic">👤</span>Profil</button>
+  </nav>
 </div>
 
 <script>
-var API=window.__ECOLEMAX_API__||"https://ecolemax.onrender.com";
-var token=localStorage.getItem("ecolemax_token")||"";
-var user=null;
-var SUBJECTS=[
-  {ic:"📐",nm:"Maths",nb:"Calcul"},
-  {ic:"🔬",nm:"Physique",nb:"Mécanique"},
-  {ic:"🧪",nm:"Chimie",nb:"Réactions"},
-  {ic:"🧬",nm:"SVT",nb:"Biologie"},
-  {ic:"🌍",nm:"Géographie",nb:"Sénégal"},
-  {ic:"📜",nm:"Histoire",nb:"Afrique"},
-  {ic:"📖",nm:"Français",nb:"Grammaire"},
-  {ic:"🇬🇧",nm:"Anglais",nb:"Vocabulary"},
-  {ic:"🇸🇳",nm:"Wolof",nb:"Sunu yëngu"},
-  {ic:"🕌",nm:"Arabe",nb:"Islam"},
-  {ic:"🤔",nm:"Philosophie",nb:"Réflexion"},
-  {ic:"💰",nm:"Économie",nb:"Market"},
-  {ic:"💻",nm:"Informatique",nb:"Code"},
-  {ic:"🔢",nm:"Algèbre",nb:"Équations"},
-  {ic:"📊",nm:"Statistiques",nb:"Données"},
-  {ic:"⚗️",nm:"Géométrie",nb:"Formes"},
-  {ic:"🧠",nm:"Méthodes",nb:"Apprentissage"},
-  {ic:"🎓",nm:"Examens",nb:"Annales"}
-];
-var CHAPTERS={
-  "Maths":["Algèbre","Analyse","Géométrie","Statistiques","Logique"],
-  "Physique":["Mécanique","Optique","Thermodynamique","Électricité","Ondes"],
-  "Chimie":["Chimie organique","Chimie minérale","Stoechiométrie","Thermodynamique","Electrochimie"],
-  "SVT":["Anatomie","Physiologie","Botanique","Zoologie","Écologie"],
-  "Géographie":["Sénégal","Afrique","Cartographie","Climat","Économie"],
-  "Histoire":["Sénégal","Afrique","Monde","Guerres","Révolutions"],
-  "Français":["Grammaire","Conjugaison","Vocabulaire","Compréhension","Production"],
-  "Anglais":["Grammar","Vocabulary","Reading","Writing","Speaking"],
-  "Wolof":["Sutura","Jànguwaal","Jariin","Yam","Laj"],
-  "Arabe":["Grammar","Vocabulary","Quran","Hadith","Aqida"],
-  "Philosophie":["Logique","Éthique","Métaphysique","Politique","Esthétique"],
-  "Économie":["Microéconomie","Macroéconomie","Market","Finance","Commerce"],
-  "Informatique":["Algorithmes","Python","Base de données","Web","Cybersécurité"],
-  "Algèbre":["Équations","Inéquations","Polynômes","Fonctions","Logarithmes"],
-  "Statistiques":["Probabilités","Régression","Tests","Données","Prévision"],
-  "Géométrie":["Triangles","Cercles","Vecteurs","Transformations","Solides"],
-  "Méthodes":["Apprentissage","Concentration","Mémorisation","Révisions","Examens"],
-  "Examens":["Bac S","Bac ES","Bac L","Terminale","1ère"]
-};
-var PLAN_INFO=[
-  {id:0,nm:"Essai Gratuit",price:"0 FCFA",feats:["24 h tout débloqué","IA 24 questions/jour","Correction photo 5/jour","Aucun paiement"]},
-  {id:1,nm:"Basic",price:"250 FCFA/mois",feats:["IA 50 questions/jour","Correction photo 15/jour","Rédactions 2/jour"]},
-  {id:2,nm:"Pro",price:"500 FCFA/mois",feats:["IA 150 questions/jour","Correction photo 50/jour","Rédactions 10/jour","Téléchargement PDF"]},
-  {id:3,nm:"Illimité",price:"1500 FCFA/mois",feats:["IA illimité","Correction photo illimitée","Rédactions illimitées","Tout débloqué"]}
-];
+const API="";
+let TOKEN=localStorage.getItem("em_token")||"";
+let USER=JSON.parse(localStorage.getItem("em_user")||"null");
+let LAST_CORRECTION=null;
 
-function togglePwd(id,el){var e=document.getElementById(id);e.type=e.type==="password"?"text":"password";}
-function switchAuth(mode){
-  var reg=document.getElementById("regFields");var login=document.getElementById("loginFields");
-  if(mode==="register"){reg.classList.remove("hidden");login.classList.add("hidden");document.getElementById("authBtn").textContent="S'inscrire";}
-  else{reg.classList.add("hidden");login.classList.remove("hidden");document.getElementById("authBtn").textContent="Se connecter";}
-  document.querySelectorAll(".auth-tab").forEach(function(t){t.classList.remove("active");});
-  document.querySelector('.auth-tab:nth-child('+(mode==="register"?1:2)+')').classList.add("active");
-  document.getElementById("authErr").classList.remove("show");
-  document.getElementById("authOk").classList.remove("show");
+// ── Thème ──
+function toggleTheme(){
+  const t=document.documentElement.getAttribute("data-theme");
+  const n=t==="sombre"?"clair":"sombre";
+  document.documentElement.setAttribute("data-theme",n);
+  localStorage.setItem("em_theme",n);
+  document.getElementById("themeBtn").textContent=n==="sombre"?"☀️":"🌙";
+  const mv=document.getElementById("modeVal"); if(mv) mv.textContent=n;
 }
+if(localStorage.getItem("em_theme")==="sombre"){toggleTheme();}
 
-async function doAuth(){
-  var mode=document.getElementById("regFields").classList.contains("hidden")?"login":"register";
-  var errEl=document.getElementById("authErr");var okEl=document.getElementById("authOk");
-  errEl.classList.remove("show");okEl.classList.remove("show");
-  if(mode==="register"){
-    var pseudo=document.getElementById("pseudo").value.trim();
-    var mdp=document.getElementById("mdp").value;
-    var niveau=document.getElementById("niveau").value;
-    if(!pseudo||pseudo.length<3){errEl.textContent="Veuillez saisir un pseudo (3+ caractères)";errEl.classList.add("show");return;}
-    if(mdp.length<8||!/[a-zA-Z]/.test(mdp)||!/[0-9]/.test(mdp)){errEl.textContent="MDP : 8+ lettre + chiffre";errEl.classList.add("show");return;}
-    try{
-      var r=await fetch(API+"/api/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo,mot_de_passe:mdp,niveau})});
-      var d=await r.json();
-      if(!r.ok){errEl.textContent=d.erreur||"Erreur";errEl.classList.add("show");return;}
-      token=d.token;user=d.user;
-      localStorage.setItem("ecolemax_token",token);
-      localStorage.setItem("ecolemax_pseudo",pseudo);
-      localStorage.setItem("ecolemax_niveau",niveau);
-      okEl.textContent="✅ Inscription réussie ! Bienvenue "+pseudo+".";okEl.classList.add("show");
-      setTimeout(function(){enterApp();},500);
-    }catch(e){errEl.textContent="Serveur inaccessible";errEl.classList.add("show");}
-  }else{
-    var pseudo=document.getElementById("loginPseudo").value.trim();
-    var mdp=document.getElementById("loginMdp").value;
-    if(!pseudo||!mdp){errEl.textContent="Remplissez tous les champs";errEl.classList.add("show");return;}
-    try{
-      var r=await fetch(API+"/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo,mot_de_passe:mdp})});
-      var d=await r.json();
-      if(!r.ok){errEl.textContent=d.erreur||"Identifiants invalides";errEl.classList.add("show");return;}
-      token=d.token;user=d.user;
-      localStorage.setItem("ecolemax_token",token);
-      localStorage.setItem("ecolemax_pseudo",pseudo);
-      enterApp();
-    }catch(e){errEl.textContent="Serveur inaccessible";errEl.classList.add("show");}
-  }
+// ── Auth ──
+function showRegister(){document.getElementById("authForm").style.display="none";document.getElementById("authRegister").style.display="block";}
+function showLogin(){document.getElementById("authForm").style.display="block";document.getElementById("authRegister").style.display="none";}
+function showAlert(id,text,ok){const e=document.getElementById(id);e.textContent=text;e.className="alert "+(ok?"ok":"err");}
+
+async function doLogin(e){e.preventDefault();
+  const r=await fetch(API+"/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo:document.getElementById("lPseudo").value.trim(),mot_de_passe:document.getElementById("lMdp").value})});
+  const d=await r.json();
+  if(d.ok){TOKEN=d.token;USER={pseudo:d.user.pseudo,id:d.user.id};localStorage.setItem("em_token",TOKEN);localStorage.setItem("em_user",JSON.stringify(USER));
+    enterApp();}
+  else showAlert("authAlert",d.erreur||"Échec",false);
 }
-
-function logout(){
-  token="";user=null;
-  localStorage.removeItem("ecolemax_token");
-  localStorage.removeItem("ecolemax_pseudo");
-  localStorage.removeItem("ecolemax_niveau");
-  document.getElementById("screen-auth").classList.add("active");
-  document.getElementById("tabbar").classList.add("hidden");
-  document.querySelectorAll(".screen").forEach(function(s){if(s.id!=="screen-auth")s.classList.remove("active");});
+async function doRegister(e){e.preventDefault();
+  const r=await fetch(API+"/api/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+    pseudo:document.getElementById("rPseudo").value.trim(),email:document.getElementById("rEmail").value.trim(),
+    mot_de_passe:document.getElementById("rMdp").value,niveau:document.getElementById("rNiveau").value})});
+  const d=await r.json();
+  if(d.ok){TOKEN=d.token;USER={pseudo:d.user.pseudo,id:d.user.id};localStorage.setItem("em_token",TOKEN);localStorage.setItem("em_user",JSON.stringify(USER));
+    enterApp();}
+  else showAlert("authAlert",d.erreur||"Échec",false);
 }
-
-function enterGuest(){
-  token="";
-  user=null;
-  document.getElementById("screen-auth").classList.remove("active");
-  document.getElementById("tabbar").classList.remove("hidden");
-  goToTab("chat");
+async function doReset(){
+  const pseudo=prompt("Entre ton pseudo pour récupérer un nouveau mot de passe :");
+  if(!pseudo) return;
+  const r=await fetch(API+"/api/reset",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo})});
+  const d=await r.json();
+  if(d.ok){showAlert("authAlert","✅ Nouveau mot de passe : "+d.nouveau_mdp+" ( note-le bien )",true);}
+  else showAlert("authAlert",d.erreur||"Utilisateur non trouvé",false);
 }
-
-async function enterApp(){
-  document.getElementById("screen-auth").classList.remove("active");
-  document.getElementById("tabbar").classList.remove("hidden");
-  goToTab("home");
-  await refreshSubscription();
+function enterApp(){
+  document.getElementById("screen-auth").style.display="none";
+  document.getElementById("appMain").style.display="block";
+  initApp();
 }
+function logout(){localStorage.removeItem("em_token");localStorage.removeItem("em_user");TOKEN="";USER=null;
+  document.getElementById("appMain").style.display="none";
+  document.getElementById("screen-auth").style.display="flex";
+  showLogin();}
 
+// ── Navigation ──
+const TABS={home:"screen-home",chat:"screen-chat",photo:"screen-photo",text:"screen-text",exercises:"screen-exercises",
+  matieres:"screen-matieres",results:"screen-results",history:"screen-history",abonnement:"screen-abonnement",
+  profile:"screen-profile",more:"screen-more",notifs:"screen-notifs"};
 function goToTab(tab){
-  document.querySelectorAll(".screen").forEach(function(s){s.classList.remove("active");});
-  document.querySelectorAll(".tab").forEach(function(t){t.classList.remove("active");});
-  if(tab==="iaadmin"){
-    document.getElementById("screen-ia-admin").classList.add("active");
-    document.getElementById("iaInput").focus();
-    return;
-  }
-  var tabs={home:"screen-home",chat:"screen-chat",photo:"screen-photo",profile:"screen-profile",text:"screen-text",exercises:"screen-exercises",history:"screen-history"};
-  document.getElementById(tabs[tab]).classList.add("active");
-  document.querySelectorAll(".tab")[{home:0,chat:1,text:2,photo:3,exercises:4,profile:5}[tab]].classList.add("active");
-  if(tab==="home"){renderSubjects();refreshSubscription();}
-  if(tab==="chat"){document.getElementById("chatInput").focus();}
+  Object.values(TABS).forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove("active");});
+  const target=TABS[tab]||TABS.home;
+  const el=document.getElementById(target);
+  if(el) el.classList.add("active");
+  document.querySelectorAll(".tabbar button").forEach(b=>b.classList.remove("active"));
+  const btn=document.querySelector(`.tabbar button[data-tab="${tab}"]`);
+  if(btn) btn.classList.add("active");
+  // Charge les données dynamiques
+  if(tab==="home") loadDash();
+  if(tab==="chat") {}
+  if(tab==="exercises") loadExerciseFilters();
+  if(tab==="matieres") loadSubjects();
+  if(tab==="results") loadResults();
+  if(tab==="history") loadHistory();
+  if(tab==="abonnement") loadAbonnement();
+  if(tab==="profile") loadProfile();
+  if(tab==="notifs") loadNotifs();
+  window.scrollTo(0,0);
 }
 
-function renderSubjects(){document.getElementById("subjGrid").innerHTML=SUBJECTS.map(function(s){return '<div class="subj-card" onclick="openSubject(\\''+s.nm+'\\')"><div class="ic">'+s.ic+'</div><div class="nm">'+s.nm+'</div><div class="nb">'+s.nb+'</div></div>';}).join("");}
-
-function openSubject(name){
-  document.getElementById("subjTitle").textContent=name;
-  var chapters=CHAPTERS[name]||["Chapitre 1","Chapitre 2","Chapitre 3"];
-  document.getElementById("chapList").innerHTML=chapters.map(function(c){return '<div class="chap-item" style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="goToTab(\\'chat\\')"><div style="font-size:20px;width:40px;height:40px;background:var(--primary-l);border-radius:10px;display:grid;place-items:center">📖</div><div style="flex:1"><div style="font-size:14px;font-weight:600">'+c+'</div><div style="font-size:12px;color:var(--ink-soft)">'+(Math.floor(Math.random()*30)+5)+' exercices</div></div></div>';}).join("");
-  document.querySelectorAll(".screen").forEach(function(s){s.classList.remove("active");});
-  document.getElementById("screen-subject").classList.add("active");
-  document.querySelectorAll(".tab").forEach(function(t){t.classList.remove("active");});
+// ── Init ──
+async function initApp(){
+  if(!TOKEN||!USER){logout();return;}
+  document.getElementById("screen-auth").style.display="none";
+  document.getElementById("appMain").style.display="block";
+  // Charge Me
+  await fetchMe();
+  goToTab("home");
 }
-
-async function sendChat(){
-  var input=document.getElementById("chatInput");
-  var question=input.value.trim();
-  if(!question)return;
-  input.value="";
-  addMsg(question,"user");
-  addMsg("","bot","loading");
+async function fetchMe(){
   try{
-    var endpoint = token ? API+"/api/ai/ask" : API+"/api/ai/guest";
-    var headers = {"Content-Type":"application/json"};
-    if(token)headers["Authorization"]="Bearer "+token;
-    var r=await fetch(endpoint,{method:"POST",headers:headers,body:JSON.stringify({question})});
-    var d=await r.json();
-    if(!r.ok){throw new Error(d.erreur||"Erreur");}
-    removeLastLoading();
-    var src=d.source==="IA"?"🤖 IA":"📚 Base";
-    addMsg(d.reponse||"Pas de réponse.","bot",null,src);
-  }catch(e){removeLastLoading();addMsg(e.message,"err");}
+    const r=await fetch(API+"/api/me",{headers:{"Authorization":"Bearer "+TOKEN}});
+    const d=await r.json();
+    if(d.user){USER=d.user;localStorage.setItem("em_user",JSON.stringify(USER));}
+    if(d.notifications_non_lues>0){const dot=document.getElementById("notifDot");if(dot){dot.style.display="block";dot.textContent=d.notifications_non_lues;}}
+  }catch(e){}
 }
 
-function askSuggest(q){document.getElementById("chatInput").value=q;sendChat();}
-
-function addMsg(text,type,loading,src){
-  var msgs=document.getElementById("chatMsgs");
-  if(loading==="loading"){msgs.insertAdjacentHTML("beforeend",'<div class="msg loading"><span class="dot">●</span> <span class="dot" style="animation-delay:.2s">●</span> <span class="dot" style="animation-delay:.4s">●</span></div>');msgs.scrollTop=msgs.scrollHeight;return;}
-  var html='<div class="msg '+type+'">'+escapeHtml(text);
-  if(src)html+='<span class="src">'+src+'</span>';
-  html+='</div>';
-  msgs.insertAdjacentHTML("beforeend",html);
-  msgs.scrollTop=msgs.scrollHeight;
+// ── Dashboard ──
+async function loadDash(){
+  try{
+    const r=await fetch(API+"/api/me",{headers:{"Authorization":"Bearer "+TOKEN}});
+    const d=await r.json();
+    if(d.user){document.getElementById("dashPseudo").textContent=d.user.pseudo;}
+    const plan=d.plan;
+    document.getElementById("dashPlan").textContent=plan?(plan.nom||"Essai gratuit 48 H")+" · "+plan.description:"";
+    document.getElementById("statEx").textContent=(d.usage&&d.usage.ex_count)||0;
+    document.getElementById("statCorr").textContent=(d.usage&&d.usage.correct_count)||0;
+    document.getElementById("statNotif").textContent=d.notifications_non_lues||0;
+    document.getElementById("statFav").textContent=d.favoris||0;
+    const dot=document.getElementById("notifDot");
+    if(d.notifications_non_lues>0){dot.style.display="block";dot.textContent=d.notifications_non_lues;}
+    else dot.style.display="none";
+  }catch(e){}
 }
 
-function removeLastLoading(){var m=document.getElementById("chatMsgs").querySelector(".msg.loading");if(m)m.remove();}
-function escapeHtml(s){var d=document.createElement("div");d.textContent=s;return d.innerHTML;}
+// ── Chat IA ──
+function addMsg(text,who,src){
+  const m=document.getElementById("chatMsgs");
+  const d=document.createElement("div");
+  d.className="msg "+(who==="user"?"user":"bot");
+  d.innerHTML=(who==="bot"&&src?`${text}<span class="src">📡 ${src}</span>`:text);
+  m.appendChild(d);m.scrollTop=m.scrollHeight;
+}
+function askIA(){
+  const q=document.getElementById("chatInput").value.trim();
+  if(!q) return;
+  document.getElementById("chatInput").value="";
+  addMsg(q,"user");
+  const loading=document.createElement("div");loading.className="msg loading";loading.textContent="🤖 Professeur IA réfléchit...";
+  document.getElementById("chatMsgs").appendChild(loading);
+  fetch(API+"/api/ai/ask",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+TOKEN},body:JSON.stringify({question:q})})
+    .then(r=>r.json()).then(d=>{loading.remove();
+      if(d.erreur){addMsg("⚠️ "+d.erreur,"bot");}
+      else{const src=d.source||"IA";addMsg(d.reponse||"(pas de réponse)","bot",src);}})
+    .catch(()=>{loading.remove();addMsg("⚠️ Erreur réseau","bot");});
+}
+function askSuggest(q){document.getElementById("chatInput").value=q;askIA();}
 
-// ---- Photo ----
-var photoData=null;
-function onPhotoSelected(event){
-  var file=event.target.files[0];if(!file)return;
-  var reader=new FileReader();
-  reader.onload=function(e){document.getElementById("photoPreview").src=e.target.result;document.getElementById("photoPreview").classList.add("show");photoData=e.target.result.split(",")[1];document.getElementById("photoBtnSend").disabled=false;};
+// ── Photo ──
+let PHOTO_DATA="";
+function onPhotoSelected(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{PHOTO_DATA=ev.target.result.split(",")[1];
+    const img=document.getElementById("photoPreview");img.src=ev.target.result;img.classList.add("show");
+    document.getElementById("photoBtn").disabled=false;};
   reader.readAsDataURL(file);
 }
-
-async function sendPhoto(){
-  if(!photoData)return;
-  var question=document.getElementById("photoQuestion").value.trim();
-  var btn=document.getElementById("photoBtnSend");var result=document.getElementById("photoResult");
-  btn.disabled=true;btn.textContent="⏳ Analyse...";
-  result.innerHTML='<div class="msg loading"><span class="dot">●</span> <span class="dot" style="animation-delay:.2s">●</span> <span class="dot" style="animation-delay:.4s">●</span> Correction...</div>';
-  try{
-    var r=await fetch(API+"/api/ai/photo",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({question:question||"Explique et corrige.",image_b64:photoData})});
-    var d=await r.json();
-    if(!r.ok){throw new Error(d.erreur||"Erreur");}
-    var src=d.source==="IA"?"🤖 IA Vision":"📷 Base";
-    result.innerHTML='<div class="msg bot">'+escapeHtml(d.reponse||"Pas de réponse.")+'<span class="src">'+src+'</span></div>';
-  }catch(e){result.innerHTML='<div class="msg err">'+escapeHtml(e.message)+'</div>';}
-  btn.disabled=false;btn.textContent="Corriger";
-}
-
-async function refreshSubscription(){
-  try{
-    var r=await fetch(API+"/api/subscription/me",{headers:{"Authorization":"Bearer "+token}});
-    var d=await r.json();
-    var pseudo=localStorage.getItem("ecolemax_pseudo")||"";
-    document.getElementById("greetName").textContent="👋 "+pseudo;
-    document.getElementById("greetSub").textContent=(d.plan&&d.plan.nom)||"";
-    var banner=document.getElementById("planBanner");
-    var plan=d.plan||{};
-    var isFree=(plan.id===0);
-    banner.className="banner "+(isFree?"gratuit":"payant");
-    document.getElementById("bannerTitle").textContent=(plan.nom||"—");
-    document.getElementById("bannerSub").textContent=(plan.limite_ia_jour?plan.limite_ia_jour+" questions IA/jour":"");
-    document.getElementById("bannerCta").textContent=isFree?"⏳ Essai gratuit 24 h — tout débloqué":"";
-    document.getElementById("planName").textContent=(plan.nom||"—");
-    document.getElementById("profNiveau").textContent=localStorage.getItem("ecolemax_niveau")||"—";
-    document.getElementById("planExp").textContent=d.date_expiration||"—";
-    document.getElementById("planStatus").textContent=(plan.id===0?"Actif":"Actif");
-    var quota=d.quota_ia_restant||0;var limit=plan.limite_ia_jour||24;
-    document.getElementById("quotaIA").textContent=quota+"/"+limit;
-    var pct=Math.round((1-quota/limit)*100);
-    document.getElementById("quotaBar").style.width=Math.min(100,Math.max(0,pct))+"%";
-    document.getElementById("profName").textContent=pseudo;
-  }catch(e){document.getElementById("greetSub").textContent="Connexion...";}
-}
-
-function showPlans(){
-  document.getElementById("planList").innerHTML=PLAN_INFO.map(function(p){return '<div class="plan-card"><div class="p-name">'+p.nm+'</div><div class="p-price">'+p.price+'</div><div class="p-feats">'+p.feats.join("<br>• ")+'</div></div>';}).join("");
-  document.getElementById("planSheet").classList.add("show");
-}
-function closePlans(){document.getElementById("planSheet").classList.remove("show");}
-
-// ---- IA Admin ----
-var iaTarget="all";
-function iaSetTarget(t){iaTarget=t;var tags=document.querySelectorAll(".ia-targets .tag");tags.forEach(function(el){el.style.opacity=".5";});var map={site:"tag-site",app:"tag-app",all:"tag-all"};var sel=document.querySelector(".ia-targets .tag."+map[t]);if(sel)sel.style.opacity="1";}
-function iaAddMsg(text,type,src){var m=document.getElementById("iaMsgs");var html='<div class="ia-msg '+type+'">'+escapeHtml(text);if(src)html+='<span class="src">'+src+'</span>';html+='</div>';m.insertAdjacentHTML("beforeend",html);m.scrollTop=m.scrollHeight;}
-function iaAsk(q){document.getElementById("iaInput").value=q;iaSend();}
-async function iaSend(){
-  var input=document.getElementById("iaInput");
-  var question=input.value.trim();
-  if(!question)return;
-  input.value="";
-  iaAddMsg(question,"user");
-  iaAddMsg("","bot","loading");
-  try{
-    var r=await fetch(API+"/api/ai/ask",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({question:question,niveau:localStorage.getItem("ecolemax_niveau")||"Terminale",target:iaTarget})});
-    var d=await r.json();
-    if(!r.ok){throw new Error(d.erreur||"Erreur");}
-    var src=d.source==="IA"?"🤖 IA":"📚 Base";
-    iaAddMsg(d.reponse||"Pas de réponse.","bot",src);
-  }catch(e){iaAddMsg(e.message,"err");}
-}
-
-// ---- Reset ----
-function showReset(){
-  document.getElementById("screen-auth").classList.remove("active");
-  document.getElementById("screen-reset").classList.add("active");
-  document.getElementById("resetStep1").classList.remove("hidden");
-  document.getElementById("resetStep2").classList.add("hidden");
-  document.getElementById("rs1").classList.add("active");
-  document.getElementById("rs2").classList.remove("active");
-  document.getElementById("resetErr").classList.remove("show");
-  document.getElementById("resetOk").classList.remove("show");
-  document.getElementById("resetErr2").classList.remove("show");
-  document.getElementById("resetOk2").classList.remove("show");
-}
-
-async function resetRequest(){
-  var pseudo=document.getElementById("resetPseudo").value.trim();
-  var contact=document.getElementById("resetContact").value.trim();
-  var errEl=document.getElementById("resetErr");var okEl=document.getElementById("resetOk");
-  errEl.classList.remove("show");okEl.classList.remove("show");
-  if(!pseudo||!contact){errEl.textContent="Remplissez pseudo + contact";errEl.classList.add("show");return;}
-  try{
-    var r=await fetch(API+"/api/reset-password/request",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo,contact})});
-    var d=await r.json();
-    if(!r.ok){errEl.textContent=d.erreur||"Erreur";errEl.classList.add("show");return;}
-    okEl.innerHTML="✅ "+d.message+"<br><br>Code: <strong style='font-size:20px;color:var(--primary)'>"+d.code+"</strong><br><span style='font-size:11px'>"+d.note+"</span>";
-    okEl.classList.add("show");
-    document.getElementById("resetStep1").classList.add("hidden");
-    document.getElementById("resetStep2").classList.remove("hidden");
-    document.getElementById("rs1").classList.remove("active");
-    document.getElementById("rs2").classList.add("active");
-  }catch(e){errEl.textContent="Serveur inaccessible";errEl.classList.add("show");}
-}
-
-async function resetVerify(){
-  var pseudo=document.getElementById("resetPseudo").value.trim();
-  var code=document.getElementById("resetCode").value.trim();
-  var mdp=document.getElementById("resetMdp").value;
-  var errEl=document.getElementById("resetErr2");var okEl=document.getElementById("resetOk2");
-  errEl.classList.remove("show");okEl.classList.remove("show");
-  if(!code||!mdp){errEl.textContent="Remplissez code + MDP";errEl.classList.add("show");return;}
-  if(mdp.length<8||!/[a-zA-Z]/.test(mdp)||!/[0-9]/.test(mdp)){errEl.textContent="MDP : 8+ lettre + chiffre";errEl.classList.add("show");return;}
-  try{
-    var r=await fetch(API+"/api/reset-password/verify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo,code,mot_de_passe:mdp})});
-    var d=await r.json();
-    if(!r.ok){errEl.textContent=d.erreur||"Erreur";errEl.classList.add("show");return;}
-    okEl.textContent="✅ Mot de passe réinitialisé ! Connectez-vous.";okEl.classList.add("show");
-    setTimeout(function(){switchAuth("login");},1500);
-  }catch(e){errEl.textContent="Serveur inaccessible";errEl.classList.add("show");}
-}
-
-// ===== CORRECTEUR DE TEXTE =====
-async function correctText(){
-  var inp=document.getElementById("textInput");
-  var texte=inp.value.trim();
-  if(texte.length<10){alert("Mettez au moins 10 caractères");return;}
-  document.getElementById("correctResult").style.display="none";
-  addMsg("Correction en cours...","bot","loading");
-  try{
-    var r=await fetch(API+"/api/ai/correct",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({texte})});
-    var d=await r.json();
-    removeLastLoading();
-    if(!r.ok){throw new Error(d.erreur||"Erreur");}
-    // Séparer texte corrigé et explications
-    var rep=d.reponse||"Pas de réponse";
-    document.getElementById("correctTextOut").textContent=rep;
-    document.getElementById("correctExpl").textContent=d.explication||d.etapes?d.etapes.join("\n"):"";
-    document.getElementById("correctResult").style.display="block";
-    document.getElementById("correctResult").scrollIntoView({behavior:"smooth"});
-  }catch(e){removeLastLoading();addMsg(e.message,"err");}
-}
-function saveCorrection(){
-  var texte=document.getElementById("textInput").value.trim();
-  var corrige=document.getElementById("correctTextOut").textContent;
-  if(!texte)return;
-  try{
-    var hist=JSON.parse(localStorage.getItem("ecolemax_hist")||"[]");
-    hist.unshift({date:new Date().toLocaleString(),texte:texte.slice(0,100),corrige:corrige.slice(0,100)});
-    if(hist.length>20)hist=hist.slice(0,20);
-    localStorage.setItem("ecolemax_hist",JSON.stringify(hist));
-    alert("✅ Enregistré dans l'historique");
-  }catch(e){alert("Erreur enregistrement");}
-}
-function showHistory(){
-  goToTab("history");
-  renderHist();
-}
-function renderHist(){
-  var list=document.getElementById("histList");
-  try{
-    var hist=JSON.parse(localStorage.getItem("ecolemax_hist")||"[]");
-    if(hist.length===0){list.innerHTML='<div style="text-align:center;color:var(--ink-soft);padding:30px">Aucun historique<br>Utilisez le correcteur puis enregistrez</div>';return;}
-    list.innerHTML=hist.map(function(h,i){return '<div style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:8px"><div style="font-size:11px;color:var(--ink-soft);margin-bottom:4px">'+h.date+'</div><div style="font-size:13px;font-weight:600">✍️ '+escapeHtml(h.texte)+'</div><div style="font-size:12px;color:var(--ink-soft);margin-top:4px">✅ '+escapeHtml(h.corrige)+'</div></div>';}).join("");
-  }catch(e){list.innerHTML='<div style="text-align:center;color:var(--ink-soft);padding:30px">Erreur chargement</div>';}
-}
-
-// ===== EXERCICES =====
-var EXERCICES=[
-  {q:"Combien font 12 × 12 ?",opts:["124","134","144","154"],rep:2,exp:"12 × 12 = 144"},
-  {q:"Quel est le passé composé de « faire » ?",opts:["fais","fait","ai fait","feras"],rep:2,exp:"« Faire » au passé composé : j'ai fait."},
-  {q:"La capitale du Sénégal est :",opts:["Dakar","Saint-Louis","Thiès","Kaolack"],rep:0,exp:"La capitale du Sénégal est Dakar."},
-  {q:"2^3 = ?",opts:["6","8","9","12"],rep:1,exp:"2³ = 2 × 2 × 2 = 8"},
-  {q:"Quel est l'opposé de -5 ?",opts:["-5","0","5","10"],rep:2,exp:"L'opposé de -5 est +5."},
-  {q:"Combien font 100 / 4 ?",opts:["20","25","30","40"],rep:1,exp:"100 ÷ 4 = 25"},
-  {q:"La forme parfaite de « finir » est :",opts:["fini","finit","finissant","finira"],rep:0,exp:"« Fini » est le participe passé de finir."}
-];
-var exIdx=0,exScore=0;
-function renderExercises(){
-  var list=document.getElementById("exList");
-  list.innerHTML=EXERCICES.map(function(e,i){return '<div class="subj-card" onclick="startExercise('+i+')"><div class="ic">✏️</div><div class="nm">Exercice '+(i+1)+'</div><div class="nb">'+escapeHtml(e.q.slice(0,40))+'</div></div>';}).join("");
-}
-function startExercise(i){
-  exIdx=i;exScore=0;
-  var e=EXERCICES[i];
-  var list=document.getElementById("exList");
-  list.innerHTML='<div style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px"><div style="font-size:13px;color:var(--ink-soft);margin-bottom:8px">Question '+(i+1)+'</div><div style="font-size:16px;font-weight:700;margin-bottom:16px">'+escapeHtml(e.q)+'</div><div id="exOpts" style="display:flex;flex-direction:column;gap:8px"></div><div style="margin-top:16px;display:flex;gap:8px"><button class="btn btn-ghost" onclick="renderExercises()">← Retour</button></div></div>';
-  var opts=document.getElementById("exOpts");
-  e.opts.forEach(function(o,j){var b=document.createElement("button");b.className="btn btn-ghost";b.style.width="100%";b.style.textAlign="left";b.onclick=function(){checkAnswer(j,b);};b.textContent=o;opts.appendChild(b);});
-}
-function checkAnswer(j,btn){
-  var e=EXERCICES[exIdx];
-  if(j===e.rep){exScore++;btn.style.background="var(--primary-l)";btn.style.borderColor="var(--primary)";btn.style.color="var(--primary)";}
-  else{btn.style.background="#fee2e2";btn.style.borderColor="var(--red)";btn.style.color="var(--red)";
-    document.querySelectorAll("#exOpts button")[e.rep].style.background="var(--primary-l)";
-    document.querySelectorAll("#exOpts button")[e.rep].style.borderColor="var(--primary)";
-    document.querySelectorAll("#exOpts button")[e.rep].style.color="var(--primary)";}
-  setTimeout(function(){
-    var list=document.getElementById("exList");
-    list.innerHTML='<div style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px"><div style="font-size:14px;font-weight:700;margin-bottom:8px">✅ Résultat</div><div style="font-size:13px;margin-bottom:8px">Score : <strong style="color:var(--primary)">'+exScore+'/1</strong></div><div style="font-size:12px;background:var(--primary-l);border-radius:8px;padding:8px">'+escapeHtml(e.exp)+'</div><div style="margin-top:12px"><button class="btn btn-primary" onclick="renderExercises()">📚 Autres exercices</button></div></div>';
-  },600);
-}
-
-// Affiche les exercices au lancement
-renderExercises();
-
-(async function init(){
-  if(token){
-    try{
-      var r=await fetch(API+"/api/subscription/me",{headers:{"Authorization":"Bearer "+token}});
-      if(r.ok){await enterApp();return;}
-    }catch(e){}
-    logout();
+async function analyzePhoto(){
+  if(!PHOTO_DATA) return;
+  const btn=document.getElementById("photoBtn");btn.disabled=true;btn.textContent="🔍 Analyse en cours...";
+  const r=await fetch(API+"/api/ai/photo",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+TOKEN},body:JSON.stringify({image:PHOTO_DATA,question:document.getElementById("photoQuestion").value})});
+  const d=await r.json();
+  btn.disabled=false;btn.textContent="🔍 Analyser et corriger";
+  if(d.erreur){showAlert("photoAlert",d.erreur,false);}
+  else{showAlert("photoAlert","✅ Correction terminée",true);
+    document.getElementById("photoResult").innerHTML=`<div class="card"><div class="msg bot">${d.reponse}<span class="src">📡 ${d.source||"IA Vision"}</span></div></div>`;
   }
-  if(location.hash==="#connecter"){switchAuth("login");}
-})();
+}
+
+// ── Correcteur ──
+async function correctText(){
+  const texte=document.getElementById("textInput").value.trim();
+  if(texte.length<10){showAlert("textAlert","Texte trop court (10+ caractères)",false);return;}
+  const r=await fetch(API+"/api/ai/correct",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+TOKEN},body:JSON.stringify({texte})});
+  const d=await r.json();
+  if(d.erreur){showAlert("textAlert",d.erreur,false);return;}
+  showAlert("textAlert","✅ Correction terminée",true);
+  LAST_CORRECTION={original:texte,corrige:d.reponse};
+  document.getElementById("correctResult").innerHTML=`<div class="card"><h3>📝 Texte corrigé</h3><div class="msg bot">${d.reponse}</div></div>`;
+}
+async function saveCorrection(){
+  if(!LAST_CORRECTION){showAlert("textAlert","Corrige d'abord un texte",false);return;}
+  // Déjà enregistré côté serveur lors de la correction (/api/ai/correct insert)
+  showAlert("textAlert","✅ Correction enregistrée dans l'historique",true);
+  goToTab("history");
+}
+
+// ── Exercices ──
+async function loadExerciseFilters(){
+  const s=document.getElementById("exSujet");
+  if(s.options.length<=1){
+    const r=await fetch(API+"/api/subjects");const d=await r.json();
+    d.forEach(x=>{const o=document.createElement("option");o.value=x.code;o.textContent=x.nom;s.appendChild(o);});
+  }
+  await loadExercises();
+}
+async function loadExercises(){
+  const sujet=document.getElementById("exSujet").value;
+  const niveau=document.getElementById("exNiveau").value;
+  const params=new URLSearchParams({sujet,niveau});const r=await fetch(API+"/api/exercises?"+params,{headers:{"Authorization":"Bearer "+TOKEN}});
+  const d=await r.json();
+  const list=document.getElementById("exList");
+  if(!d.exercices||d.exercices.length===0){list.innerHTML="<div class='card'>Aucun exercice trouvé.</div>";return;}
+  list.innerHTML="";
+  d.exercices.forEach(ex=>{
+    const opts=JSON.parse(ex.options||"[]");
+    const item=document.createElement("div");item.className="ex-item";
+    item.innerHTML=`<div class="q">${ex.qtext}</div><div class="meta">${ex.titre} · ${ex.niveau} · ${ex.difficulte}⭐</div>`;
+    if(ex.type==="qcm"&&opts.length){
+      opts.forEach((opt,i)=>{
+        const b=document.createElement("button");b.className="ex-opt";b.textContent=opt;
+        b.onclick=()=>checkAnswer(ex,opt,b,item);item.appendChild(b);
+      });
+    } else {
+      const inp=document.createElement("input");inp.className="field";inp.placeholder="Ta réponse...";inp.style.marginTop="8px";
+      const vb=document.createElement("button");vb.className="btn btn-primary btn-block";vb.textContent="Valider";vb.style.marginTop="8px";
+      vb.onclick=()=>checkOpen(ex,inp.value,item,inp,vb);
+      item.appendChild(inp);item.appendChild(vb);
+    }
+    list.appendChild(item);
+  });
+}
+async function checkAnswer(ex,userRep,btn,item){
+  const opts=item.querySelectorAll(".ex-opt");
+  const correct=ex.reponse;
+  opts.forEach(o=>{o.disabled=true;
+    if(o.textContent===correct) o.classList.add("correct");
+  });
+  if(userRep===correct) btn.classList.add("correct"); else btn.classList.add("wrong");
+  const exp=document.createElement("div");exp.className="ex-explication";exp.textContent="✅ Explication : "+(ex.explication||ex.reponse);
+  item.appendChild(exp);
+  // Enregistre le résultat côté serveur
+  fetch(API+"/api/exercise/reponse",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+TOKEN},body:JSON.stringify({exercise_id:ex.id,reponse:userRep})}).then(r=>r.json());
+}
+async function checkOpen(ex,userRep,item,inp,vb){
+  vb.disabled=true;
+  if(userRep.trim()===ex.reponse){vb.classList.add("correct");}
+  else{vb.classList.add("wrong");}
+  const exp=document.createElement("div");exp.className="ex-explication";exp.textContent="✅ Réponse : "+ex.reponse+" — "+(ex.explication||"");
+  item.appendChild(exp);
+  fetch(API+"/api/exercise/reponse",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+TOKEN},body:JSON.stringify({exercise_id:ex.id,reponse:userRep})}).then(r=>r.json());
+}
+
+// ── Matières ──
+async function loadSubjects(){
+  const r=await fetch(API+"/api/content",{headers:{"Authorization":"Bearer "+TOKEN}});
+  const d=await r.json();
+  const g=document.getElementById("subjectsGrid");g.innerHTML="";
+  (d.sujets||[]).forEach(s=>{
+    const c=document.createElement("div");c.className="subject-card";
+    c.innerHTML=`<div class="ic">📚</div><div class="nm">${s.nom}</div>`;
+    c.onclick=()=>loadCoursForSubject(s.code);
+    g.appendChild(c);
+  });
+}
+async function loadCoursForSubject(code){
+  const r=await fetch(API+"/api/content",{headers:{"Authorization":"Bearer "+TOKEN}});
+  const d=await r.json();
+  const cours=(d.cours||[]).filter(c=>c.sujet_code===code);
+  const list=document.getElementById("subjectsGrid");
+  list.innerHTML=`<div class="back-row"><button class="back-btn" onclick="loadSubjects()">←</button><div class="section-title" style="margin:0">${code} — Cours</div></div>`;
+  if(cours.length===0){list.innerHTML+="<div class='card'>Aucun cours pour cette matière.</div>";return;}
+  cours.forEach(c=>{
+    const card=document.createElement("div");card.className="card";
+    card.innerHTML=`<h3>${c.titre}</h3><p style="font-size:13px;color:var(--ink-soft)">${c.contenu}</p><div class="meta" style="font-size:11px;color:var(--ink-soft);margin-top:6px">${c.niveau} · ${c.chapitre}</div>`;
+    list.appendChild(card);
+  });
+}
+
+// ── Résultats ──
+async function loadResults(){
+  const r=await fetch(API+"/api/history",{headers:{"Authorization":"Bearer "+TOKEN}});
+  const d=await r.json();
+  const list=document.getElementById("resultsList");
+  const res=d.resultats||[];
+  if(res.length===0){list.innerHTML="<div class='card'>Pas encore de résultats. Fais des exercices !</div>";return;}
+  list.innerHTML="";
+  res.forEach(r=>{
+    const item=document.createElement("div");item.className="result-item";
+    item.innerHTML=`<div class="score ${r.correct?'ok':'no'}">${r.correct?'✓':'✗'}</div>
+      <div><div style="font-size:13px">${r.reponse_utilisateur||"—"}</div><div style="font-size:11px;color:var(--ink-soft)">${r.date}</div></div>`;
+    list.appendChild(item);
+  });
+}
+
+// ── Historique ──
+async function loadHistory(){
+  const r=await fetch(API+"/api/history",{headers:{"Authorization":"Bearer "+TOKEN}});
+  const d=await r.json();
+  const list=document.getElementById("histList");
+  const corr=d.corrections||[];
+  if(corr.length===0){list.innerHTML="<div class='card'>Pas encore de corrections. Utilise le correcteur de texte !</div>";return;}
+  list.innerHTML="";
+  corr.forEach(c=>{
+    const item=document.createElement("div");item.className="hist-item";
+    item.innerHTML=`<div class="t">${c.date}</div><div class="c"><strong>Original :</strong> ${c.original?c.original.substring(0,80):"..."}<br><strong>Corrigé :</strong> ${c.corrige?c.corrige.substring(0,80):"..."}</div>`;
+    list.appendChild(item);
+  });
+}
+
+// ── Abonnement ──
+async function loadAbonnement(){
+  try{
+    const r=await fetch(API+"/api/me",{headers:{"Authorization":"Bearer "+TOKEN}});
+    const d=await r.json();
+    const plan=d.plan;
+    document.getElementById("myPlan").innerHTML=`<h3>💎 Mon abonnement</h3>
+      <p style="font-size:14px;color:var(--ink-soft)">${plan?plan.nom:"Essai gratuit 48 H"}</p>
+      <p style="font-size:12px;color:var(--ink-soft);margin-top:4px">${plan?plan.description:"Ton essai de 48 H est actif — tout débloqué"}</p>
+      ${plan&&plan.expire?`<p style="font-size:12px;color:var(--ink-soft);margin-top:4px">⏳ Expiration : ${plan.expire.substring(0,10)}</p>`:""}`;
+  }catch(e){}
+  const r2=await fetch(API+"/api/plans");const plans=await r2.json();
+  const list=document.getElementById("plansList");list.innerHTML="";
+  const dureeLabel={2:"48 H",3:"3 jours",7:"1 semaine",14:"2 semaines",30:"1 mois",90:"90 jours (BAC)",365:"1 an"};
+  plans.forEach(p=>{
+    const c=document.createElement("div");c.className="plan-card";
+    if(p.code===plan_code){c.className+=" current";}
+    const prix=p.prix===0?"Gratuit":(p.prix+" FCFA");
+    const duree=dureeLabel[p.duree_jours]||(p.duree_jours+" jours");
+    const tranche = p.paiement_tranche && p.paiement_tranche!=="unique" && p.nb_tranches>1
+      ? `<div style="font-size:11px;color:var(--violet);margin-top:4px">💳 ${p.nb_tranches} tranches · ${Math.round(p.prix/p.nb_tranches)} FCFA/mois</div>` : '';
+    c.innerHTML=`<div class="nm">${p.nom}</div><div class="pr">${prix}<small>/${duree}</small></div>
+      <div class="desc">${p.description}</div>
+      <div class="quota-bar"><div class="fill" style="width:${Math.min(100,p.limite_ia_jour/10)}%"></div></div>
+      <div style="font-size:11px;color:var(--ink-soft)">${p.limite_ia_jour} questions IA · ${p.photo_jour} photo(s)</div>
+      ${tranche}
+      ${p.prix===0?'<button class="btn btn-outline btn-block" disabled>Essai gratuit actif</button>':
+        `<button class="btn btn-primary btn-block" onclick="subscribe('${p.code}',${p.prix})">S'abonner · ${p.prix} FCFA</button>`}`;
+    list.appendChild(c);
+  });
+}
+async function subscribe(plan,montant){
+  const method=prompt("Choisis le mode de paiement :\n1 = Wave\n2 = Orange Money\n3 = Carte bancaire\n\nEntre 1, 2 ou 3 :","1");
+  if(!method) return;
+  const m=["wave","orange","card"][parseInt(method)-1]||"wave";
+  showAlert("abAlert","Création du paiement...","info");
+  const r=await fetch(API+"/api/subscribe",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+TOKEN},body:JSON.stringify({plan,method:m})});
+  const d=await r.json();
+  if(d.ok){
+    showAlert("abAlert","✅ Paiement créé. Réf : "+d.reference+"\n\nConfirme le paiement pour activer ton abonnement.","ok");
+    const cr=await fetch(API+"/api/payment/confirm",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+TOKEN},body:JSON.stringify({reference:d.reference,plan})});
+    const cd=await cr.json();
+    if(cd.ok){showAlert("abAlert","🎉 "+cd.message+" — "+d.reference,"ok");await loadAbonnement();}
+    else showAlert("abAlert",cd.erreur||"Confirmation échouée",false);
+  } else showAlert("abAlert",d.erreur||"Erreur",false);
+}
+
+// ── Notifications ──
+async function loadNotifs(){
+  const r=await fetch(API+"/api/notifications",{headers:{"Authorization":"Bearer "+TOKEN}});
+  const d=await r.json();
+  const list=document.getElementById("notifsList");
+  if(!d.notifications||d.notifications.length===0){list.innerHTML="<div class='card'>Aucune notification.</div>";return;}
+  list.innerHTML="";
+  d.notifications.forEach(n=>{
+    const item=document.createElement("div");item.className="hist-item";
+    item.style.borderLeft=n.lu?"3px solid var(--line)":"3px solid var(--violet)";
+    item.innerHTML=`<div class="t">${n.date}</div><div class="c"><strong>${n.titre}</strong> — ${n.message}</div>`;
+    list.appendChild(item);
+  });
+  // Marque comme lues
+  fetch(API+"/api/notifications/read",{method:"POST",headers:{"Authorization":"Bearer "+TOKEN}});
+  document.getElementById("notifDot").style.display="none";
+}
+
+// ── Profil ──
+async function loadProfile(){
+  try{
+    const r=await fetch(API+"/api/me",{headers:{"Authorization":"Bearer "+TOKEN}});
+    const d=await r.json();
+    document.getElementById("profPseudo").textContent=d.user.pseudo;
+    document.getElementById("profNiveau").textContent=d.user.niveau;
+    document.getElementById("profAv").textContent=(d.user.pseudo||"E").charAt(0).toUpperCase();
+    document.getElementById("profPlan").textContent=d.plan?d.plan.nom:"Essai gratuit";
+    document.getElementById("profNotif").textContent=d.notifications_non_lues||0;
+  }catch(e){}
+}
+
+// ── Support ──
+function openSupport(){
+  const sujet=prompt("Sujet du message :");if(!sujet)return;
+  const msg=prompt("Message :");if(!msg)return;
+  fetch(API+"/api/support",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+TOKEN},body:JSON.stringify({sujet,message:msg})})
+    .then(r=>r.json()).then(d=>{alert(d.ok?"✅ Message envoyé. Notre équipe y répondra.":"Erreur : "+d.erreur);});
+}
+
+// ── Init au lancement ──
+if(TOKEN&&USER){initApp();}
+
+  // ── 7 Langues ──
+  const LANGS = {
+    fr: {name:"Français", flag:"🇫🇷"},
+    wo: {name:"Wolof", flag:"🇸🇳"},
+    en: {name:"English", flag:"🇬🇧"},
+    es: {name:"Español", flag:"🇪🇸"},
+    pt: {name:"Português", flag:"🇵🇹"},
+    de: {name:"Deutsch", flag:"🇩🇪"},
+    ar: {name:"العربية", flag:"🇸🇦"},
+  };
+  function showLangPicker(){
+    const langs = Object.entries(LANGS);
+    const html = langs.map(([code,l])=>`<div class="lang-item" onclick="setLang('${code}')"><span>${l.flag}</span> ${l.name}</div>`).join('');
+    showModal('🌍 Choisir la langue', html);
+  }
+  function setLang(code){
+    localStorage.setItem('ecolemax_lang', code);
+    document.documentElement.lang = code;
+    document.getElementById('langVal').textContent = LANGS[code].name;
+    applyTranslations(code);
+    hideModal();
+  }
+  function applyTranslations(code){
+    const t = {
+      fr: {dashboard:"Tableau de bord", chat:"Professeur IA", scan:"Scanner", correct:"Correcteur", exercices:"Exercices", matieres:"Matières", results:"Résultats", history:"Historique", abonnement:"Abonnement", profil:"Profil", parametres:"Paramètres", inscrire:"S'inscrire", connexion:"Connexion", pseudo:"Pseudo", mot_de_passe:"Mot de passe", email:"Email", niveau:"Niveau", ecrire:"Écrire votre question", envoyer:"Envoyer", coriger:"Corriger texte", prendre_photo:"Prendre photo", chercher:"Rechercher exercices", aucune:"Aucun exercice", welcome:"Bienvenue", essai_gratuit:"Essai 48 H gratuit"},
+      en: {dashboard:"Dashboard", chat:"AI Teacher", scan:"Scanner", correct:"Text Corrector", exercices:"Exercises", matieres:"Subjects", results:"Results", history:"History", abonnement:"Subscription", profil:"Profile", parametres:"Settings", inscrire:"Register", connexion:"Login", pseudo:"Username", mot_de_passe:"Password", email:"Email", niveau:"Level", ecrire:"Type your question", envoyer:"Send", coriger:"Correct text", prendre_photo:"Take photo", chercher:"Search exercises", aucune:"No exercises", welcome:"Welcome", essai_gratuit:"Free 48H trial"},
+      wo: {dashboard:"Faayda biir", chat:"Prof esu IA", scan:"Scanner", correct:"Sant lees", exercices:"Njangale", matieres:"Matiiere", results:"Ndimbal", history:"Paster", abonnement:"Abonement", profil:"Profil", parametres:"Parametres", inscrire:"Seggtu", connexion:"Dijoll", pseudo:"Tuuy", mot_de_passe:"Mbind mi", email:"Email", niveau:"Njiitu", ecrire:"Ngéddaalal", envoyer:"Saa", coriger:"Sant texte", prendre_photo:"Sukkanawu photo", chercher:"Nga nd猫l exercise", aucune:"Waa duty", welcome:"Njangal", essai_gratuit:"Benn 48h wu graat"},
+      es: {dashboard:"Panel", chat:"Profesor IA", scan:"Escáner", correct:"Corrector", exercices:"Ejercicios", matieres:"Materias", results:"Resultados", history:"Historial", abonnement:"Suscripción", profil:"Perfil", parametres:"Configuración", inscrire:"Registrarse", connexion:"Iniciar sesión", pseudo:"Usuario", mot_de_passe:"Contraseña", email:"Correo", niveau:"Nivel", ecrire:"Escribe tu pregunta", envoyer:"Enviar", coriger:"Corregir texto", prendre_photo:"Tomar foto", chercher:"Buscar ejercicios", aucune:"Ningún ejercicio", welcome:"Bienvenido", essai_gratuit:"Prueba gratis 48 H"},
+      pt: {dashboard:"Painel", chat:"Professor IA", scan:"Escanear", correct:"Corretor", exercices:"Exercícios", matieres:"Matérias", results:"Resultados", history:"Histórico", abonnement:"Assinatura", profil:"Perfil", parametres:"Configurações", inscrire:"Cadastrar", connexion:"Entrar", pseudo:"Usuário", mot_de_passe:"Senha", email:"E-mail", niveau:"Nível", ecrire:"Digite sua pergunta", envoyer:"Enviar", coriger:"Corrigir texto", prendre_photo:"Tirar foto", chercher:"Buscar exercícios", aucune:"Nenhum exercício", welcome:"Bem-vindo", essai_gratuit:"Teste grátis 48 H"},
+      de: {dashboard:"Dashboard", chat:"KI-Lehrer", scan:"Scanner", correct:"Korrektur", exercices:"Übungen", matieres:"Fächer", results:"Ergebnisse", history:"Verlauf", abonnement:"Abonnement", profil:"Profil", parametres:"Einstellungen", inscrire:"Registrieren", connexion:"Anmelden", pseudo:"Benutzername", mot_de_passe:"Passwort", email:"E-Mail", niveau:"Klasse", ecrire:"Frage eingeben", envoyer:"Senden", coriger:"Text korrigieren", prendre_photo:"Foto machen", chercher:"Übungen suchen", aucune:"Keine Übungen", welcome:"Willkommen", essai_gratuit:"48 H kostenlos"},
+      ar: {dashboard:"لوحة التحكم", chat:"أستاذ الذكاء", scan:"ماسح ضوئي", correct:"مدقق لغوي", exercices:"تدريبات", matieres:"المواد", results:"النتائج", history:"السجل", abonnement:"اشتراك", profil:"الملف الشخصي", parametres:"الإعدادات", inscrire:"تسجيل", connexion:"تسجيل الدخول", pseudo:"اسم المستخدم", mot_de_passe:"كلمة المرور", email:"البريد الإلكتروني", niveau:"المستوى", ecrire:"اكتب سؤالك", envoyer:"إرسال", coriger:"تصحيح النص", prendre_photo:"التقاط صورة", chercher:"بحث في التدريبات", aucune:"لا تدريبات", welcome:"مرحبا", essai_gratuit:"تجربة مجانية 48 ساعة"},
+    };
+    const tr = t[code] || t.fr;
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.dataset.i18n;
+      if (tr[key]) el.textContent = tr[key];
+    });
+  }
+  // Init lang
+  const savedLang = localStorage.getItem('ecolemax_lang') || 'fr';
+  document.documentElement.lang = savedLang;
+  if (document.getElementById('langVal')) document.getElementById('langVal').textContent = LANGS[savedLang].name;
+  applyTranslations(savedLang);
 </script>
 </body>
 </html>

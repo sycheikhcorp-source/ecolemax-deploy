@@ -1,0 +1,4 @@
+/home/user/deploy/apk-build/sortie/classes/sn/ecolemax/app/R$string.class
+/home/user/deploy/apk-build/sortie/classes/sn/ecolemax/app/R$mipmap.class
+/home/user/deploy/apk-build/sortie/classes/sn/ecolemax/app/MainActivity.class
+/home/user/deploy/apk-build/sortie/classes/sn/ecolemax/app/R.class
