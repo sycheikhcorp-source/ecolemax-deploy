@@ -437,9 +437,9 @@ def reponse_ia(question, plan):
             if POLLINATIONS_KEY:
                 headers["Authorization"] = "Bearer " + POLLINATIONS_KEY
             req = urllib.request.Request(
-                "https://text.pollinations.ai/",
+                "https://text.pollinations.ai/openai",
                 data=json.dumps({"messages": _llm_messages(question), "model": "openai", "max_tokens": 600}).encode(),
-                headers=headers)
+                headers={"Content-Type": "application/json", "Referer": "ecolemax.onrender.com"})
             with urllib.request.urlopen(req, timeout=25) as r:
                 raw = r.read().decode()
             try:
