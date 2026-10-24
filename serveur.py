@@ -73,12 +73,14 @@ PROMPT_SYSTEME = (
 # Base de données
 # ------------------------------------------------------------------
 def db():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=30)
     conn.row_factory = sqlite3.Row
     return conn
 
 def init_db():
     c = db()
+    c.execute("PRAGMA journal_mode=WAL")
+    c.execute("PRAGMA busy_timeout=30000")
     c.executescript("""
     CREATE TABLE IF NOT EXISTS plans (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -436,9 +438,9 @@ def reponse_ia(question, plan):
                 headers["Authorization"] = "Bearer " + POLLINATIONS_KEY
             req = urllib.request.Request(
                 "https://text.pollinations.ai/",
-                data=json.dumps({"messages": _llm_messages(question), "model": "openai"}).encode(),
+                data=json.dumps({"messages": _llm_messages(question), "model": "openai", "max_tokens": 600}).encode(),
                 headers=headers)
-            with urllib.request.urlopen(req, timeout=30) as r:
+            with urllib.request.urlopen(req, timeout=25) as r:
                 raw = r.read().decode()
             try:
                 txt = json.loads(raw)["choices"][0]["message"]["content"]
