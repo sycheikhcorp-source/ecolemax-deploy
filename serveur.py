@@ -412,7 +412,7 @@ def init_db():
         ("Philosophie","« Je pense, donc je suis » est de qui?",json.dumps(["Platon","Descartes","Kant","Nietzsche"],),1,"Descartes (Cogito ergo sum).","Toutes"),
     ]
     for qz in quiz_q:
-        c.execute("INSERT OR IGNORE INTO quiz (categorie,question,options,reponse,explication,niveau,ordre) VALUES (?,?,?,?,?,?,?)", qz)
+        c.execute("INSERT OR IGNORE INTO quiz (categorie,question,options,reponse,explication,niveau) VALUES (?,?,?,?,?,?)", qz)
 
     # Notifications par défaut pour nouveaux utilisateurs (créées à l'inscription)
     c.execute("INSERT OR IGNORE INTO admins (pseudo,mot_de_passe,role,created_at) VALUES ('admin',?,'superadmin',?)",
