@@ -1,0 +1,17 @@
+{
+  "name": "ecolemax",
+  "description": "Plateforme Éducative ÉcoleMax - IA, Exercices, Quiz, Bibliothèque",
+  "repository": "https://github.com/sycheikhcorp-source/ecolemax-deploy",
+  "branch": "main",
+  "builder": "docker",
+  "instance_type": "s-01",
+  "region": "blr1",
+  "env": {
+    "ADMIN_PASSWORD": "ecolemax2026",
+    "DB_PATH": "/home/app/ecolemax.db"
+  },
+  "port": 8000,
+  "healthcheck": {
+    "path": "/health"
+  }
+}
