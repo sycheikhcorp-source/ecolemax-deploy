@@ -513,10 +513,12 @@ PROJET_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "projet")
 def index():
     return serve_html("index.html")
 
+@app.route("/app")
 @app.route("/app.html")
 def app_html():
     return serve_html("app.html")
 
+@app.route("/dashboard")
 @app.route("/dashboard.html")
 def dashboard():
     return serve_html("dashboard.html")
@@ -535,7 +537,7 @@ def securite():
 
 @app.route("/EcoleMax.apk")
 def apk():
-    return send_file(os.path.join(os.path.dirname(os.path.abspath(__file__)), "EcoleMax-v6-signed.apk"), as_attachment=True)
+    return send_file(os.path.join(os.path.dirname(os.path.abspath(__file__)), "EcoleMax-v7-signed.apk"), as_attachment=True)
 
 @app.route("/favicon.ico")
 def favicon():
