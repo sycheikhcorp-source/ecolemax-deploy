@@ -751,7 +751,7 @@ def api_ai_translate():
     if not ok: return jsonify({"erreur":msg}), 402
     data = request.get_json(silent=True) or {}
     texte = data.get("texte","")
-    lang = data.get("langue","fr")
+    lang = data.get("langue_cible", data.get("langue","fr"))
     if not texte or len(texte.strip()) < 2: return jsonify({"erreur":"Texte trop court"}), 400
     r = reponse_traduction(texte, lang, p)
     log_sec(u["id"], "traduction", lang + ": " + texte[:80])
@@ -827,7 +827,7 @@ def api_history():
     if not u: return jsonify({"erreur":"Authentification requise"}), 401
     c = db()
     corr = c.execute("SELECT * FROM corrections WHERE user_id=? ORDER BY date DESC LIMIT 50", (u["id"],)).fetchall()
-    res = c.execute("SELECT * FROM results WHERE user_id=? ORDER BY date DESC LIMIT 50", (u["id"],)).fetchall()
+    res = c.execute("SELECT * FROM quiz_resultats WHERE user_id=? ORDER BY date DESC LIMIT 50", (u["id"],)).fetchall()
     c.close()
     return jsonify({"corrections":[dict(r) for r in corr], "resultats":[dict(r) for r in res]})
 
