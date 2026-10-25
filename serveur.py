@@ -997,6 +997,19 @@ class Handler(BaseHTTPRequestHandler):
             rows = c.execute(q, params).fetchall()
             c.close()
             return self.send_json({"quiz":[dict(r) for r in rows]})
+        if path == "/api/languages":
+            return self.send_json({"langues":[
+                {"code":"fr","nom":"Français","emoji":"🇫🇷"},
+                {"code":"en","nom":"Anglais","emoji":"🇬🇧"},
+                {"code":"es","nom":"Espagnol","emoji":"🇪🇸"},
+                {"code":"pt","nom":"Portugais","emoji":"🇵🇹"},
+                {"code":"ar","nom":"Arabe","emoji":"🇸🇦"},
+                {"code":"de","nom":"Allemand","emoji":"🇩🇪"},
+                {"code":"zh","nom":"Mandarin","emoji":"🇨🇳"},
+                {"code":"hi","nom":"Hindi","emoji":"🇮🇳"},
+                {"code":"ru","nom":"Russe","emoji":"🇷🇺"},
+                {"code":"ja","nom":"Japonais","emoji":"🇯🇵"},
+            ]})
         if path.startswith("/api/"):
             return self.send_json({"erreur":"Méthode non autorisée"}, 405)
         # Fichiers statiques

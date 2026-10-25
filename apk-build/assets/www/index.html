@@ -300,11 +300,13 @@ input,textarea,select{font-family:inherit}
       <div class="quick-btn" onclick="goToTab('photo')"><div class="ic">📸</div><div class="lb">Scanner</div></div>
       <div class="quick-btn" onclick="goToTab('text')"><div class="ic">✍️</div><div class="lb">Correcteur</div></div>
       <div class="quick-btn" onclick="goToTab('quiz')"><div class="ic">🎲</div><div class="lb">Quiz Universel</div></div>
+      <div class="quick-btn" onclick="goToTab('trad')"><div class="ic">🌍</div><div class="lb">Traduction</div></div>
     </div>
     <div class="section-title">Menu complet</div>
     <div class="more-grid">
       <div class="more-card" onclick="goToTab('exercises')"><div class="ic">📚</div><div class="lb">Exercices</div></div>
       <div class="more-card" onclick="goToTab('quiz')"><div class="ic">🎲</div><div class="lb">Quiz</div></div>
+      <div class="more-card" onclick="goToTab('trad')"><div class="ic">🌍</div><div class="lb">Traduction</div></div>
       <div class="more-card" onclick="goToTab('matieres')"><div class="ic">🎨</div><div class="lb">Matières</div></div>
       <div class="more-card" onclick="goToTab('results')"><div class="ic">📊</div><div class="lb">Résultats</div></div>
       <div class="more-card" onclick="goToTab('history')"><div class="ic">🕒</div><div class="lb">Historique</div></div>
@@ -319,7 +321,7 @@ input,textarea,select{font-family:inherit}
         </svg>
         <div class="logo-text">École<span>Max</span></div>
       </div>
-      <p>CREE PAR SYCHEIKHCORP · Dakar, Sénégal</p>
+      <p>Créé par SYCHEIKHCORP · Dakar, Sénégal</p>
     </div>
   </div>
 
@@ -347,10 +349,15 @@ input,textarea,select{font-family:inherit}
   <div class="screen" id="screen-photo">
     <div class="chat-header"><h3>📸 Scanner un exercice</h3><p>Photo, reconnaissance, résolution étape par étape</p></div>
     <div class="photo-area">
-      <label class="photo-btn">
+      <label class="photo-btn" onclick="requestCameraPermission()">
         <div class="ic">📷</div>
-        <div class="lb">Prendre une photo ou choisir dans la galerie</div>
-        <input type="file" accept="image/*" capture="environment" onchange="onPhotoSelected(event)" style="display:none">
+        <div class="lb">Prendre une photo</div>
+        <input type="file" accept="image/*" capture="environment" onchange="onPhotoSelected(event)" style="display:none" id="cameraInput">
+      </label>
+      <label class="photo-btn" onclick="openGallery()">
+        <div class="ic">🖼️</div>
+        <div class="lb">Choisir dans la galerie</div>
+        <input type="file" accept="image/*" onchange="onPhotoSelected(event)" style="display:none" id="galleryInput">
       </label>
       <img class="photo-preview" id="photoPreview">
     </div>
@@ -402,6 +409,22 @@ input,textarea,select{font-family:inherit}
     <div style="margin-top:12px">
       <button class="btn btn-primary btn-block" onclick="loadQuiz()">🎲 Lancer un quiz</button>
     </div>
+  </div>
+
+    <!-- TRADUCTION IA -->
+  <div class="screen" id="screen-trad">
+    <div class="back-row"><button class="back-btn" onclick="goToTab('home')">←</button><div class="section-title" style="margin:0">🌍 Traduction IA</div></div>
+    <div class="alert" id="tradAlert"></div>
+    <div class="section-title">Langue de traduction</div>
+    <div class="quick-grid" id="tradLangs"></div>
+    <div class="field"><label>Texte à traduire</label>
+      <textarea id="tradInput" rows="4" placeholder="Écris ou colle le texte à traduire..." style="width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;font-size:14px;resize:vertical"></textarea>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn btn-primary" style="flex:1" onclick="traduire()">🌐 Traduire</button>
+      <button class="btn btn-outline" onclick="document.getElementById('tradInput').value='';document.getElementById('tradResult').innerHTML=''">🗑 Effacer</button>
+    </div>
+    <div id="tradResult" style="margin-top:12px"></div>
   </div>
 
   <!-- MATIERES -->
@@ -490,7 +513,7 @@ input,textarea,select{font-family:inherit}
         </svg>
         <div class="logo-text">École<span>Max</span></div>
       </div>
-      <p>CREE PAR SYCHEIKHCORP · Dakar, Sénégal</p>
+      <p>Créé par SYCHEIKHCORP · Dakar, Sénégal</p>
     </div>
   </div>
 
@@ -505,6 +528,7 @@ input,textarea,select{font-family:inherit}
     <button onclick="goToTab('home')" data-tab="home"><span class="ic">🏠</span>Accueil</button>
     <button onclick="goToTab('chat')" data-tab="chat"><span class="ic">🤖</span>IA</button>
     <button onclick="goToTab('quiz')" data-tab="quiz"><span class="ic">🎲</span>Quiz</button>
+    <button onclick="goToTab('trad')" data-tab="trad"><span class="ic">🌍</span>Trad</button>
     <button onclick="goToTab('exercises')" data-tab="exercises"><span class="ic">📚</span>Exercices</button>
     <button onclick="goToTab('profile')" data-tab="profile"><span class="ic">👤</span>Profil</button>
   </nav>
@@ -572,7 +596,7 @@ function logout(){localStorage.removeItem("em_token");localStorage.removeItem("e
 
 // ── Navigation ──
 const TABS={home:"screen-home",chat:"screen-chat",photo:"screen-photo",text:"screen-text",exercises:"screen-exercises",
-  quiz:"screen-quiz",matieres:"screen-matieres",results:"screen-results",history:"screen-history",abonnement:"screen-abonnement",
+  quiz:"screen-quiz",trad:"screen-trad",matieres:"screen-matieres",results:"screen-results",history:"screen-history",abonnement:"screen-abonnement",
   profile:"screen-profile",more:"screen-more",notifs:"screen-notifs"};
 function goToTab(tab){
   Object.values(TABS).forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove("active");});
@@ -597,6 +621,7 @@ function goToTab(tab){
 
 // ── Init ──
 async function initApp(){
+  try { loadTradLangs(); } catch(e){}
   try { loadQuizCats(); } catch(e){}
   if(!TOKEN||!USER){logout();return;}
   document.getElementById("screen-auth").style.display="none";
@@ -671,6 +696,22 @@ function askSuggest(q){document.getElementById("chatInput").value=q;askIA();}
 
 // ── Photo ──
 let PHOTO_DATA="";
+// ── Permissions caméra ──
+function requestCameraPermission(){
+  // Sur Android WebView, capture="environment" demande la permission automatiquement
+  // Si la permission n'est pas accordée, l'input ne s'ouvre pas
+  var input=document.getElementById("cameraInput");
+  if(input){input.click();}
+}
+function openGallery(){
+  var input=document.getElementById("galleryInput");
+  if(input){input.click();}
+}
+// Sur mobile, vérifier si la caméra est disponible
+function checkCameraSupport(){
+  return true; // WebView Android supporte capture="environment"
+}
+
 function onPhotoSelected(e){
   const file=e.target.files[0];if(!file)return;
   const reader=new FileReader();
@@ -730,6 +771,41 @@ async function loadQuizCats(){
   el.innerHTML=cats.map(c=>`<div class="quick-btn" onclick="loadQuiz('${c}')"><div class="ic">🎯</div><div class="lb">${c}</div></div>`).join("");
 }
 
+// ── Traduction IA ──
+let TRAD_LANGS=[];
+async function loadTradLangs(){
+  try {
+    const r=await fetch(API+"/api/languages");
+    const d=await r.json();
+    TRAD_LANGS=d.langues||[];
+    const el=document.getElementById("tradLangs");
+    if(el){
+      el.innerHTML=TRAD_LANGS.map(l=>'<div class="quick-btn" onclick="selectTradLang(\''+l.code+'\')"><div class="ic">'+l.emoji+'</div><div class="lb">'+l.nom+'</div></div>').join("");
+    }
+  } catch(e){}
+}
+let TRAD_CURRENT="";
+function selectTradLang(code){
+  TRAD_CURRENT=code;
+  const lang=TRAD_LANGS.find(l=>l.code===code);
+  showAlert("tradAlert","Langue sélectionnée : "+(lang?lang.nom:code),true);
+  setTimeout(()=>{showAlert("tradAlert","","");},2000);
+}
+async function traduire(){
+  const texte=document.getElementById("tradInput").value.trim();
+  if(!texte){showAlert("tradAlert","Entre un texte à traduire",false);return;}
+  if(!TRAD_CURRENT){showAlert("tradAlert","Choisis une langue de traduction",false);return;}
+  showAlert("tradAlert","🌐 Traduction en cours...",true);
+  try {
+    const r=await fetch(API+"/api/ai/translate",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+TOKEN},body:JSON.stringify({texte,langue:TRAD_CURRENT})});
+    const d=await r.json();
+    if(d.erreur){showAlert("tradAlert",d.erreur,false);return;}
+    showAlert("tradAlert","✅ Traduction terminée",true);
+    document.getElementById("tradResult").innerHTML='<div class="card"><h3>🌐 Traduction ('+d.langue+')</h3><div class="msg bot">'+d.reponse+'<span class="src">📡 '+d.source+'</span></div></div>';
+  } catch(err){showAlert("tradAlert","⚠️ Erreur réseau: "+err.message,false);}
+}
+
+// ── Quiz Universel ──
 async function loadQuiz(categorie) {
   const q=document.getElementById("quizAlert");
   try {
