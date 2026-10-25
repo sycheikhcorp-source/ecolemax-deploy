@@ -613,6 +613,14 @@ def api_subjects():
     c.close()
     return jsonify([dict(r) for r in rows])
 
+@app.route("/api/content")
+def api_content():
+    c = db()
+    sujets = c.execute("SELECT * FROM sujets ORDER BY ordre").fetchall()
+    cours = c.execute("SELECT * FROM cours ORDER BY sujet_code, titre").fetchall()
+    c.close()
+    return jsonify({"sujets":[dict(s) for s in sujets], "cours":[dict(c) for c in cours]})
+
 @app.route("/api/languages")
 def api_languages():
     return jsonify({"langues":[
@@ -639,7 +647,22 @@ def api_exercises():
     if niveau: q += " AND niveau=?"; params.append(niveau)
     rows = c.execute(q, params).fetchall()
     c.close()
-    return jsonify({"exercices":[dict(r) for r in rows]})
+    # Extraire les options de la question [opt1/opt2/opt3]
+    import re as _re
+    import json as _json
+    result = []
+    for r in rows:
+        ex = dict(r)
+        question = ex.get("question","")
+        m = _re.search(r"\[([^\]]+)\]", question)
+        if m:
+            opts = [o.strip() for o in m.group(1).split("/")]
+            ex["options"] = _json.dumps(opts, ensure_ascii=False)
+            ex["question"] = _re.sub(r"\s*\[([^\]]+)\]", "", question).strip()
+        else:
+            ex["options"] = "[]"
+        result.append(ex)
+    return jsonify({"exercices": result})
 
 @app.route("/api/quiz")
 def api_quiz():
@@ -650,7 +673,39 @@ def api_quiz():
     if categorie: q += " AND categorie=?"; params.append(categorie)
     rows = c.execute(q, params).fetchall()
     c.close()
-    return jsonify({"quiz":[dict(r) for r in rows]})
+    # Générer les options dynamiquement
+    import random as _random
+    # Pool de réponses wrong par catégorie
+    _wrong_pools = {
+        "Géographie": ["Conakry","Bamako","Abidjan","Ouagadougou","Dakar","Saint-Louis","Ziguinchor","Lomé","Cotonou","Niamey"],
+        "Histoire": ["1960","1965","1970","1958","Senghor","Diouf","Wade","Macky","Goree","Saint-Louis"],
+        "Maths": ["2x","3x","5x","10","15","20","100","0","1","1000"],
+        "Français": ["cheval","chevaux","cheval","pronom relatif","qui","que","où","en","au","du"],
+        "Physique": ["Newton","300000 km/s","énergie","masse","vitesse","accélération","force","travail","puissance","moment"],
+        "Chimie": ["H₂O","CO₂","7","14","1","100","Zn","Cu","O₂","N₂"],
+        "SVT": ["cœur","gène","photosynthèse","cellule","organite","ADN","ARN","proteine","sang","nerf"],
+        "Anglais": ["hello","books","je suis","good","bad","yes","no","one","two","three"],
+        "Informatique": ["&&","CSS","CREATE","O(log n)","Python","Java","HTML","SQL","algorithme","base de données"],
+        "Économie": ["XOF","FCFA","BCEAO","OMC","1 EUR","500","1000","2000","inflation","taux"],
+    }
+    result = []
+    for r in rows:
+        qz = dict(r)
+        idx = qz.get("reponse", 0)
+        correct = qz.get("explication", "")
+        cat = qz.get("categorie", "")
+        pool = _wrong_pools.get(cat, ["Option A","Option B","Option C","Option D"])
+        # Choisir 3 wrong answers
+        wrong = _random.sample([p for p in pool if p != correct], min(3, len(pool)-1)) if len(pool) > 1 else ["A","B","C"]
+        while len(wrong) < 3: wrong.append(f"Option {chr(65+len(wrong))}")
+        # Placer la bonne réponse à l'index
+        options = [""] * 4
+        for i in range(4):
+            if i == idx: options[i] = correct
+            else: options[i] = wrong.pop(0) if wrong else f"Option {chr(65+i)}"
+        qz["options"] = _json.dumps(options, ensure_ascii=False)
+        result.append(qz)
+    return jsonify({"quiz": result})
 
 @app.route("/api/register", methods=["POST"])
 def api_register():
