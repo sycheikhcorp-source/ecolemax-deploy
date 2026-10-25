@@ -575,14 +575,12 @@ def serve_html(filename):
         return Response("404 Not Found", status=404, mimetype="text/html")
     with open(fp, "r", encoding="utf-8") as f:
         content = f.read()
-    # Injecter l'URL API absolute si la variable est vide
-    if "window.__ECOLEMAX_API__" not in content:
-        # Remplacer 'const API = window.__ECOLEMAX_API__ || "";' par la valeur absolue
-        api_url = request.host_url.rstrip("/")
-        content = content.replace(
-            'const API = window.__ECOLEMAX_API__ || "";',
-            f'const API = window.__ECOLEMAX_API__ || "{api_url}";'
-        )
+    # Injecter l'URL API absolute
+    api_url = request.host_url.rstrip("/")
+    content = content.replace(
+        'const API = window.__ECOLEMAX_API__ || "";',
+        f'const API = window.__ECOLEMAX_API__ || "{api_url}";'
+    )
     resp = Response(content, mimetype="text/html; charset=utf-8")
     resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     resp.headers["X-Content-Type-Options"] = "nosniff"
