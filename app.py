@@ -486,7 +486,7 @@ def reponse_traduction(texte, langue, plan=None):
 # ─── Flask App ───
 # Import des données seeds (528 exercices, 720 quiz)
 from data_seed import EXERCICES as SEED_EXERCICES, QUIZ as SEED_QUIZ
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify, send_file, Response
 
 app = Flask(__name__)
 
@@ -505,18 +505,33 @@ def get_user_by_token(req):
 def health():
     return jsonify({"status":"ok","service":"ecolemax","time":now()})
 
+# ─── Serveur de fichiers statiques ───
+PROJET_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "projet")
+
 @app.route("/")
 @app.route("/index.html")
 def index():
-    return send_file(os.path.join(os.path.dirname(os.path.abspath(__file__)), "projet", "index.html"))
+    return serve_html("index.html")
 
 @app.route("/app.html")
 def app_html():
-    return send_file(os.path.join(os.path.dirname(os.path.abspath(__file__)), "projet", "app.html"))
+    return serve_html("app.html")
 
 @app.route("/dashboard.html")
 def dashboard():
-    return send_file(os.path.join(os.path.dirname(os.path.abspath(__file__)), "projet", "dashboard.html"))
+    return serve_html("dashboard.html")
+
+@app.route("/telecharger.html")
+def telecharger():
+    return serve_html("telecharger.html")
+
+@app.route("/tester.html")
+def tester():
+    return serve_html("tester.html")
+
+@app.route("/securite.html")
+def securite():
+    return serve_html("securite.html")
 
 @app.route("/EcoleMax.apk")
 def apk():
@@ -524,7 +539,54 @@ def apk():
 
 @app.route("/favicon.ico")
 def favicon():
-    return send_file(os.path.join(os.path.dirname(os.path.abspath(__file__)), "projet", "favicon.ico"))
+    fp = os.path.join(PROJET_DIR, "favicon.ico")
+    if os.path.exists(fp):
+        return send_file(fp)
+    return Response(status=404)
+
+# Route catch-all pour tous les fichiers statiques (CSS, JS, assets, images)
+@app.route("/static/<path:filename>")
+@app.route("/css/<path:filename>")
+@app.route("/js/<path:filename>")
+@app.route("/assets/<path:filename>")
+@app.route("/pwa/<path:filename>")
+@app.route("/qr/<path:filename>")
+def static_files(filename):
+    # Chercher dans plusieurs dossiers
+    for sub in ["", "css", "js", "assets", "pwa", "qr", "outils", "telechargements"]:
+        fp = os.path.join(PROJET_DIR, sub, filename) if sub else os.path.join(PROJET_DIR, filename)
+        if os.path.isfile(fp):
+            # Détecter le type MIME
+            ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+            mime = {
+                "css": "text/css", "js": "application/javascript",
+                "html": "text/html", "png": "image/png", "jpg": "image/jpeg",
+                "jpeg": "image/jpeg", "svg": "image/svg+xml", "ico": "image/x-icon",
+                "json": "application/json", "webmanifest": "application/manifest+json",
+                "woff": "font/woff", "woff2": "font/woff2", "ttf": "font/ttf",
+            }.get(ext, "application/octet-stream")
+            return send_file(fp, mimetype=mime)
+    return Response("404 Not Found", status=404)
+
+def serve_html(filename):
+    """Sert un fichier HTML avec le bon Content-Type et injecte l'URL API."""
+    fp = os.path.join(PROJET_DIR, filename)
+    if not os.path.isfile(fp):
+        return Response("404 Not Found", status=404, mimetype="text/html")
+    with open(fp, "r", encoding="utf-8") as f:
+        content = f.read()
+    # Injecter l'URL API absolute si la variable est vide
+    if "window.__ECOLEMAX_API__" not in content:
+        # Remplacer 'const API = window.__ECOLEMAX_API__ || "";' par la valeur absolue
+        api_url = request.host_url.rstrip("/")
+        content = content.replace(
+            'const API = window.__ECOLEMAX_API__ || "";',
+            f'const API = window.__ECOLEMAX_API__ || "{api_url}";'
+        )
+    resp = Response(content, mimetype="text/html; charset=utf-8")
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    resp.headers["X-Content-Type-Options"] = "nosniff"
+    return resp
 
 @app.route("/api/plans")
 def api_plans():
