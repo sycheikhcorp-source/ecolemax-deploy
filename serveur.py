@@ -1478,4 +1478,21 @@ class Handler(BaseHTTPRequestHandler):
 if __name__ == "__main__":
     init_db()
     print(f"🟢 ÉcoleMax API démarrée → http://0.0.0.0:{PORT}")
+
+    # ─── Keep-alive interne (prévient le sleep Render free plan) ───
+    def keepalive_loop():
+        import urllib.request
+        while True:
+            try:
+                url = f"http://127.0.0.1:{PORT}/health"
+                req = urllib.request.Request(url, method="GET")
+                urllib.request.urlopen(req, timeout=5)
+                print(f"🟢 Keep-alive envoyé → {url}")
+            except Exception as e:
+                print(f"⚠️ Keep-alive échoué: {e}")
+            time.sleep(600)  # Toutes les 10 minutes
+
+    threading.Thread(target=keepalive_loop, daemon=True).start()
+    print("🟢 Keep-alive interne activé (toutes les 10 min)")
+
     ThreadingHTTPServer((HOST, PORT), Handler).serve_forever()
