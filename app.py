@@ -49,7 +49,7 @@ def db():
 def init_db():
     c = db()
     c.execute("""CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, pseudo TEXT UNIQUE, email TEXT, mot_de_passe TEXT, niveau TEXT, role TEXT DEFAULT 'eleve', created_at TEXT)""")
-    c.execute("""CREATE TABLE IF NOT EXISTS plans (code TEXT PRIMARY KEY, nom TEXT, prix INTEGER, duree_jours INTEGER, quota_ia INTEGER, quota_photo INTEGER, quota_correct INTEGER, quota_texte INTEGER, couleur TEXT)""")
+    c.execute("""CREATE TABLE IF NOT EXISTS plans (code TEXT PRIMARY KEY, nom TEXT, prix REAL, duree_jours INTEGER, limite_ia_jour INTEGER, photo_jour INTEGER, description TEXT, paiement_tranche TEXT, nb_tranches INTEGER)""")
     c.execute("""CREATE TABLE IF NOT EXISTS abonnements (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, plan_code TEXT, statut TEXT DEFAULT 'en_attente', debut TEXT, expire TEXT, montant INTEGER)""")
     c.execute("""CREATE TABLE IF NOT EXISTS paiements (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, montant INTEGER, method TEXT, statut TEXT, reference TEXT UNIQUE, abonnement_id INTEGER, created_at TEXT, confirmed_at TEXT)""")
     c.execute("""CREATE TABLE IF NOT EXISTS usages (user_id INTEGER, date TEXT, ia_count INTEGER, photo_count INTEGER, correct_count INTEGER, ex_count INTEGER, PRIMARY KEY(user_id,date))""")
@@ -79,13 +79,16 @@ def init_db():
     c.execute("CREATE INDEX IF NOT EXISTS idx_logs_user ON logs_sec(user_id)")
 
     plans = [
-        ("gratuit","Essai 48 H",0,2,5,3,1000,0,"#22c55e"),
-        ("basique","Basique",2500,30,50,10,2000,50,"#3b82f6"),
-        ("premium","Premium",5000,90,200,30,5000,200,"#8b5cf6"),
-        ("excellence","Excellence",10000,365,1000,100,20000,1000,"#f59e0b"),
+        ("gratuit","Essai gratuit 48 H",0.0,2,999999,1,"Essai 48 h : IA illimitee · 1 photo · tout debloque","unique",1),
+        ("3jours","Pack 3 Jours",250.0,3,15,1,"3 jours · 15 questions IA/jour · 1 photo/jour","unique",1),
+        ("1semaine","Pack 1 Semaine",500.0,7,30,2,"7 jours · 30 questions IA/jour · 2 photos/jour","unique",1),
+        ("2semaines","Pack 2 Semaines",1000.0,14,50,3,"14 jours · 50 questions IA/jour · 3 photos/jour","unique",1),
+        ("1mois","Pack 1 Mois",2000.0,30,100,5,"30 jours · 100 questions IA/jour · 5 photos/jour","unique",1),
+        ("bac","Pack BAC",3000.0,90,200,10,"90 jours · 200 questions IA/jour · 10 photos/jour · tous niveaux","unique",1),
+        ("annuel","Pack Annuel",10000.0,365,500,30,"1 an · 500 questions IA/jour · 30 photos/jour · tous niveaux","mensuel",10),
     ]
     for p in plans:
-        c.execute("INSERT OR IGNORE INTO plans (code,nom,prix,duree_jours,quota_ia,quota_photo,quota_correct,quota_texte,couleur) VALUES (?,?,?,?,?,?,?,?,?)", p)
+        c.execute("INSERT OR IGNORE INTO plans (code,nom,prix,duree_jours,limite_ia_jour,photo_jour,description,paiement_tranche,nb_tranches) VALUES (?,?,?,?,?,?,?,?,?)", p)
 
     sujets = [
         ("math","Mathématiques","Algèbre, géométrie, probabilités",1),
@@ -210,17 +213,29 @@ def init_db():
 def plan_actif(u):
     c = db()
     a = c.execute("SELECT * FROM abonnements WHERE user_id=? AND statut='actif'", (u["id"],)).fetchone()
-    c.close()
     if a:
         p = c.execute("SELECT * FROM plans WHERE code=?", (a["plan_code"],)).fetchone()
         if p:
+            c.close()
             return dict(p)
     g = c.execute("SELECT * FROM plans WHERE code='gratuit'").fetchone()
+    c.close()
     return dict(g)
 
 def check_quota(u, p, type_usage):
-    quota = {"ia": p["quota_ia"], "photo": p["quota_photo"], "correct": p["quota_correct"]}.get(type_usage, 1000)
-    if quota <= 0: return False, "Quota de "+str(type_usage)+" épuisé pour ce plan"
+    # Limites depuis la table plans (colonnes limite_ia_jour, photo_jour)
+    # IA illimitée pour tous les eleves inscrits pour le test
+    if type_usage == "ia":
+        limite = p.get("limite_ia_jour", 999999)
+        if limite <= 0: return False, "Quota IA épuisé pour ce plan"
+        return True, "OK"
+    if type_usage == "photo":
+        limite = p.get("photo_jour", 0)
+        if limite <= 0: return False, "Quota photo épuisé pour ce plan"
+        return True, "OK"
+    if type_usage == "correct":
+        # Correction IA sans limite (meilleur apprentissage)
+        return True, "OK"
     return True, "OK"
 
 def update_usage(uid, type_usage):
@@ -1110,7 +1125,9 @@ def api_reset():
     c.close()
     return jsonify({"ok":True,"nouveau_mdp":new})
 
+# Initialiser la base de données au démarrage (fonctionne avec Gunicorn et Flask dev)
+init_db()
+
 if __name__ == "__main__":
-    init_db()
     print("🟢 ÉcoleMax Flask → http://0.0.0.0:" + str(PORT))
     app.run(host="0.0.0.0", port=PORT)
