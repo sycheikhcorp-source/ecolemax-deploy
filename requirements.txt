@@ -1,3 +1,2 @@
-# ÉcoleMax — backend 100 % bibliothèque standard Python (aucune dépendance externe)
-# Rien à installer : python3 serveur.py suffit.
-# Ce fichier existe pour Render/Railway/Koyeb qui l'attendent.
+flask==3.1.3
+gunicorn==26.2.0
