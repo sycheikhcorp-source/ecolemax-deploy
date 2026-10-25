@@ -1225,8 +1225,9 @@ def keepalive():
     while True:
         try:
             urlreq.urlopen(service_url + "/health", timeout=10)
-        except:
-            pass
+            print("[keepalive] OK -> " + service_url + "/health", flush=True)
+        except Exception as ex:
+            print("[keepalive] ERR: " + str(ex), flush=True)
         time.sleep(240)  # 4 minutes
 
 # Lancer le keepalive dans un thread séparé (sans bloqué le startup)

@@ -677,8 +677,7 @@ async function deleteUser(id,pseudo){
   const d=await r.json();showAlert("alert",d.message||d.erreur,d.ok);if(d.ok)refreshCurrent();
 }
 async function abonneUser(id){
-  const plan=prompt("Choisis le plan d'abonnement:
-1=3jours(250F) 2=1semaine(500F) 3=2semaines(1000F) 4=1mois(2000F) 5=bac(3000F) 6=annuel(10000F)","4");
+  const plan=prompt("Choisis le plan d'abonnement:\n1=3jours(250F) 2=1semaine(500F) 3=2semaines(1000F) 4=1mois(2000F) 5=bac(3000F) 6=annuel(10000F)","4");
   if(!plan)return;
   const codes={"1":"3jours","2":"1semaine","3":"2semaines","4":"1mois","5":"bac","6":"annuel"};
   const code=codes[plan];if(!code)return;
