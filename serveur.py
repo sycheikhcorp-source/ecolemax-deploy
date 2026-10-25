@@ -817,9 +817,11 @@ def reponse_ia_photo(question, image_b64, plan=None):
 # HTTP Handler
 # ─────────────────────────────────────────────
 class Handler(BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
     def log_message(self, *a): pass
 
     def send_json(self, data, code=200):
+        self.wfile.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 1024*1024)
         body = json.dumps(data, ensure_ascii=False).encode()
         self.send_response(code)
         self.send_header("Content-Type","application/json; charset=utf-8")
@@ -830,6 +832,7 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def send_html(self, path, code=200):
+        self.wfile.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 1024*1024)
         if not os.path.isfile(path):
             self.send_error(404, "Fichier non trouvé")
             return
