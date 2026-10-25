@@ -1133,6 +1133,25 @@ def api_reset():
     c.close()
     return jsonify({"ok":True,"nouveau_mdp":new})
 
+# Keepalive thread — empêche Render de suspendre le service
+def keepalive():
+    """Demande /health toutes les 4 minutes pour éviter la suspension Render."""
+    import urllib.request as urlreq
+    # Déterminer l'URL du service
+    service_url = os.environ.get("RENDER_SERVICE_URL", "")
+    if not service_url:
+        service_url = "http://localhost:" + str(PORT)
+    while True:
+        try:
+            urlreq.urlopen(service_url + "/health", timeout=10)
+        except:
+            pass
+        time.sleep(240)  # 4 minutes
+
+# Lancer le keepalive dans un thread séparé (sans bloqué le startup)
+import threading as _threading
+_threading.Thread(target=keepalive, daemon=True).start()
+
 # Initialiser la base de données au démarrage (fonctionne avec Gunicorn et Flask dev)
 init_db()
 
