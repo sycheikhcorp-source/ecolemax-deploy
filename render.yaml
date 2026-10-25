@@ -6,3 +6,11 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn -w 4 -b 0.0.0.0:$PORT --timeout 120 app:app
     healthCheckPath: /health
+    autoDeploy: true
+    healthCheckPeriod: 300
+
+  - type: cron
+    name: ecolemax-keepalive
+    plan: free
+    schedule: "*/5 * * * *"
+    command: "curl -s https://ecolemax.onrender.com/health"
