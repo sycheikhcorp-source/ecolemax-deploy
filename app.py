@@ -654,11 +654,11 @@ def api_exercises():
     for r in rows:
         ex = dict(r)
         question = ex.get("question","")
-        m = _re.search(r"\[([^\]]+)\]", question)
+        m = _re.search(r"\[([a-zA-ZÀ-ÿ0-9]+(?:/[a-zA-ZÀ-ÿ0-9]+)+)\]", question)
         if m:
             opts = [o.strip() for o in m.group(1).split("/")]
             ex["options"] = _json.dumps(opts, ensure_ascii=False)
-            ex["question"] = _re.sub(r"\s*\[([^\]]+)\]", "", question).strip()
+            ex["question"] = _re.sub(r"\s*\[([a-zA-ZÀ-ÿ0-9]+(?:/[a-zA-ZÀ-ÿ0-9]+)+)\]", "", question).strip()
         else:
             ex["options"] = "[]"
         result.append(ex)
@@ -675,12 +675,13 @@ def api_quiz():
     c.close()
     # Générer les options dynamiquement
     import random as _random
+    import json as _json2
     # Pool de réponses wrong par catégorie
     _wrong_pools = {
         "Géographie": ["Conakry","Bamako","Abidjan","Ouagadougou","Dakar","Saint-Louis","Ziguinchor","Lomé","Cotonou","Niamey"],
         "Histoire": ["1960","1965","1970","1958","Senghor","Diouf","Wade","Macky","Goree","Saint-Louis"],
         "Maths": ["2x","3x","5x","10","15","20","100","0","1","1000"],
-        "Français": ["cheval","chevaux","cheval","pronom relatif","qui","que","où","en","au","du"],
+        "Français": ["cheval","chevaux","pronom relatif","qui","que","où","en","au","du","les"],
         "Physique": ["Newton","300000 km/s","énergie","masse","vitesse","accélération","force","travail","puissance","moment"],
         "Chimie": ["H₂O","CO₂","7","14","1","100","Zn","Cu","O₂","N₂"],
         "SVT": ["cœur","gène","photosynthèse","cellule","organite","ADN","ARN","proteine","sang","nerf"],
@@ -692,18 +693,17 @@ def api_quiz():
     for r in rows:
         qz = dict(r)
         idx = qz.get("reponse", 0)
+        if idx >= 4: idx = 0
         correct = qz.get("explication", "")
         cat = qz.get("categorie", "")
         pool = _wrong_pools.get(cat, ["Option A","Option B","Option C","Option D"])
-        # Choisir 3 wrong answers
         wrong = _random.sample([p for p in pool if p != correct], min(3, len(pool)-1)) if len(pool) > 1 else ["A","B","C"]
         while len(wrong) < 3: wrong.append(f"Option {chr(65+len(wrong))}")
-        # Placer la bonne réponse à l'index
         options = [""] * 4
         for i in range(4):
             if i == idx: options[i] = correct
             else: options[i] = wrong.pop(0) if wrong else f"Option {chr(65+i)}"
-        qz["options"] = _json.dumps(options, ensure_ascii=False)
+        qz["options"] = _json2.dumps(options, ensure_ascii=False)
         result.append(qz)
     return jsonify({"quiz": result})
 
