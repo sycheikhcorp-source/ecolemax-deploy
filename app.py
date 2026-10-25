@@ -570,9 +570,9 @@ def app_html():
 def dashboard():
     return send_file(os.path.join(os.path.dirname(os.path.abspath(__file__)), "projet", "dashboard.html"))
 
-@app.route("/EcoleMax-1.0.0.apk")
+@app.route("/EcoleMax.apk")
 def apk():
-    return send_file(os.path.join(os.path.dirname(os.path.abspath(__file__)), "projet", "telechargements", "EcoleMax-1.0.0.apk"), as_attachment=True)
+    return send_file(os.path.join(os.path.dirname(os.path.abspath(__file__)), "EcoleMax-v6-signed.apk"), as_attachment=True)
 
 @app.route("/favicon.ico")
 def favicon():
