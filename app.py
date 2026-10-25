@@ -575,12 +575,25 @@ def serve_html(filename):
         return Response("404 Not Found", status=404, mimetype="text/html")
     with open(fp, "r", encoding="utf-8") as f:
         content = f.read()
-    # Injecter l'URL API absolute
+    # Injecter l'URL API absolute — gère plusieurs formats
     api_url = request.host_url.rstrip("/")
+    # Format 1: const API = window.__ECOLEMAX_API__ || "";
     content = content.replace(
         'const API = window.__ECOLEMAX_API__ || "";',
         f'const API = window.__ECOLEMAX_API__ || "{api_url}";'
     )
+    # Format 2: const API="";
+    content = content.replace(
+        'const API="";',
+        f'const API="{api_url}";'
+    )
+    # Format 3: const API = "";
+    content = content.replace(
+        'const API = "";',
+        f'const API = "{api_url}";'
+    )
+    # Corriger s.categorie → s.description (sujets table n'a pas categorie)
+    content = content.replace("s.categorie", "s.description")
     resp = Response(content, mimetype="text/html; charset=utf-8")
     resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     resp.headers["X-Content-Type-Options"] = "nosniff"
