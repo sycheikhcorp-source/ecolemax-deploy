@@ -1,0 +1,19 @@
+{
+  "name": "EcoleMax",
+  "description": "Plateforme éducative complète - Flask+Gunicorn",
+  "repository": "https://github.com/sycheikhcorp-source/ecolemax-deploy",
+  "keywords": ["python", "flask", "education"],
+  "buildpacks": [
+    {
+      "url": "heroku/python"
+    }
+  ],
+  "env": {
+    "PORT": {
+      "description": "Port du serveur"
+    },
+    "DB_PATH": {
+      "description": "Chemin de la base de données SQLite"
+    }
+  }
+}

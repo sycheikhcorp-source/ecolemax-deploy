@@ -1,0 +1,12 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.git
+.github
+*.db
+*.bak
+__redeploy__
+README.md
+.env
+node_modules
