@@ -12,8 +12,9 @@ OVH_AI_URL = "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/chat/completions"
 OVH_AI_MODEL = "Qwen2.5-VL-72B-Instruct"
 OVH_AI_FALLBACK = "Meta-Llama-3_3-70B-Instruct"
 OVH_AI_MAX_TOKENS = 3000
-OVH_AI_TIMEOUT = 45
+OVH_AI_TIMEOUT = 30
 _POLLINATIONS_MIN_INTERVAL = 30
+_ai_sem = threading.BoundedSemaphore(5)  # max 5 appels IA simultanés (évite la saturation du fournisseur)
 
 # ─── Utilitaires ───
 def now():
@@ -32,7 +33,7 @@ def log_sec(user_id, action, detail=""):
 def hash_pass(mdp):
     """Hachage PBKDF2 avec sel aléatoire (sécurité renforcée)."""
     salt = os.urandom(16)
-    h = hashlib.pbkdf2_hmac('sha256', mdp.encode(), salt, 100000)
+    h = hashlib.pbkdf2_hmac('sha256', mdp.encode(), salt, 50000)
     return "pbkdf2$" + salt.hex() + "$" + h.hex()
 
 def verify_pass(mdp, stored):
@@ -42,7 +43,7 @@ def verify_pass(mdp, stored):
         if len(parts) == 3:
             try:
                 salt = bytes.fromhex(parts[1])
-                h = hashlib.pbkdf2_hmac('sha256', mdp.encode(), salt, 100000)
+                h = hashlib.pbkdf2_hmac('sha256', mdp.encode(), salt, 50000)
                 if h.hex() == parts[2]:
                     return True
             except Exception:
@@ -236,141 +237,147 @@ def update_usage(uid, type_usage):
     c.close()
 
 def get_iou_ai(q, max_tokens=OVH_AI_MAX_TOKENS, temperature=0.4, max_retries=2, silent=False):
-    print(f"🟣 AI OVH → model={OVH_AI_MODEL} max_tokens={max_tokens} q={q[:60]}...")
-    payload = {"model": OVH_AI_MODEL, "messages": [{"role": "user", "content": q}], "max_tokens": max_tokens, "temperature": temperature}
-    data = json.dumps(payload).encode()
-    last_err = ""
-    for attempt in range(max_retries + 1):
-        try:
-            req = urllib.request.Request(OVH_AI_URL, data=data, method="POST")
-            req.add_header("Content-Type", "application/json")
-            with urllib.request.urlopen(req, timeout=OVH_AI_TIMEOUT) as resp:
-                result = json.loads(resp.read().decode())
-                text = result["choices"][0]["message"]["content"].strip()
-                if not silent: print(f"✅ AI OVH OK ({len(text)} chars)")
-                return True, text, OVH_AI_MODEL
-        except Exception as e:
-            last_err = str(e)
-            if attempt < max_retries:
-                time.sleep(2 * (attempt + 1))
-    if not silent: print(f"❌ AI OVH FAIL: {last_err}")
-    return False, "", last_err
+    with _ai_sem:
+        print(f"🟣 AI OVH → model={OVH_AI_MODEL} max_tokens={max_tokens} q={q[:60]}...")
+        payload = {"model": OVH_AI_MODEL, "messages": [{"role": "user", "content": q}], "max_tokens": max_tokens, "temperature": temperature}
+        data = json.dumps(payload).encode()
+        last_err = ""
+        for attempt in range(max_retries + 1):
+            try:
+                req = urllib.request.Request(OVH_AI_URL, data=data, method="POST")
+                req.add_header("Content-Type", "application/json")
+                with urllib.request.urlopen(req, timeout=OVH_AI_TIMEOUT) as resp:
+                    result = json.loads(resp.read().decode())
+                    text = result["choices"][0]["message"]["content"].strip()
+                    if not silent: print(f"✅ AI OVH OK ({len(text)} chars)")
+                    return True, text, OVH_AI_MODEL
+            except Exception as e:
+                last_err = str(e)
+                if attempt < max_retries:
+                    time.sleep(2 * (attempt + 1))
+        if not silent: print(f"❌ AI OVH FAIL: {last_err}")
+        return False, "", last_err
 
 def get_iou_ai_vision(q, image_b64, max_tokens=OVH_AI_MAX_TOKENS, temperature=0.3, silent=False):
-    print(f"🟣 AI OVH Vision → model={OVH_AI_MODEL} q={q[:50]}...")
-    payload = {
-        "model": OVH_AI_MODEL,
-        "messages": [{"role": "user", "content": [
-            {"type": "text", "text": q},
-            {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + image_b64}}
-        ]}],
-        "max_tokens": max_tokens, "temperature": temperature
-    }
-    data = json.dumps(payload).encode()
-    last_err = ""
-    for attempt in range(3):
+    with _ai_sem:
+        print(f"🟣 AI OVH Vision → model={OVH_AI_MODEL} q={q[:50]}...")
+        payload = {
+            "model": OVH_AI_MODEL,
+            "messages": [{"role": "user", "content": [
+                {"type": "text", "text": q},
+                {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + image_b64}}
+            ]}],
+            "max_tokens": max_tokens, "temperature": temperature
+        }
+        data = json.dumps(payload).encode()
+        last_err = ""
+        for attempt in range(3):
+            try:
+                req = urllib.request.Request(OVH_AI_URL, data=data, method="POST")
+                req.add_header("Content-Type", "application/json")
+                with urllib.request.urlopen(req, timeout=OVH_AI_TIMEOUT) as resp:
+                    result = json.loads(resp.read().decode())
+                    text = result["choices"][0]["message"]["content"].strip()
+                    if not silent: print(f"✅ AI OVH Vision OK ({len(text)} chars)")
+                    return True, text, OVH_AI_MODEL
+            except Exception as e:
+                last_err = str(e)
+                if attempt < 2:
+                    time.sleep(2 * (attempt + 1))
+        if not silent: print(f"❌ AI OVH Vision FAIL: {last_err}")
+        return False, "", last_err
+
+def get_iou_ai_fallback(q, max_tokens=OVH_AI_MAX_TOKENS, silent=False):
+    with _ai_sem:
+        print(f"🟣 AI OVH Fallback → model={OVH_AI_FALLBACK}")
+        payload = {"model": OVH_AI_FALLBACK, "messages": [{"role": "user", "content": q}], "max_tokens": max_tokens, "temperature": 0.4}
+        data = json.dumps(payload).encode()
         try:
             req = urllib.request.Request(OVH_AI_URL, data=data, method="POST")
             req.add_header("Content-Type", "application/json")
             with urllib.request.urlopen(req, timeout=OVH_AI_TIMEOUT) as resp:
                 result = json.loads(resp.read().decode())
                 text = result["choices"][0]["message"]["content"].strip()
-                if not silent: print(f"✅ AI OVH Vision OK ({len(text)} chars)")
-                return True, text, OVH_AI_MODEL
+                if not silent: print(f"✅ AI OVH Fallback OK ({len(text)} chars)")
+                return True, text, OVH_AI_FALLBACK
         except Exception as e:
-            last_err = str(e)
-            if attempt < 2:
-                time.sleep(2 * (attempt + 1))
-    if not silent: print(f"❌ AI OVH Vision FAIL: {last_err}")
-    return False, "", last_err
-
-def get_iou_ai_fallback(q, max_tokens=OVH_AI_MAX_TOKENS, silent=False):
-    print(f"🟣 AI OVH Fallback → model={OVH_AI_FALLBACK}")
-    payload = {"model": OVH_AI_FALLBACK, "messages": [{"role": "user", "content": q}], "max_tokens": max_tokens, "temperature": 0.4}
-    data = json.dumps(payload).encode()
-    try:
-        req = urllib.request.Request(OVH_AI_URL, data=data, method="POST")
-        req.add_header("Content-Type", "application/json")
-        with urllib.request.urlopen(req, timeout=OVH_AI_TIMEOUT) as resp:
-            result = json.loads(resp.read().decode())
-            text = result["choices"][0]["message"]["content"].strip()
-            if not silent: print(f"✅ AI OVH Fallback OK ({len(text)} chars)")
-            return True, text, OVH_AI_FALLBACK
-    except Exception as e:
-        if not silent: print(f"❌ AI OVH Fallback FAIL: {e}")
-    return False, "", str(e)
+            if not silent: print(f"❌ AI OVH Fallback FAIL: {e}")
+        return False, "", str(e)
 
 def get_iou_ai_fallback_vision(q, image_b64, silent=False):
-    print(f"🟣 AI OVH Fallback Vision → model={OVH_AI_FALLBACK}")
-    payload = {
-        "model": OVH_AI_FALLBACK,
-        "messages": [{"role": "user", "content": [
-            {"type": "text", "text": q},
-            {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + image_b64}}
-        ]}],
-        "max_tokens": OVH_AI_MAX_TOKENS, "temperature": 0.3
-    }
-    data = json.dumps(payload).encode()
-    try:
-        req = urllib.request.Request(OVH_AI_URL, data=data, method="POST")
-        req.add_header("Content-Type", "application/json")
-        with urllib.request.urlopen(req, timeout=OVH_AI_TIMEOUT) as resp:
-            result = json.loads(resp.read().decode())
-            text = result["choices"][0]["message"]["content"].strip()
-            if not silent: print(f"✅ AI OVH Fallback Vision OK ({len(text)} chars)")
-            return True, text, OVH_AI_FALLBACK
-    except Exception as e:
-        if not silent: print(f"❌ AI OVH Fallback Vision FAIL: {e}")
-    return False, "", str(e)
+    with _ai_sem:
+        print(f"🟣 AI OVH Fallback Vision → model={OVH_AI_FALLBACK}")
+        payload = {
+            "model": OVH_AI_FALLBACK,
+            "messages": [{"role": "user", "content": [
+                {"type": "text", "text": q},
+                {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + image_b64}}
+            ]}],
+            "max_tokens": OVH_AI_MAX_TOKENS, "temperature": 0.3
+        }
+        data = json.dumps(payload).encode()
+        try:
+            req = urllib.request.Request(OVH_AI_URL, data=data, method="POST")
+            req.add_header("Content-Type", "application/json")
+            with urllib.request.urlopen(req, timeout=OVH_AI_TIMEOUT) as resp:
+                result = json.loads(resp.read().decode())
+                text = result["choices"][0]["message"]["content"].strip()
+                if not silent: print(f"✅ AI OVH Fallback Vision OK ({len(text)} chars)")
+                return True, text, OVH_AI_FALLBACK
+        except Exception as e:
+            if not silent: print(f"❌ AI OVH Fallback Vision FAIL: {e}")
+        return False, "", str(e)
 
 def get_pollinations(q, max_tokens=OVH_AI_MAX_TOKENS, silent=False):
-    last_err = ""
-    now_t = time.time()
-    global _last_pollinations_call
-    if '_last_pollinations_call' not in globals(): _last_pollinations_call = 0
-    if now_t - _last_pollinations_call < _POLLINATIONS_MIN_INTERVAL:
-        wait = _POLLINATIONS_MIN_INTERVAL - (now_t - _last_pollinations_call)
-        if not silent: print(f"⏳ Pollinations rate limit, waiting {wait:.0f}s")
-        time.sleep(wait)
-    _last_pollinations_call = time.time()
-    payload = {"model": "openai", "messages": [{"role": "user", "content": q}], "max_tokens": max_tokens, "temperature": 0.5}
-    data = json.dumps(payload).encode()
-    try:
-        req = urllib.request.Request(POLLINATIONS_URL, data=data, method="POST")
-        req.add_header("Content-Type", "application/json")
-        with urllib.request.urlopen(req, timeout=OVH_AI_TIMEOUT) as resp:
-            result = json.loads(resp.read().decode())
-            text = result["choices"][0]["message"]["content"].strip()
-            if not silent: print(f"✅ Pollinations OK ({len(text)} chars)")
-            return True, text, "Pollinations"
-    except Exception as e:
-        last_err = str(e)
-    if not silent: print(f"❌ Pollinations FAIL: {last_err}")
-    return False, "", last_err
+    with _ai_sem:
+        last_err = ""
+        now_t = time.time()
+        global _last_pollinations_call
+        if '_last_pollinations_call' not in globals(): _last_pollinations_call = 0
+        if now_t - _last_pollinations_call < _POLLINATIONS_MIN_INTERVAL:
+            wait = _POLLINATIONS_MIN_INTERVAL - (now_t - _last_pollinations_call)
+            if not silent: print(f"⏳ Pollinations rate limit, waiting {wait:.0f}s")
+            time.sleep(wait)
+        _last_pollinations_call = time.time()
+        payload = {"model": "openai", "messages": [{"role": "user", "content": q}], "max_tokens": max_tokens, "temperature": 0.5}
+        data = json.dumps(payload).encode()
+        try:
+            req = urllib.request.Request(POLLINATIONS_URL, data=data, method="POST")
+            req.add_header("Content-Type", "application/json")
+            with urllib.request.urlopen(req, timeout=OVH_AI_TIMEOUT) as resp:
+                result = json.loads(resp.read().decode())
+                text = result["choices"][0]["message"]["content"].strip()
+                if not silent: print(f"✅ Pollinations OK ({len(text)} chars)")
+                return True, text, "Pollinations"
+        except Exception as e:
+            last_err = str(e)
+        if not silent: print(f"❌ Pollinations FAIL: {last_err}")
+        return False, "", last_err
 
 def get_pollinations_vision(q, image_b64, silent=False):
-    last_err = ""
-    payload = {
-        "model": "openai",
-        "messages": [{"role": "user", "content": [
-            {"type": "text", "text": q},
-            {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + image_b64}}
-        ]}],
-        "max_tokens": OVH_AI_MAX_TOKENS, "temperature": 0.3
-    }
-    data = json.dumps(payload).encode()
-    try:
-        req = urllib.request.Request(POLLINATIONS_URL, data=data, method="POST")
-        req.add_header("Content-Type", "application/json")
-        with urllib.request.urlopen(req, timeout=OVH_AI_TIMEOUT) as resp:
-            result = json.loads(resp.read().decode())
-            text = result["choices"][0]["message"]["content"].strip()
-            if not silent: print(f"✅ Pollinations Vision OK ({len(text)} chars)")
-            return True, text, "Pollinations Vision"
-    except Exception as e:
-        last_err = str(e)
-    if not silent: print(f"❌ Pollinations Vision FAIL: {last_err}")
-    return False, "", last_err
+    with _ai_sem:
+        last_err = ""
+        payload = {
+            "model": "openai",
+            "messages": [{"role": "user", "content": [
+                {"type": "text", "text": q},
+                {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + image_b64}}
+            ]}],
+            "max_tokens": OVH_AI_MAX_TOKENS, "temperature": 0.3
+        }
+        data = json.dumps(payload).encode()
+        try:
+            req = urllib.request.Request(POLLINATIONS_URL, data=data, method="POST")
+            req.add_header("Content-Type", "application/json")
+            with urllib.request.urlopen(req, timeout=OVH_AI_TIMEOUT) as resp:
+                result = json.loads(resp.read().decode())
+                text = result["choices"][0]["message"]["content"].strip()
+                if not silent: print(f"✅ Pollinations Vision OK ({len(text)} chars)")
+                return True, text, "Pollinations Vision"
+        except Exception as e:
+            last_err = str(e)
+        if not silent: print(f"❌ Pollinations Vision FAIL: {last_err}")
+        return False, "", last_err
 
 def local_reponse_math(q):
     if any(k in q.lower() for k in ["calcul", "solve", "solution", "explication"]):
