@@ -59,6 +59,7 @@ def init_db():
     c.execute("""CREATE TABLE IF NOT EXISTS corrections (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, original TEXT, corrige TEXT, explication TEXT, date TEXT)""")
     c.execute("""CREATE TABLE IF NOT EXISTS quiz (id INTEGER PRIMARY KEY AUTOINCREMENT, categorie TEXT, question TEXT, reponse INTEGER, explication TEXT)""")
     c.execute("""CREATE TABLE IF NOT EXISTS quiz_resultats (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, score INTEGER, total INTEGER, date TEXT)""")
+    c.execute("""CREATE TABLE IF NOT EXISTS results (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, exercise_id INTEGER, score INTEGER, reponse_utilisateur TEXT, correct INTEGER, date TEXT)""")
     c.execute("""CREATE TABLE IF NOT EXISTS favoris (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, type TEXT, ref_id INTEGER, label TEXT, date TEXT, UNIQUE(user_id,type,ref_id))""")
     c.execute("""CREATE TABLE IF NOT EXISTS notifications (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, titre TEXT, message TEXT, type TEXT DEFAULT 'system', lu INTEGER DEFAULT 0, date TEXT)""")
     c.execute("""CREATE TABLE IF NOT EXISTS supports (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, sujet TEXT, message TEXT, date TEXT)""")
@@ -537,7 +538,7 @@ def securite():
 
 @app.route("/EcoleMax.apk")
 def apk():
-    return send_file(os.path.join(os.path.dirname(os.path.abspath(__file__)), "EcoleMax-v6-signed.apk"), as_attachment=True)
+    return send_file(os.path.join(os.path.dirname(os.path.abspath(__file__)), "EcoleMax-v10.apk"), as_attachment=True)
 
 @app.route("/favicon.ico")
 def favicon():
@@ -1045,6 +1046,17 @@ def api_admin_stats():
     return jsonify({"total_users":total_users,"total_abos":total_abos,"total_pays":total_pays,
                      "total_ex":total_ex,"paiements_attente":pays_attente})
 
+@app.route("/api/admin/backup")
+def api_admin_backup():
+    """Sauvegarde complète de la base de données (dump SQL téléchargeable)."""
+    if request.headers.get("X-Admin-Password","") != ADMIN_PASSWORD:
+        return jsonify({"erreur":"Non autorisé"}), 403
+    c = db()
+    dump = "\n".join(c.iterdump())
+    c.close()
+    return Response(dump, mimetype="application/sql",
+                    headers={"Content-Disposition":"attachment; filename=ecolemax-backup.sql"})
+
 @app.route("/api/admin/users")
 def api_admin_users():
     if request.headers.get("X-Admin-Password","") != ADMIN_PASSWORD:
@@ -1195,7 +1207,6 @@ def api_reset():
     pseudo = data.get("pseudo","")
     c = db()
     u = c.execute("SELECT * FROM users WHERE pseudo=?", (pseudo,)).fetchone()
-    c.close()
     if not u: return jsonify({"erreur":"Utilisateur non trouvé"}), 404
     new = secrets.token_hex(4)
     c.execute("UPDATE users SET mot_de_passe=? WHERE id=?", (hash_pass(new), u["id"]))
