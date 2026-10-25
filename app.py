@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """ÉcoleMax — Serveur Flask + Gunicorn (production stable)"""
-import os, json, re, base64, hashlib, datetime, secrets, sqlite3, urllib.request, time, threading
+import os, json, re, base64, hashlib, datetime, secrets, sqlite3, urllib.request, time, threading, hmac
 
 HOST = "0.0.0.0"
 PORT = int(os.environ.get("PORT", 8000))
 DB_PATH = os.environ.get("DB_PATH", os.path.join(os.path.dirname(os.path.abspath(__file__)), "ecolemax.db"))
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "ecolemax2026")
+JWT_SECRET = os.environ.get("JWT_SECRET", "ecolemax-jwt-secret-v1-2026-change")
 POLLINATIONS_URL = "https://text.pollinations.ai/openai"
 OVH_AI_URL = "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/chat/completions"
 OVH_AI_MODEL = "Qwen2.5-VL-72B-Instruct"
@@ -29,21 +30,50 @@ def log_sec(user_id, action, detail=""):
         pass
 
 def hash_pass(mdp):
-    return hashlib.sha256(mdp.encode()).hexdigest()
+    """Hachage PBKDF2 avec sel aléatoire (sécurité renforcée)."""
+    salt = os.urandom(16)
+    h = hashlib.pbkdf2_hmac('sha256', mdp.encode(), salt, 100000)
+    return "pbkdf2$" + salt.hex() + "$" + h.hex()
+
+def verify_pass(mdp, stored):
+    """Vérifie un mot de passe : PBKDF2 d'abord, migration SHA-256 pour les anciens."""
+    if stored and stored.startswith("pbkdf2$"):
+        parts = stored.split("$")
+        if len(parts) == 3:
+            try:
+                salt = bytes.fromhex(parts[1])
+                h = hashlib.pbkdf2_hmac('sha256', mdp.encode(), salt, 100000)
+                if h.hex() == parts[2]:
+                    return True
+            except Exception:
+                pass
+    # Migration : anciens mots de passe hachés en SHA-256 simple
+    return hashlib.sha256(mdp.encode()).hexdigest() == stored
 
 def jwt_create(uid):
     payload = {"uid": uid, "ts": int(time.time())}
+    sig = hmac.new(JWT_SECRET.encode(), json.dumps(payload, separators=(',', ':')).encode(), hashlib.sha256).hexdigest()
+    payload["sig"] = sig
     return base64.urlsafe_b64encode(json.dumps(payload).encode()).decode()
 
 def jwt_decode(token):
+    """Décode et vérifie la signature HMAC du JWT."""
     try:
-        return json.loads(base64.urlsafe_b64decode(token.encode()))
+        payload = json.loads(base64.urlsafe_b64decode(token.encode()))
+        sig = payload.pop("sig", None)
+        if sig is None: return None
+        calc = hmac.new(JWT_SECRET.encode(), json.dumps(payload, separators=(',', ':')).encode(), hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(sig, calc): return None
+        return payload
     except Exception:
         return None
 
 def db():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=30)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA synchronous=NORMAL")
+    conn.execute("PRAGMA busy_timeout=30000")
     return conn
 
 def init_db():
@@ -490,6 +520,7 @@ from data_seed import EXERCICES as SEED_EXERCICES, QUIZ as SEED_QUIZ
 from flask import Flask, request, jsonify, send_file, Response
 
 app = Flask(__name__)
+app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024  # 10MB max par requête
 
 def get_user_by_token(req):
     auth = req.headers.get("Authorization","")
@@ -744,7 +775,7 @@ def api_login():
     c = db()
     u = c.execute("SELECT * FROM users WHERE pseudo=?", (pseudo,)).fetchone()
     c.close()
-    if not u or u["mot_de_passe"] != hash_pass(mdp):
+    if not u or not verify_pass(mdp, u["mot_de_passe"]):
         return jsonify({"erreur":"Identifiants invalides"}), 401
     log_sec(u["id"], "connexion", "Connexion élève")
     return jsonify({"ok":True,"token":jwt_create(u["id"]),"user":{"id":u["id"],"pseudo":u["pseudo"]}})
@@ -793,6 +824,14 @@ def api_ai_photo():
     data = request.get_json(silent=True) or {}
     img = data.get("image","")
     if not img or len(img) < 100: return jsonify({"erreur":"Image invalide"}), 400
+    if len(img) > 8 * 1024 * 1024: return jsonify({"erreur":"Image trop grosse (max 8MB)"}), 400
+    try:
+        img_bytes = base64.b64decode(img, validate=True)
+    except Exception:
+        return jsonify({"erreur":"Image base64 invalide"}), 400
+    if len(img_bytes) < 50: return jsonify({"erreur":"Image invalide"}), 400
+    if not (img_bytes[:3] == b'\xff\xd8\xff' or img_bytes[:8] == b'\x89PNG\r\n\x1a\n' or img_bytes[:4] == b'RIFF' or img_bytes[:6] in (b'GIF87a', b'GIF89a')):
+        return jsonify({"erreur":"Format d'image non supporté (JPEG/PNG/WebP/GIF)"}), 400
     q = data.get("question","")
     r = reponse_ia_photo(q, img, p)
     log_sec(u["id"], "ia_photo", "Correction photo")
