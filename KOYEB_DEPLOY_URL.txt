@@ -1,0 +1,1 @@
+https://app.koyeb.com/deploy?repo=sycheikhcorp-source/ecolemax-deploy&branch=main&builder=docker&name=ecolemax&instance_type=s-01&port=8000
