@@ -610,7 +610,7 @@ def securite():
 
 @app.route("/EcoleMax.apk")
 def apk():
-    return send_file(os.path.join(os.path.dirname(os.path.abspath(__file__)), "EcoleMax-v10.apk"), as_attachment=True)
+    return send_file(os.path.join(os.path.dirname(os.path.abspath(__file__)), "EcoleMax.apk"), as_attachment=True)
 
 @app.route("/favicon.ico")
 def favicon():
