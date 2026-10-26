@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ÉcoleMax — Catalogue SYCHEIKHCORP</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#f0f2f5;color:#1a1a2e;line-height:1.6}
+.page{max-width:820px;margin:0 auto;background:#fff;min-height:1160px;padding:60px;position:relative;box-shadow:0 0 30px rgba(0,0,0,.1);margin-bottom:30px}
+@media print{.page{page-break-after:always;margin:0;box-shadow:none}}
+
+/* Couverture */
+.cover{background:linear-gradient(135deg,#1565d8 0%,#7c3aed 100%);color:#fff;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;height:1000px;position:relative;overflow:hidden}
+.cover::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(circle at 30% 40%,rgba(255,255,255,.1) 0%,transparent 50%),radial-gradient(circle at 70% 60%,rgba(255,255,255,.08) 0%,transparent 50%)}
+.cover-logo{width:120px;height:120px;margin-bottom:30px;position:relative;z-index:1}
+.cover h1{font-size:52px;font-weight:900;margin-bottom:15px;position:relative;z-index:1;letter-spacing:-1px}
+.cover h1 span{color:#fbbf24}
+.cover .tagline{font-size:20px;opacity:.9;margin-bottom:40px;position:relative;z-index:1}
+.cover .badge{background:rgba(255,255,255,.2);border:2px solid rgba(255,255,255,.4);border-radius:50px;padding:10px 30px;font-size:14px;font-weight:700;position:relative;z-index:1;backdrop-filter:blur(10px)}
+.cover-footer{position:absolute;bottom:30px;left:0;right:0;text-align:center;font-size:13px;opacity:.7;z-index:1}
+
+/* Sections */
+.section{margin-bottom:50px}
+.section-title{font-size:28px;font-weight:800;color:#1565d8;margin-bottom:15px;padding-bottom:8px;border-bottom:3px solid #e8f1ff;display:flex;align-items:center;gap:10px}
+.section-title .num{background:#7c3aed;color:#fff;border-radius:8px;padding:4px 12px;font-size:16px}
+.section-text{font-size:15px;color:#475569;margin-bottom:20px}
+
+/* Grille features */
+.feature-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:15px;margin-bottom:20px}
+.feature-card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:20px;text-align:center}
+.feature-icon{width:50px;height:50px;margin:0 auto 10px;background:linear-gradient(135deg,#1565d8,#7c3aed);border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px}
+.feature-card h4{font-size:14px;font-weight:700;margin-bottom:5px}
+.feature-card p{font-size:12px;color:#64748b}
+
+/* Plans */
+.plan-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:15px}
+.plan-card{border:2px solid #e2e8f0;border-radius:16px;padding:25px;position:relative;transition:.2s}
+.plan-card.popular{border-color:#7c3aed;background:linear-gradient(135deg,#f5f3ff,#e8f1ff)}
+.plan-badge{position:absolute;top:-12px;left:20px;background:#7c3aed;color:#fff;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:700}
+.plan-name{font-size:18px;font-weight:800;color:#1e293b;margin-bottom:5px}
+.plan-price{font-size:28px;font-weight:900;color:#1565d8;margin-bottom:10px}
+.plan-price small{font-size:14px;color:#64748b;font-weight:400}
+.plan-features{list-style:none;padding:0}
+.plan-features li{font-size:13px;color:#475569;padding:4px 0;padding-left:20px;position:relative}
+.plan-features li::before{content:'✓';color:#16a34a;font-weight:700;position:absolute;left:0}
+
+/* Stats */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+.stat-box{background:linear-gradient(135deg,#1565d8,#7c3aed);color:#fff;border-radius:12px;padding:20px;text-align:center}
+.stat-number{font-size:32px;font-weight:900}
+.stat-label{font-size:12px;opacity:.9}
+
+/* Screenshots */
+.screenshot{border:2px solid #e2e8f0;border-radius:16px;overflow:hidden;margin-bottom:20px;box-shadow:0 4px 20px rgba(15,23,42,.08)}
+.screenshot-header{background:linear-gradient(135deg,#1565d8,#7c3aed);color:#fff;padding:12px 20px;font-weight:700;font-size:14px;display:flex;align-items:center;gap:8px}
+.screenshot-body{background:#f8fafc;padding:30px;text-align:center}
+.mock-phone{width:200px;height:380px;background:#1e293b;border-radius:30px;margin:0 auto 15px;padding:10px;box-shadow:0 8px 30px rgba(0,0,0,.2)}
+.mock-screen{width:100%;height:100%;background:#f8fafc;border-radius:22px;overflow:hidden;display:flex;flex-direction:column}
+.mock-header{background:linear-gradient(135deg,#1565d8,#7c3aed);color:#fff;padding:10px;text-align:center;font-size:11px;font-weight:700}
+.mock-content{padding:10px;flex:1}
+.mock-btn{background:#7c3aed;color:#fff;border-radius:8px;padding:6px;text-align:center;font-size:9px;margin-bottom:5px}
+.mock-card{background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:6px;margin-bottom:5px;font-size:8px;color:#475569}
+
+/* Footer SYCHEIKHCORP */
+.footer{position:absolute;bottom:0;left:0;right:0;background:#0f172a;color:#94a3b8;padding:20px;text-align:center;font-size:13px}
+.footer strong{color:#fbbf24}
+.footer .logo-text{font-size:16px;font-weight:900;color:#fff;margin-bottom:5px;letter-spacing:1px}
+
+/* Installation steps */
+.steps{counter-reset:step;padding:0;list-style:none}
+.steps li{counter-increment:step;position:relative;padding-left:45px;margin-bottom:20px;font-size:14px;color:#475569}
+.steps li::before{content:counter(step);position:absolute;left:0;top:0;width:32px;height:32px;background:linear-gradient(135deg,#1565d8,#7c3aed);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+
+/* QR code placeholder */
+.qr-box{text-align:center;margin:20px 0}
+.qr-placeholder{width:120px;height:120px;background:#f8fafc;border:2px dashed #cbd5e1;border-radius:12px;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:12px}
+</style>
+</head>
+<body>
+
+<!-- ===== PAGE 1 : COUVERTURE ===== -->
+<div class="page cover">
+  <svg class="cover-logo" viewBox="0 0 100 100" fill="none">
+    <rect x="10" y="10" width="80" height="80" rx="16" fill="rgba(255,255,255,.2)" stroke="rgba(255,255,255,.5)" stroke-width="2"/>
+    <text x="50" y="48" text-anchor="middle" font-size="28" font-weight="900" fill="#fff">ÉM</text>
+    <text x="50" y="72" text-anchor="middle" font-size="12" font-weight="700" fill="#fbbf24">ÉCOLEMAX</text>
+  </svg>
+  <h1>ÉcoleMax</h1>
+  <p class="tagline">Plateforme Éducative Numérique<br>Android · Web · Dashboard</p>
+  <div class="badge">SYCHEIKHCORP · 2026</div>
+  <div class="cover-footer">Catalogue Officiel — Partenaires & Établissements</div>
+</div>
+
+<!-- ===== PAGE 2 : INTRODUCTION ===== -->
+<div class="page">
+  <div class="footer">
+    <div class="logo-text">SYCHEIKHCORP</div>
+    <strong>Innovation Éducative</strong> · Catalogue 2026
+  </div>
+  <div class="section">
+    <div class="section-title"><span class="num">01</span> Présentation</div>
+    <p class="section-text">ÉcoleMax est une plateforme éducative complète conçue pour les écoles, collèges et lycées. Elle permet aux élèves d'accéder à des exercices, quiz, cours et assistance IA depuis leur téléphone Android ou leur navigateur web, avec un dashboard administrateur centralisé pour le gestionnaire d'établissement.</p>
+  </div>
+  <div class="section">
+    <div class="section-title"><span class="num">02</span> Architecture</div>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-icon">📱</div>
+        <h4>Application Android</h4>
+        <p>APK installable sur Android 10+</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🌐</div>
+        <h4>Site Web</h4>
+        <p>Responsive, moderne, accessible</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <h4>Dashboard Admin</h4>
+        <p>Statistiques, utilisateurs, contenus</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔄</div>
+        <h4>Synchronisation</h4>
+        <p>Comptes synchronisés APK ↔ Web</p>
+      </div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-title"><span class="num">03</span> Statistiques</div>
+    <div class="stats-grid">
+      <div class="stat-box"><div class="stat-number">38,882</div><div class="stat-label">Exercices</div></div>
+      <div class="stat-box"><div class="stat-number">45,006</div><div class="stat-label">Questions Quiz</div></div>
+      <div class="stat-box"><div class="stat-number">1,660</div><div class="stat-label">Cours</div></div>
+      <div class="stat-box"><div class="stat-number">7</div><div class="stat-label">Plans d'Abonnement</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PAGE 3 : APPLICATION ANDROID ===== -->
+<div class="page">
+  <div class="footer">
+    <div class="logo-text">SYCHEIKHCORP</div>
+    <strong>Innovation Éducative</strong> · Catalogue 2026
+  </div>
+  <div class="section">
+    <div class="section-title"><span class="num">04</span> Application Android</div>
+    <p class="section-text">Application native légère (APK) qui ouvre l'interface complète d'ÉcoleMax dans un WebView optimisé. Compatible Android 10 et supérieurs, elle fonctionne sur tous les téléphones modernes connectés à Internet.</p>
+  </div>
+  <div class="screenshot">
+    <div class="screenshot-header">📱 Interface Élève — Application Android</div>
+    <div class="screenshot-body">
+      <div class="mock-phone">
+        <div class="mock-screen">
+          <div class="mock-header">ÉcoleMax — Espace Élève</div>
+          <div class="mock-content">
+            <div class="mock-card">Bienvenue, Eleve_01</div>
+            <div class="mock-btn">Exercices</div>
+            <div class="mock-card">Quiz · IA · Favoris</div>
+            <div class="mock-btn">Assistant IA</div>
+            <div class="mock-card">Plan: Essai 48h · IA Illimitee</div>
+          </div>
+        </div>
+      </div>
+      <p style="font-size:13px;color:#64748b">Tableau de bord élève avec accès exercices, quiz, assistant IA et suivi des résultats</p>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-title"><span class="num">05</span> Installation</div>
+    <ol class="steps">
+      <li>Télécharger l'APK depuis le lien fourni par l'établissement</li>
+      <li>Autoriser l'installation depuis « Sources inconnues » dans les paramètres Android</li>
+      <li>Ouvrir l'application ÉcoleMax</li>
+      <li>Créer un compte avec pseudo et mot de passe</li>
+      <li>Commencer les exercices, quiz et consultation de l'assistant IA</li>
+    </ol>
+  </div>
+</div>
+
+<!-- ===== PAGE 4 : SITE WEB ===== -->
+<div class="page">
+  <div class="footer">
+    <div class="logo-text">SYCHEIKHCORP</div>
+    <strong>Innovation Éducative</strong> · Catalogue 2026
+  </div>
+  <div class="section">
+    <div class="section-title"><span class="num">06</span> Site Web</div>
+    <p class="section-text">Version responsive accessible directement dans le navigateur du téléphone ou de l'ordinateur. Interface moderne avec thème clair/sombre, couleurs bleu/violet, et navigation intuitive. Synchronisation instantanée avec l'application Android.</p>
+  </div>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="feature-icon">🎨</div>
+      <h4>Design Moderne</h4>
+      <p>Bleu/Violet, responsive, thème clair/sombre</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">⚡</div>
+      <h4>Rapide</h4>
+      <p>API optimisée, chargement instantané</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔒</div>
+      <h4>Sécurisé</h4>
+      <p>JWT tokens, hachage PBKDF2, logs de sécurité</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🌍</div>
+      <h4>Accessible</h4>
+      <p>Navigateur mobile ou ordinateur</p>
+    </div>
+  </div>
+  <div class="screenshot">
+    <div class="screenshot-header">🌐 Interface Web — Navigateur Mobile</div>
+    <div class="screenshot-body">
+      <div class="mock-phone">
+        <div class="mock-screen">
+          <div class="mock-header">ÉcoleMax — Web</div>
+          <div class="mock-content">
+            <div class="mock-card">Connexion</div>
+            <div class="mock-btn">S'inscrire</div>
+            <div class="mock-card">Exercices · Quiz · IA</div>
+            <div class="mock-btn">Mon Compte</div>
+          </div>
+        </div>
+      </div>
+      <p style="font-size:13px;color:#64748b">Identique à l'application Android — compte synchronisé automatiquement</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PAGE 5 : DASHBOARD ADMIN ===== -->
+<div class="page">
+  <div class="footer">
+    <div class="logo-text">SYCHEIKHCORP</div>
+    <strong>Innovation Éducative</strong> · Catalogue 2026
+  </div>
+  <div class="section">
+    <div class="section-title"><span class="num">07</span> Dashboard Administrateur</div>
+    <p class="section-text">Tableau de bord complet pour gérer l'établissement : statistiques, utilisateurs, abonnements, paiements, exercices, quiz, notifications, supports et journalisation. Protégé par mot de passe administrateur.</p>
+  </div>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="feature-icon">📈</div>
+      <h4>Statistiques</h4>
+      <p>Nombre d'élèves, exercices, abonnements</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">👥</div>
+      <h4>Utilisateurs</h4>
+      <p>Liste, profils, suppression, rôles</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">💳</div>
+      <h4>Paiements</h4>
+      <p>Abonnements, transactions, statuts</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📚</div>
+      <h4>Contenus</h4>
+      <p>Exercices, quiz, cours, corrections</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔔</div>
+      <h4>Notifications</h4>
+      <p>Messages, annonces, rappels</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🛡️</div>
+      <h4>Journalisation</h4>
+      <p>Logs de sécurité, audit, activité</p>
+    </div>
+  </div>
+  <div class="screenshot">
+    <div class="screenshot-header">📊 Dashboard Admin — Vue Statistiques</div>
+    <div class="screenshot-body">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:400px;margin:0 auto">
+        <div class="stat-box"><div class="stat-number" style="font-size:20px">166</div><div class="stat-label">Users</div></div>
+        <div class="stat-box"><div class="stat-number" style="font-size:20px">38K</div><div class="stat-label">Exercices</div></div>
+        <div class="stat-box"><div class="stat-number" style="font-size:20px">45K</div><div class="stat-label">Quiz</div></div>
+      </div>
+      <p style="font-size:13px;color:#64748b;margin-top:10px">Statistiques en temps réel — accès via mot de passe administrateur</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PAGE 6 : PLANS ===== -->
+<div class="page">
+  <div class="footer">
+    <div class="logo-text">SYCHEIKHCORP</div>
+    <strong>Innovation Éducative</strong> · Catalogue 2026
+  </div>
+  <div class="section">
+    <div class="section-title"><span class="num">08</span> Plans d'Abonnement</div>
+    <p class="section-text">7 plans disponibles, du test gratuit à l'abonnement annuel. Tous les plans incluent l'accès aux exercices et quiz. La limite d'IA varie selon le plan. Prix en FCFA (1 EUR = 655,957 FCFA).</p>
+  </div>
+  <div class="plan-grid">
+    <div class="plan-card popular">
+      <div class="plan-badge">GRATUIT</div>
+      <div class="plan-name">Essai gratuit 48 H</div>
+      <div class="plan-price">Gratuit <small>/ 48h</small></div>
+      <ul class="plan-features">
+        <li>IA illimitée (999 999 questions/jour)</li>
+        <li>1 photo par jour</li>
+        <li>Accès à tous les exercices</li>
+        <li>Quiz illimités</li>
+        <li>Tous les niveaux débloqués</li>
+      </ul>
+    </div>
+    <div class="plan-card">
+      <div class="plan-name">Pack 3 Jours</div>
+      <div class="plan-price">164 000 FCFA <small>/ 3 jours</small></div>
+      <ul class="plan-features">
+        <li>15 questions IA par jour</li>
+        <li>1 photo par jour</li>
+        <li>Accès exercices & quiz</li>
+      </ul>
+    </div>
+    <div class="plan-card">
+      <div class="plan-name">Pack 1 Semaine</div>
+      <div class="plan-price">328 000 FCFA <small>/ 7 jours</small></div>
+      <ul class="plan-features">
+        <li>30 questions IA par jour</li>
+        <li>2 photos par jour</li>
+        <li>Accès exercices & quiz</li>
+      </ul>
+    </div>
+    <div class="plan-card">
+      <div class="plan-name">Pack 2 Semaines</div>
+      <div class="plan-price">656 000 FCFA <small>/ 14 jours</small></div>
+      <ul class="plan-features">
+        <li>50 questions IA par jour</li>
+        <li>3 photos par jour</li>
+        <li>Accès exercices & quiz</li>
+      </ul>
+    </div>
+    <div class="plan-card">
+      <div class="plan-name">Pack 1 Mois</div>
+      <div class="plan-price">1 312 000 FCFA <small>/ 30 jours</small></div>
+      <ul class="plan-features">
+        <li>100 questions IA par jour</li>
+        <li>5 photos par jour</li>
+        <li>Accès exercices & quiz</li>
+      </ul>
+    </div>
+    <div class="plan-card popular">
+      <div class="plan-badge">POPULAIRE</div>
+      <div class="plan-name">Pack BAC</div>
+      <div class="plan-price">1 968 000 FCFA <small>/ 90 jours</small></div>
+      <ul class="plan-features">
+        <li>200 questions IA par jour</li>
+        <li>10 photos par jour</li>
+        <li>Tous les niveaux</li>
+        <li>Préparation BAC complète</li>
+      </ul>
+    </div>
+    <div class="plan-card">
+      <div class="plan-name">Pack Annuel</div>
+      <div class="plan-price">6 560 000 FCFA <small>/ 365 jours</small></div>
+      <ul class="plan-features">
+        <li>500 questions IA par jour</li>
+        <li>30 photos par jour</li>
+        <li>Tous les niveaux</li>
+        <li>Accès illimité 1 an</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PAGE 7 : FONCTIONNALITÉS & TESTS ===== -->
+<div class="page">
+  <div class="footer">
+    <div class="logo-text">SYCHEIKHCORP</div>
+    <strong>Innovation Éducative</strong> · Catalogue 2026
+  </div>
+  <div class="section">
+    <div class="section-title"><span class="num">09</span> Fonctionnalités Élève</div>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-icon">📝</div>
+        <h4>Exercices</h4>
+        <p>38 882 exercices, filtres par difficulté</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">❓</div>
+        <h4>Quiz</h4>
+        <p>45 006 questions, sessions de 15 questions</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🤖</div>
+        <h4>Assistant IA</h4>
+        <p>Questions/réponses via Groq API (Qwen2.5-VL-72B)</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⭐</div>
+        <h4>Favoris</h4>
+        <p>Sauvegarder les exercices préférés</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <h4>Résultats</h4>
+        <p>Suivi des scores, historique, progression</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔔</div>
+        <h4>Notifications</h4>
+        <p>Annonces, rappels, messages</p>
+      </div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-title"><span class="num">10</span> Tests Réalisés</div>
+    <table style="width:100%;border-collapse:collapse;font-size:14px">
+      <tr style="background:#f1f5f9"><td style="padding:8px;border:1px solid #e2e8f0;font-weight:700">Inscription</td><td style="padding:8px;border:1px solid #e2e8f0">✅ OK — pseudo + mot de passe (8+ caractères)</td></tr>
+      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:700">Connexion</td><td style="padding:8px;border:1px solid #e2e8f0">✅ OK — token JWT, /api/me fonctionnel</td></tr>
+      <tr style="background:#f1f5f9"><td style="padding:8px;border:1px solid #e2e8f0;font-weight:700">Exercices</td><td style="padding:8px;border:1px solid #e2e8f0">✅ OK — 38 882 exercices disponibles</td></tr>
+      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:700">Quiz</td><td style="padding:8px;border:1px solid #e2e8f0">✅ OK — sessions de 15 questions</td></tr>
+      <tr style="background:#f1f5f9"><td style="padding:8px;border:1px solid #e2e8f0;font-weight:700">Assistant IA</td><td style="padding:8px;border:1px solid #e2e8f0">✅ OK — Groq API, réponses fonctionnelles</td></tr>
+      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:700">Dashboard Admin</td><td style="padding:8px;border:1px solid #e2e8f0">✅ OK — stats, utilisateurs, contenus</td></tr>
+      <tr style="background:#f1f5f9"><td style="padding:8px;border:1px solid #e2e8f0;font-weight:700">Synchronisation</td><td style="padding:8px;border:1px solid #e2e8f0">✅ OK — APK ↔ Web ↔ Dashboard, base centrale</td></tr>
+      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:700">APK Android</td><td style="padding:8px;border:1px solid #e2e8f0">✅ OK — signé v1+v2+v3, Android 10+, 37 KB</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ===== PAGE 8 : CONTACT ===== -->
+<div class="page">
+  <div class="footer">
+    <div class="logo-text">SYCHEIKHCORP</div>
+    <strong>Innovation Éducative</strong> · Catalogue 2026
+  </div>
+  <div class="section">
+    <div class="section-title"><span class="num">11</span> Contact & Informations</div>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-icon">🏢</div>
+        <h4>SYCHEIKHCORP</h4>
+        <p>ÉcoleMax — Département Éducation</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📅</div>
+        <h4>Année</h4>
+        <p>2026</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🌐</div>
+        <h4>Site</h4>
+        <p>ecolemax.onrender.com</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📋</div>
+        <h4>Technologie</h4>
+        <p>Python Flask · SQLite · Android WebView</p>
+      </div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-title"><span class="num">12</span> Résumé</div>
+    <p class="section-text">ÉcoleMax est une plateforme éducative complète, prête pour les tests avec des vrais élèves. Elle offre une application Android installable, un site web responsive, et un dashboard administrateur centralisé. Les comptes sont synchronisés entre tous les points d'accès. La plateforme est déployée sur Render avec une base de données centralisée pour une synchronisation instantanée.</p>
+    <p class="section-text" style="margin-top:15px;font-weight:700;color:#1565d8">✅ Version livrée : testée, fonctionnelle, prête pour 50+ élèves simultanés.</p>
+  </div>
+  <div style="text-align:center;margin-top:40px;padding:30px;background:linear-gradient(135deg,#1565d8,#7c3aed);color:#fff;border-radius:16px">
+    <div style="font-size:24px;font-weight:900;margin-bottom:8px">ÉcoleMax</div>
+    <div style="font-size:14px;opacity:.9">SYCHEIKHCORP · Innovation Éducative · 2026</div>
+  </div>
+</div>
+
+</body>
+</html>

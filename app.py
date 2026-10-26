@@ -1,11 +1,29 @@
 #!/usr/bin/env python3
 """ÉcoleMax — Serveur Flask + Gunicorn (production stable)"""
-import os, json, re, base64, hashlib, datetime, secrets, sqlite3, urllib.request, time, threading, hmac
+import os, json, re, base64, hashlib, datetime, secrets, sqlite3, urllib.request, time, threading, hmac, random
 
 HOST = "0.0.0.0"
 PORT = int(os.environ.get("PORT", 8000))
 DB_PATH = os.environ.get("DB_PATH", os.path.join(os.path.dirname(os.path.abspath(__file__)), "ecolemax.db"))
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "ecolemax2026")
+
+# === Twilio SMS ===
+TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID", "")
+TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN", "")
+TWILIO_FROM_NUMBER = os.environ.get("TWILIO_FROM_NUMBER", "")
+SMS_PROVIDER = os.environ.get("SMS_PROVIDER", "twilio")
+
+# === Render API ===
+RENDER_API_KEY = os.environ.get("RENDER_API_KEY", "")
+RENDER_SERVICE_URL = os.environ.get("RENDER_SERVICE_URL", "")
+
+# === Email (SendGrid) ===
+SENDGRID_API_KEY = os.environ.get("SENDGRID_API_KEY", "")
+SENDGRID_FROM = os.environ.get("SENDGRID_FROM", "sycheikhcorp@gmail.com")
+SMTP_HOST = os.environ.get("SMTP_HOST", "")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
+SMTP_USER = os.environ.get("SMTP_USER", "")
+SMTP_PASS = os.environ.get("SMTP_PASS", "")
 JWT_SECRET = os.environ.get("JWT_SECRET", "ecolemax-jwt-secret-v1-2026-change")
 POLLINATIONS_URL = "https://text.pollinations.ai/openai"
 OVH_AI_URL = "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/chat/completions"
@@ -86,9 +104,9 @@ def init_db():
     c.execute("""CREATE TABLE IF NOT EXISTS usages (user_id INTEGER, date TEXT, ia_count INTEGER, photo_count INTEGER, correct_count INTEGER, ex_count INTEGER, PRIMARY KEY(user_id,date))""")
     c.execute("""CREATE TABLE IF NOT EXISTS sujets (code TEXT PRIMARY KEY, nom TEXT, description TEXT, ordre INTEGER)""")
     c.execute("""CREATE TABLE IF NOT EXISTS cours (id INTEGER PRIMARY KEY AUTOINCREMENT, sujet_code TEXT, titre TEXT, contenu TEXT, niveau TEXT)""")
-    c.execute("""CREATE TABLE IF NOT EXISTS exercises (id INTEGER PRIMARY KEY AUTOINCREMENT, sujet_code TEXT, titre TEXT, niveau TEXT, type TEXT, question TEXT, reponse TEXT, explication TEXT)""")
+    c.execute("""CREATE TABLE IF NOT EXISTS exercises (id INTEGER PRIMARY KEY AUTOINCREMENT, sujet_code TEXT, titre TEXT, niveau TEXT, type TEXT, question TEXT, reponse TEXT, explication TEXT, difficulte TEXT DEFAULT 'moyen')""")
     c.execute("""CREATE TABLE IF NOT EXISTS corrections (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, original TEXT, corrige TEXT, explication TEXT, date TEXT)""")
-    c.execute("""CREATE TABLE IF NOT EXISTS quiz (id INTEGER PRIMARY KEY AUTOINCREMENT, categorie TEXT, question TEXT, reponse INTEGER, explication TEXT)""")
+    c.execute("""CREATE TABLE IF NOT EXISTS quiz (id INTEGER PRIMARY KEY AUTOINCREMENT, categorie TEXT, question TEXT, reponse INTEGER, explication TEXT, difficulte TEXT DEFAULT 'moyen')""")
     c.execute("""CREATE TABLE IF NOT EXISTS quiz_resultats (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, score INTEGER, total INTEGER, date TEXT)""")
     c.execute("""CREATE TABLE IF NOT EXISTS results (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, exercise_id INTEGER, score INTEGER, reponse_utilisateur TEXT, correct INTEGER, date TEXT)""")
     c.execute("""CREATE TABLE IF NOT EXISTS favoris (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, type TEXT, ref_id INTEGER, label TEXT, date TEXT, UNIQUE(user_id,type,ref_id))""")
@@ -109,6 +127,15 @@ def init_db():
     c.execute("CREATE INDEX IF NOT EXISTS idx_supports_user ON supports(user_id)")
     c.execute("CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id)")
     c.execute("CREATE INDEX IF NOT EXISTS idx_logs_user ON logs_sec(user_id)")
+    # Nouvelles tables
+    c.execute("CREATE TABLE IF NOT EXISTS sms_codes (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, phone TEXT, code TEXT, expires_at TEXT, attempts INTEGER DEFAULT 0, used INTEGER DEFAULT 0)")
+    c.execute("CREATE TABLE IF NOT EXISTS contact_messages (id INTEGER PRIMARY KEY AUTOINCREMENT, nom TEXT, email TEXT, phone TEXT, objet TEXT, categorie TEXT, message TEXT, statut TEXT DEFAULT 'nouveau', date TEXT)")
+    c.execute("CREATE TABLE IF NOT EXISTS audit_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, admin_id INTEGER, action TEXT, target_user_id INTEGER, detail TEXT, date TEXT)")
+    c.execute("CREATE TABLE IF NOT EXISTS quiz_sessions (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, categorie TEXT, difficulte TEXT, questions TEXT, temps_total INTEGER, score INTEGER, total INTEGER, date TEXT)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_sms_user ON sms_codes(user_id)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_contact_statut ON contact_messages(statut)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_audit_admin ON audit_logs(admin_id)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_quiz_sess_user ON quiz_sessions(user_id)")
 
     plans = [
         ("gratuit","Essai gratuit 48 H",0.0,2,999999,1,"Essai 48 h : IA illimitee · 1 photo · tout debloque","unique",1),
@@ -239,7 +266,11 @@ def update_usage(uid, type_usage):
 def get_iou_ai(q, max_tokens=OVH_AI_MAX_TOKENS, temperature=0.4, max_retries=2, silent=False):
     with _ai_sem:
         print(f"🟣 AI OVH → model={OVH_AI_MODEL} max_tokens={max_tokens} q={q[:60]}...")
-        payload = {"model": OVH_AI_MODEL, "messages": [{"role": "user", "content": q}], "max_tokens": max_tokens, "temperature": temperature}
+        messages = [
+            {"role": "system", "content": "Tu es un professeur patient et pédagogue. Réponds TOUJOURS en français, clair, concis et adapté au niveau scolaire de l'élève."},
+            {"role": "user", "content": q}
+        ]
+        payload = {"model": OVH_AI_MODEL, "messages": messages, "max_tokens": max_tokens, "temperature": temperature}
         data = json.dumps(payload).encode()
         last_err = ""
         for attempt in range(max_retries + 1):
@@ -263,7 +294,8 @@ def get_iou_ai_vision(q, image_b64, max_tokens=OVH_AI_MAX_TOKENS, temperature=0.
         print(f"🟣 AI OVH Vision → model={OVH_AI_MODEL} q={q[:50]}...")
         payload = {
             "model": OVH_AI_MODEL,
-            "messages": [{"role": "user", "content": [
+            "messages": [{"role": "system", "content": "Tu es un professeur patient. Décris et analyse cette image pédagogiquement, en français."},
+            {"role": "user", "content": [
                 {"type": "text", "text": q},
                 {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + image_b64}}
             ]}],
@@ -290,7 +322,7 @@ def get_iou_ai_vision(q, image_b64, max_tokens=OVH_AI_MAX_TOKENS, temperature=0.
 def get_iou_ai_fallback(q, max_tokens=OVH_AI_MAX_TOKENS, silent=False):
     with _ai_sem:
         print(f"🟣 AI OVH Fallback → model={OVH_AI_FALLBACK}")
-        payload = {"model": OVH_AI_FALLBACK, "messages": [{"role": "user", "content": q}], "max_tokens": max_tokens, "temperature": 0.4}
+        payload = {"model": OVH_AI_FALLBACK, "messages": [{"role": "system", "content": "Tu es un professeur patient. Réponds TOUJOURS en français, clair et pédagogique."},{"role": "user", "content": q}], "max_tokens": max_tokens, "temperature": 0.4}
         data = json.dumps(payload).encode()
         try:
             req = urllib.request.Request(OVH_AI_URL, data=data, method="POST")
@@ -339,7 +371,7 @@ def get_pollinations(q, max_tokens=OVH_AI_MAX_TOKENS, silent=False):
             if not silent: print(f"⏳ Pollinations rate limit, waiting {wait:.0f}s")
             time.sleep(wait)
         _last_pollinations_call = time.time()
-        payload = {"model": "openai", "messages": [{"role": "user", "content": q}], "max_tokens": max_tokens, "temperature": 0.5}
+        payload = {"model": "openai", "messages": [{"role": "system", "content": "Tu es un professeur patient. Réponds TOUJOURS en français, clair et pédagogique."},{"role": "user", "content": q}], "max_tokens": max_tokens, "temperature": 0.5}
         data = json.dumps(payload).encode()
         try:
             req = urllib.request.Request(POLLINATIONS_URL, data=data, method="POST")
@@ -359,7 +391,8 @@ def get_pollinations_vision(q, image_b64, silent=False):
         last_err = ""
         payload = {
             "model": "openai",
-            "messages": [{"role": "user", "content": [
+            "messages": [{"role": "system", "content": "Tu es un professeur patient. Décris et analyse cette image pédagogiquement, en français."},
+            {"role": "user", "content": [
                 {"type": "text", "text": q},
                 {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + image_b64}}
             ]}],
@@ -541,6 +574,7 @@ def get_user_by_token(req):
     return u
 
 @app.route("/health")
+@app.route("/api/health")
 def health():
     return jsonify({"status":"ok","service":"ecolemax","time":now()})
 
@@ -592,6 +626,7 @@ def favicon():
 @app.route("/assets/<path:filename>")
 @app.route("/pwa/<path:filename>")
 @app.route("/qr/<path:filename>")
+@app.route("/<path:filename>")  # Route racine pour fichiers statiques JS/CSS
 def static_files(filename):
     # Chercher dans plusieurs dossiers
     for sub in ["", "css", "js", "assets", "pwa", "qr", "outils", "telechargements"]:
@@ -681,11 +716,15 @@ def api_languages():
 def api_exercises():
     sujet = request.args.get("sujet","")
     niveau = request.args.get("niveau","")
+    difficulte = request.args.get("difficulte","")
+    limite = request.args.get("limite","")
     c = db()
     q = "SELECT * FROM exercises WHERE 1=1"
     params = []
     if sujet: q += " AND sujet_code=?"; params.append(sujet)
     if niveau: q += " AND niveau=?"; params.append(niveau)
+    if difficulte: q += " AND difficulte=?"; params.append(difficulte)
+    if limite: q += " LIMIT " + str(int(limite))
     rows = c.execute(q, params).fetchall()
     c.close()
     # Extraire les options de la question [opt1/opt2/opt3]
@@ -708,10 +747,14 @@ def api_exercises():
 @app.route("/api/quiz")
 def api_quiz():
     categorie = request.args.get("categorie","")
+    difficulte = request.args.get("difficulte","")
+    limite = request.args.get("limite","")
     c = db()
     q = "SELECT * FROM quiz WHERE 1=1"
     params = []
     if categorie: q += " AND categorie=?"; params.append(categorie)
+    if difficulte: q += " AND difficulte=?"; params.append(difficulte)
+    if limite: q += " LIMIT " + str(int(limite))
     rows = c.execute(q, params).fetchall()
     c.close()
     # Générer les options dynamiquement
@@ -875,9 +918,9 @@ def api_ai_translate():
     ok, msg = check_quota(u, p, "ia")
     if not ok: return jsonify({"erreur":msg}), 402
     data = request.get_json(silent=True) or {}
-    texte = data.get("texte","")
+    texte = data.get("texte", data.get("text",""))
     lang = data.get("langue_cible", data.get("langue","fr"))
-    if not texte or len(texte.strip()) < 2: return jsonify({"erreur":"Texte trop court"}), 400
+    if not texte or len(texte.strip()) < 1: return jsonify({"erreur":"Texte trop court"}), 400
     r = reponse_traduction(texte, lang, p)
     log_sec(u["id"], "traduction", lang + ": " + texte[:80])
     return jsonify(r)
@@ -977,15 +1020,34 @@ def api_notifications_read():
 
 @app.route("/api/support", methods=["POST"])
 def api_support():
+    # Accessible sans auth — formulaire contact public
     u = get_user_by_token(request)
-    if not u: return jsonify({"erreur":"Authentification requise"}), 401
+    uid = u["id"] if u else 0
     data = request.get_json(silent=True) or {}
+    nom = data.get("nom","")
+    email = data.get("email","")
+    telephone = data.get("telephone","")
+    objet = data.get("objet", data.get("sujet",""))
+    message = data.get("message","")
+    categorie = data.get("categorie","")
     c = db()
-    c.execute("INSERT INTO supports (user_id,sujet,message,date) VALUES (?,?,?,?)",
-              (u["id"], data.get("sujet",""), data.get("message",""), now()))
+    c.execute("INSERT INTO supports (user_id,nom,email,telephone,objet,message,categorie,date) VALUES (?,?,?,?,?,?,?,?)",
+              (uid, nom, email, telephone, objet, message, categorie, now()))
     c.commit()
     c.close()
-    return jsonify({"ok":True})
+    # Envoyer email à l'admin si SendGrid configuré
+    try:
+        import os
+        sg_key = os.environ.get("SENDGRID_API_KEY","")
+        if sg_key:
+            from sendgrid import SendGridAPIClient
+            from sendgrid.helpers.mail import Mail
+            msg = "Nom: %s\nEmail: %s\nTéléphone: %s\nCatégorie: %s\nObjet: %s\n\nMessage:\n%s" % (nom, email, telephone, categorie, objet, message)
+            sg = SendGridAPIClient(sg_key)
+            sg.send(Mail(from_email="no-reply@ecolemax.app", to_emails="sycheikhcorp@gmail.com", subject="[ÉcoleMax] "+objet, content=msg))
+    except Exception as e:
+        print("[support] email échoué: %s" % e, flush=True)
+    return jsonify({"ok":True, "message":"Votre demande a été envoyée. Nous vous répondrons rapidement."})
 
 @app.route("/api/subscribe", methods=["POST"])
 def api_subscribe():
@@ -1259,6 +1321,536 @@ def api_reset():
     c.commit()
     c.close()
     return jsonify({"ok":True,"nouveau_mdp":new})
+
+@app.route("/api/quiz/session", methods=["POST"])
+def api_quiz_session():
+    """Génère une session de quiz avec au moins 15 questions."""
+    data = request.get_json(silent=True) or {}
+    user = get_user_by_token(request)
+    if not user: return jsonify({"erreur":"Authentification requise"}), 401
+    categorie = data.get("categorie","")
+    difficulte = data.get("difficulte","")
+    nb = max(15, int(data.get("nb",15)))
+    limite = data.get("limite","")
+    c = db()
+    q = "SELECT * FROM quiz WHERE 1=1"
+    params = []
+    if categorie: q += " AND categorie=?"; params.append(categorie)
+    if difficulte: q += " AND difficulte=?"; params.append(difficulte)
+    if limite: q += " LIMIT " + str(int(limite))
+    rows = c.execute(q, params).fetchall()
+    c.close()
+    if len(rows) < nb:
+        return jsonify({"erreur":"Pas assez de questions disponibles","disponibles":len(rows)})
+    import random as _r
+    import json as _j
+    selected = _r.sample(rows, nb)
+    result = []
+    for r in selected:
+        qz = dict(r)
+        idx = qz.get("reponse", 0)
+        correct = qz.get("explication", "")
+        cat = qz.get("categorie", "")
+        pool = ["Option A","Option B","Option C","Option D"]
+        wrong = _r.sample([p for p in pool if p != correct], 3) if pool else ["A","B","C"]
+        options = [""] * 4
+        for i in range(4):
+            if i == idx: options[i] = correct
+            else: options[i] = wrong.pop(0) if wrong else f"Option {chr(65+i)}"
+        qz["options"] = _j.dumps(options, ensure_ascii=False)
+        result.append(qz)
+    return jsonify({"session":result, "nb":len(result), "categorie":categorie, "difficulte":difficulte})
+
+@app.route("/api/quiz/result", methods=["POST"])
+def api_quiz_result():
+    data = request.get_json(silent=True) or {}
+    user = get_user_by_token(request)
+    if not user: return jsonify({"erreur":"Authentification requise"}), 401
+    score = int(data.get("score",0))
+    total = int(data.get("total",0))
+    temps = int(data.get("temps",0))
+    categorie = data.get("categorie","")
+    difficulte = data.get("difficulte","")
+    c = db()
+    c.execute("INSERT INTO quiz_resultats (user_id,score,total,date) VALUES (?,?,?,?)",(user["id"],score,total,now()))
+    c.execute("INSERT INTO quiz_sessions (user_id,categorie,difficulte,questions,temps_total,score,total,date) VALUES (?,?,?,?,?,?,?,?)",
+              (user["id"],categorie,difficulte,"",temps,score,total,now()))
+    c.commit()
+    c.close()
+    return jsonify({"ok":True,"score":score,"total":total,"moyenne":round(score*100/total if total else 0,1)})
+
+@app.route("/api/quiz/history")
+def api_quiz_history():
+    user = get_user_by_token(request)
+    if not user: return jsonify({"erreur":"Authentification requise"}), 401
+    c = db()
+    rows = c.execute("SELECT score,total,date FROM quiz_resultats WHERE user_id=? ORDER BY date DESC LIMIT 50",(user["id"],)).fetchall()
+    c.close()
+    return jsonify({"resultats":[dict(r) for r in rows]})
+
+
+def send_sms_twilio(phone, message):
+    """Envoie un SMS via Twilio."""
+    try:
+        from twilio.rest import Client
+        client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+        msg = client.messages.create(
+            body=message,
+            from_=TWILIO_FROM_NUMBER,
+            to=phone
+        )
+        print(f"✅ SMS Twilio envoyé: {msg.sid}", flush=True)
+        return True, msg.sid
+    except Exception as e:
+        print(f"❌ SMS Twilio ERR: {e}", flush=True)
+        return False, str(e)
+
+def send_email_sendgrid(to_email, subject, html_body):
+    """Envoie un email via SendGrid."""
+    if not SENDGRID_API_KEY:
+        print("❌ SendGrid API key non configurée", flush=True)
+        return False, "SendGrid non configuré"
+    try:
+        import sendgrid
+        from sendgrid.helpers.mail import Mail, Email, To, Content
+        sg = sendgrid.SendGridAPIClient(apikey=SENDGRID_API_KEY)
+        mail = Mail(
+            from_email=SENDGRID_FROM,
+            to_emails=to_email,
+            subject=subject,
+            html_content=html_body
+        )
+        response = sg.client.mail.send.post(request_body=mail.get())
+        print(f"✅ Email SendGrid envoyé: status={response.status_code}", flush=True)
+        return True, str(response.status_code)
+    except Exception as e:
+        print(f"❌ Email SendGrid ERR: {e}", flush=True)
+        return False, str(e)
+
+
+@app.route("/api/register/sms", methods=["POST"])
+def api_register_sms():
+    """Envoie un code OTP par SMS."""
+    data = request.get_json(silent=True) or {}
+    phone = data.get("phone","")
+    pseudo = data.get("pseudo","")
+    email = data.get("email","")
+    if not phone or not pseudo: return jsonify({"erreur":"Téléphone et pseudo requis"}), 400
+    code = str(random.randint(100000,999999))
+    expires = (datetime.datetime.now()+datetime.timedelta(minutes=10)).strftime("%Y-%m-%d %H:%M:%S")
+    # Enregistrer le code (en production, envoyer via SMS)
+    c = db()
+    u = c.execute("SELECT id FROM users WHERE pseudo=?", (pseudo,)).fetchone()
+    if not u:
+        c.execute("INSERT INTO users (pseudo,email,mot_de_passe,niveau,role,created_at) VALUES (?,?,?,?,?,?)",
+                  (pseudo,email,hash_pass(secrets.token_hex(4)),"","eleve",now()))
+        uid = c.execute("SELECT id FROM users WHERE pseudo=?",(pseudo,)).fetchone()["id"]
+    else:
+        uid = u["id"]
+    c.execute("DELETE FROM sms_codes WHERE user_id=?", (uid,))
+    c.execute("INSERT INTO sms_codes (user_id,phone,code,expires_at) VALUES (?,?,?,?)",(uid,phone,code,expires))
+    c.commit()
+    c.close()
+    # Envoi réel via Twilio
+    if SMS_PROVIDER == "twilio":
+        ok, msg_id = send_sms_twilio(phone, f"Code ÉcoleMax: {code}")
+        if ok:
+            return jsonify({"ok":True,"message":"Code SMS envoyé","debug_code":None})
+        else:
+            return jsonify({"ok":True,"message":"Code SMS envoyé (erreur envoi)","debug_code":code})
+    return jsonify({"ok":True,"message":"Code SMS envoyé","debug_code":code})
+
+@app.route("/api/register/verify", methods=["POST"])
+def api_register_verify():
+    data = request.get_json(silent=True) or {}
+    pseudo = data.get("pseudo","")
+    code = data.get("code","")
+    c = db()
+    u = c.execute("SELECT * FROM users WHERE pseudo=?", (pseudo,)).fetchone()
+    if not u: return jsonify({"erreur":"Utilisateur non trouvé"}), 404
+    sms = c.execute("SELECT * FROM sms_codes WHERE user_id=? AND used=0 ORDER BY id DESC LIMIT 1",(u["id"],)).fetchone()
+    if not sms: return jsonify({"erreur":"Aucun code trouvé"}), 404
+    if sms["attempts"] >= 5: return jsonify({"erreur":"Trop de tentatives"}), 429
+    if sms["code"] != code:
+        c.execute("UPDATE sms_codes SET attempts=attempts+1 WHERE id=?",(sms["id"],))
+        c.commit(); c.close()
+        return jsonify({"erreur":"Code incorrect"}), 400
+    c.execute("UPDATE sms_codes SET used=1 WHERE id=?",(sms["id"],))
+    c.execute("UPDATE users SET phone_verified=1 WHERE id=?",(u["id"],)) if "phone_verified" in [r[1] for r in c.execute("PRAGMA table_info(users)")] else None
+    c.commit(); c.close()
+    return jsonify({"ok":True,"verifie":True})
+
+@app.route("/api/contact", methods=["POST"])
+def api_contact():
+    data = request.get_json(silent=True) or {}
+    nom = data.get("nom","")
+    email = data.get("email","")
+    phone = data.get("phone","")
+    objet = data.get("objet","")
+    categorie = data.get("categorie","autre")
+    message = data.get("message","")
+    if not nom or not email or not message: return jsonify({"erreur":"Nom, email et message requis"}), 400
+    c = db()
+    c.execute("INSERT INTO contact_messages (nom,email,phone,objet,categorie,message,statut,date) VALUES (?,?,?,?,?,?,?,?)",
+              (nom,email,phone,objet,categorie,message,"nouveau",now()))
+    c.commit(); c.close()
+    # Envoyer email à l'administrateur
+    ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL","sycheikhcorp@gmail.com")
+    SMTP_HOST = os.environ.get("SMTP_HOST","")
+    if SMTP_HOST:
+        try:
+            import smtplib
+            from email.mime.text import MIMEText
+            msg = MIMEText(f"Nouveau message de contact:\n\nNom: {nom}\nEmail: {email}\nTéléphone: {phone}\nObjet: {objet}\nCatégorie: {categorie}\nMessage: {message}")
+            msg["Subject"] = f"[ÉcoleMax Contact] {objet}"
+            msg["From"] = "noreply@ecolemax.sn"
+            msg["To"] = ADMIN_EMAIL
+            s = smtplib.SMTP(SMTP_HOST, int(os.environ.get("SMTP_PORT","587")))
+            s.starttls()
+            s.login(os.environ.get("SMTP_USER",""), os.environ.get("SMTP_PASS",""))
+            s.sendmail("noreply@ecolemax.sn",[ADMIN_EMAIL],msg.as_string())
+            s.quit()
+            print(f"[EMAIL] Contact envoyé à {ADMIN_EMAIL}", flush=True)
+        except Exception as e:
+            print(f"[EMAIL] ERR: {e}", flush=True)
+    return jsonify({"ok":True,"message":"Message envoyé","reference":f"CM{secrets.token_hex(4)}"})
+
+@app.route("/api/admin/contacts/<int:cid>/traiter", methods=["POST"])
+def api_admin_contact_traiter(cid):
+    if request.headers.get("X-Admin-Password","") != ADMIN_PASSWORD:
+        return jsonify({"erreur":"Non autorisé"}), 403
+    c = db()
+    c.execute("UPDATE contact_messages SET statut='traite' WHERE id=?", (cid,))
+    c.commit(); c.close()
+    return jsonify({"ok":True})
+
+
+
+# === GÉNÉRATOR LOCAL DE CONTENUS (fallback sans IA) ===
+
+def generate_exercice_local(sujet, difficulte):
+    """Génère un exercice local basique."""
+    cat_name = {"math":"Maths","fr":"Français","phys":"Physique","chim":"Chimie","svt":"SVT","hist":"Histoire","geo":"Géographie","eng":"Anglais","eco":"Économie","info":"Informatique","es":"Espagnol","ara":"Arabe"}.get(sujet,sujet)
+    import random as _r
+    templates = {
+        "math": [
+            ("Calculez {a} + {b} [{s1}/{s2}/{s3}/{s4}]", "{a} + {b} = {a}+{b}"),
+            ("Simplifiez {a} × {b} [{s1}/{s2}/{s3}/{s4}]", "{a} × {b} = {a}×{b}"),
+            ("Calculez {a} − {b} [{s1}/{s2}/{s3}/{s4}]", "{a} − {b} = {a}-{b}"),
+            ("Calculez {a} ÷ {b} [{s1}/{s2}/{s3}/{s4}]", "{a} ÷ {b} = {a}/{b}"),
+        ],
+        "fr": [
+            ("Conjuguez le verbe 'manger' au présent : je ___ [mange/manges/mange/mange]", "je mange"),
+            ("Quelle est la forme correcte ? 'Les enfants ___' [joue/jouent/joues/jouant]", "jouent"),
+            ("Complétez : 'Il est ___ grand' [très/trop/tellement/assez]", "très"),
+            ("Synonyme de 'rapide' : [véloce/lent/paresseux/calme]", "véloce"),
+        ],
+        "phys": [
+            ("Un objet de 5 kg est soumis à une force de 20 N. Calculez l'accélération [4 m/s²/5 m/s²/0.25 m/s²/25 m/s²]", "a = F/m = 20/5 = 4 m/s²"),
+            ("La vitesse de la lumière est environ [300 000 km/s/30 000 km/s/3 000 km/s/3 000 000 km/s]", "300 000 km/s"),
+            ("L'unité de la force est [Newton/Joule/Watt/Pascal]", "Newton"),
+            ("La vitesse est égale à [distance / temps/temps × distance/force × masse/énergie × masse]", "distance / temps"),
+        ],
+        "chim": [
+            ("Formule de l'eau est [H₂O/CO₂/O₂/N₂]", "H₂O"),
+            ("Le pH d'une solution neutre est [7/0/14/1]", "7"),
+            ("Atome le plus réactif du tableau périodique : [Fluor/Oxygène/Hydrogène/Azote]", "Fluor"),
+            ("Nombre d'électrons de l'oxygène : [8/6/10/16]", "8"),
+        ],
+        "svt": [
+            ("Le cœur pompe le sang vers [le corps/les poumons/le cerveau/tout le corps]", "tout le corps"),
+            ("La photosynthèse se produit dans [les feuilles/les racines/les fleurs/les fruits]", "les feuilles"),
+            ("L'ADN est situé dans [le noyau/la membrane/le cytoplasme/les mitochondries]", "le noyau"),
+            ("Les cellules nerveuses sont appelées [neurones/leucocytes/erythrocytes/myocytes]", "neurones"),
+        ],
+        "hist": [
+            ("La capitale du royaume du Tekrour était [Tomboctou/Gao/Djenné/Ségou]", "Tomboctou"),
+            ("L'indépendance du Sénégal a été proclamée en [1960/1958/1965/1970]", "1960"),
+            ("Premier président du Sénégal : [Léopold Sédar Senghor/Abdoulaye Wade/Macky Sall/Diouf]", "Léopold Sédar Senghor"),
+            ("La ville de Saint-Louis fut la capitale de l'Afrique-Occidentale française en [1895/1902/1860/1920]", "1895"),
+        ],
+        "geo": [
+            ("Capitale du Sénégal : [Dakar/Touba/Thiès/Saint-Louis]", "Dakar"),
+            ("Le fleuve le plus long d'Afrique est [le Nil/le Niger/le Sénégal/le Congo]", "le Nil"),
+            ("Le Mont Everest se situe dans [l'Asie/l'Afrique/l'Amérique/l'Europe]", "l'Asie"),
+            ("Le Sahara est situé en [Afrique/Asie/Amérique/Europe]", "Afrique"),
+        ],
+        "eng": [
+            ("How are you? [Comment allez-vous/Comment tu es/Qui es-tu/Où vas-tu]", "Comment allez-vous"),
+            ("I ___ a student [am/is/are/be]", "am"),
+            ("The plural of 'child' is [children/childs/childes/child]", "children"),
+            ("Good morning means [Bonjour/Bonsoir/Au revoir/Merci]", "Bonjour"),
+        ],
+        "eco": [
+            ("La monnaie du Sénégal est [XOF/FCFA/EUR/USD]", "XOF"),
+            ("La banque centrale de l'UMOA est [BCEAO/BCE/Banque de France/BRI]", "BCEAO"),
+            ("L'inflation est [la hausse des prix/la baisse des prix/la stabilité des prix/l'équilibre budgétaire]", "la hausse des prix"),
+            ("Le PIB mesure [la richesse d'un pays/la population/le taux d'intérêt/l'inflation]", "la richesse d'un pays"),
+        ],
+        "info": [
+            ("HTML signifie [HyperText Markup Language/HyperTransfer/HighText/HyperLanguage]", "HyperText Markup Language"),
+            ("CSS signifie [Cascading Style Sheets/Creative Style Sheets/Computer Style Sheets/Code Style Sheets]", "Cascading Style Sheets"),
+            ("Le langage de programmation le plus populaire pour le web est [Python/Java/JavaScript/C++]", "JavaScript"),
+            ("Une adresse IP est composée de [4 nombres/3 nombres/6 nombres/2 nombres]", "4 nombres"),
+        ],
+    }
+    templates_default = [
+        ("Question de " + cat_name + " : [Option A/Option B/Option C/Option D]", "Explication pédagogique"),
+    ]
+    tpls = templates.get(sujet, templates_default)
+    tpl = _r.choice(tpls)
+    if "{a}" in tpl[0]:
+        a = _r.randint(2,20)
+        b = _r.randint(2,20)
+        s1 = a+b
+        wrong = _r.sample([s1+1, s1-1, s1+2], 3)
+        q = tpl[0].format(a=a,b=b,s1=s1,s2=wrong[0],s3=wrong[1],s4=wrong[2])
+        exp = tpl[1].format(a=a,b=b)
+        return sujet, q, exp, difficulte, ""
+    else:
+        q = tpl[0]
+        exp = tpl[1]
+        return sujet, q, exp, difficulte, ""
+
+def generate_quiz_local(categorie, difficulte):
+    """Génère un quiz local basique."""
+    import random as _r
+    templates = {
+        "Maths": [
+            ("Quel est le résultat de 7 × 8 ?", 3, "7 × 8 = 56", "facile"),
+            ("La racine carrée de 25 est :", 2, "√25 = 5", "facile"),
+            ("Un triangle avec 3 côtés égaux est un :", 1, "Triangle équilatéral", "moyen"),
+            ("La valeur de π est environ :", 0, "π ≈ 3.1416", "moyen"),
+        ],
+        "Français": [
+            ("Quelle est la capitale de la France ?", 2, "Paris", "facile"),
+            ("Le pluriel de 'cheval' est :", 0, "chevaux", "facile"),
+            ("Conjuguer 'être' à la 1ère personne :", 0, "je suis", "moyen"),
+            ("Un synonyme de 'joli' est :", 1, "beau", "facile"),
+        ],
+        "Physique": [
+            ("La force est mesurée en :", 0, "Newton (N)", "facile"),
+            ("La vitesse de la lumière est :", 2, "300 000 km/s", "moyen"),
+            ("L'unité de la température est :", 1, "Kelvin (K)", "moyen"),
+            ("La loi de Newton est liée à :", 0, "la force et l'accélération", "difficile"),
+        ],
+        "Chimie": [
+            ("La formule de l'eau est :", 0, "H₂O", "facile"),
+            ("Le pH d'un acide est :", 0, "inférieur à 7", "facile"),
+            ("Le nombre atomique de l'oxygène est :", 2, "8", "moyen"),
+            ("Un atome stable a :", 1, "des électrons en couches complètes", "difficile"),
+        ],
+        "SVT": [
+            ("Le cœur est situé dans :", 1, "la poitrine", "facile"),
+            ("La photosynthèse transforme :", 0, "la lumière en énergie", "moyen"),
+            ("Les cellules nerveuses sont appelées :", 1, "neurones", "facile"),
+            ("Le système circulatoire transporte :", 0, "le sang", "facile"),
+        ],
+        "Histoire": [
+            ("L'indépendance du Sénégal date de :", 3, "1960", "facile"),
+            ("Le premier président du Sénégal est :", 2, "Léopold Sédar Senghor", "facile"),
+            ("La capitale historique du Mali est :", 1, "Tombouctou", "moyen"),
+        ],
+        "Géographie": [
+            ("Capitale du Sénégal :", 0, "Dakar", "facile"),
+            ("Le fleuve le plus long d'Afrique :", 1, "le Nil", "facile"),
+            ("La plus grande ville d'Afrique est :", 2, "Le Caire", "moyen"),
+            ("Le Sahara est un :", 0, "désert", "facile"),
+        ],
+        "Anglais": [
+            ("How are you?", 0, "Comment allez-vous", "facile"),
+            ("I ___ a book", 0, "am", "facile"),
+            ("The plural of 'child' is :", 1, "children", "moyen"),
+            ("Goodbye means :", 2, "Au revoir", "facile"),
+        ],
+        "Économie": [
+            ("La monnaie du Sénégal est :", 1, "XOF", "facile"),
+            ("La BCEAO est :", 0, "la banque centrale de l'UMOA", "moyen"),
+            ("L'inflation est :", 1, "la hausse des prix", "facile"),
+        ],
+        "Informatique": [
+            ("HTML signifie :", 0, "HyperText Markup Language", "facile"),
+            ("CSS est utilisé pour :", 1, "styliser les pages web", "facile"),
+            ("Une adresse IP v4 comporte :", 3, "4 nombres", "moyen"),
+            ("Le langage du web par défaut est :", 2, "JavaScript", "moyen"),
+        ],
+    }
+    templates_default = [
+        ("Question de " + categorie + " :", 0, "Explication pédagogique", "moyen"),
+    ]
+    tpls = templates.get(categorie, templates_default)
+    q, rep, exp, _ = _r.choice(tpls)
+    return categorie, q, rep, exp, difficulte
+
+
+# === ROUTES ADMIN : GÉNÉRATION IA ET CRUD CONTENUS ===
+
+@app.route("/api/admin/exercises/generate", methods=["POST"])
+def api_admin_exercises_generate():
+    if request.headers.get("X-Admin-Password","") != ADMIN_PASSWORD:
+        return jsonify({"erreur":"Authentification requise"}), 403
+    data = request.get_json(silent=True) or {}
+    sujet = data.get("sujet","math")
+    niveau = data.get("niveau","")
+    difficulte = data.get("difficulte","moyen")
+    nb = min(int(data.get("nb",10)),50)
+    cat_name = {"math":"Maths","fr":"Français","phys":"Physique","chim":"Chimie","svt":"SVT","hist":"Histoire","geo":"Géographie","eng":"Anglais","eco":"Économie","info":"Informatique","es":"Espagnol","ara":"Arabe"}.get(sujet,sujet)
+
+    c = db()
+    generated = []
+    for i in range(nb):
+        q_prompt = "Génère un exercice de " + cat_name + " de niveau " + difficulte + " pour un élève. Format JSON strict:\n{\"question\": \"énoncé avec [option1/option2/option3/option4]\", \"explication\": \"solution détaillée\", \"difficulte\": \"" + difficulte + "\"}\nUnique, sans doublon. Réponse dans l'explication."
+        ok, text, src = get_pollinations(q_prompt, max_tokens=500, silent=True)
+        if ok and text and "402" not in text and "Payment" not in text:
+            try:
+                m = re.search(r'\{[^{}]*"question"[^{}]*\}', text, re.DOTALL)
+                if m:
+                    j = json.loads(m.group(0))
+                    question = j.get("question","")
+                    explication = j.get("explication","")
+                    if question and len(question) > 10:
+                        generated.append((sujet, question, explication, difficulte, niveau))
+                        continue
+            except:
+                pass
+        # Fallback local
+        try:
+            cat, q, exp, diff, niv = generate_exercice_local(sujet, difficulte)
+            generated.append((cat, q, exp, diff, niv))
+        except:
+            pass
+
+    inserted = 0
+    for cat, q, exp, diff, niv in generated:
+        dup = c.execute("SELECT id FROM exercises WHERE question=? AND sujet_code=?",(q[:100],cat)).fetchone()
+        if dup: continue
+        c.execute("INSERT INTO exercises (sujet_code,question,explication,difficulte,niveau) VALUES (?,?,?,?,?)",(cat,q,exp,diff,niv))
+        inserted += 1
+    c.commit()
+    c.close()
+    return jsonify({"ok":True,"generes":inserted,"ecartes":len(generated)-inserted,"source":src})
+
+@app.route("/api/admin/quiz/generate", methods=["POST"])
+def api_admin_quiz_generate():
+    if request.headers.get("X-Admin-Password","") != ADMIN_PASSWORD:
+        return jsonify({"erreur":"Authentification requise"}), 403
+    data = request.get_json(silent=True) or {}
+    categorie = data.get("categorie","Maths")
+    difficulte = data.get("difficulte","moyen")
+    nb = min(int(data.get("nb",10)),50)
+
+    c = db()
+    generated = []
+    for i in range(nb):
+        q_prompt = "Génère un QCM de " + categorie + " de niveau " + difficulte + ". Format JSON strict:\n{\"question\": \"question\", \"reponse\": 0, \"explication\": \"explication pédagogique\"}\nreponse: index 0-3 de la bonne réponse. Réponse dans l'explication."
+        ok, text, src = get_pollinations(q_prompt, max_tokens=400, silent=True)
+        if ok and text and "402" not in text and "Payment" not in text:
+            try:
+                m = re.search(r'\{[^{}]*"question"[^{}]*\}', text, re.DOTALL)
+                if m:
+                    j = json.loads(m.group(0))
+                    q = j.get("question","")
+                    rep = j.get("reponse",0)
+                    exp = j.get("explication","")
+                    if rep < 0 or rep > 3: rep = 0
+                    if q and len(q) > 10:
+                        generated.append((categorie, q, rep, exp, difficulte))
+                        continue
+            except:
+                pass
+        # Fallback local
+        try:
+            cat, q, rep, exp, diff = generate_quiz_local(categorie, difficulte)
+            generated.append((cat, q, rep, exp, diff))
+        except:
+            pass
+
+    inserted = 0
+    for cat, q, rep, exp, diff in generated:
+        dup = c.execute("SELECT id FROM quiz WHERE question=? AND categorie=?",(q[:100],cat)).fetchone()
+        if dup: continue
+        c.execute("INSERT INTO quiz (categorie,question,reponse,explication,difficulte) VALUES (?,?,?,?,?)",(cat,q,rep,exp,diff))
+        inserted += 1
+    c.commit()
+    c.close()
+    return jsonify({"ok":True,"generes":inserted,"ecartes":len(generated)-inserted,"source":src})
+
+@app.route("/api/admin/exercises", methods=["GET","POST","DELETE"])
+def api_admin_exercises():
+    if request.headers.get("X-Admin-Password","") != ADMIN_PASSWORD:
+        return jsonify({"erreur":"Authentification requise"}), 403
+    c = db()
+    if request.method == "GET":
+        sujet = request.args.get("sujet","")
+        difficulte = request.args.get("difficulte","")
+        limite = int(request.args.get("limite",50))
+        q = "SELECT * FROM exercises WHERE 1=1"
+        params = []
+        if sujet: q += " AND sujet_code=?"; params.append(sujet)
+        if difficulte: q += " AND difficulte=?"; params.append(difficulte)
+        q += " ORDER BY id DESC LIMIT ?"
+        params.append(limite)
+        rows = c.execute(q, params).fetchall()
+        c.close()
+        return jsonify({"exercices":[dict(r) for r in rows]})
+    data = request.get_json(silent=True) or {}
+    if request.method == "POST":
+        sujet = data.get("sujet_code","math")
+        question = data.get("question","")
+        explication = data.get("explication","")
+        difficulte = data.get("difficulte","moyen")
+        niveau = data.get("niveau","")
+        if not question: return jsonify({"erreur":"Question requise"}), 400
+        c.execute("INSERT INTO exercises (sujet_code,question,explication,difficulte,niveau) VALUES (?,?,?,?,?)",(sujet,question,explication,difficulte,niveau))
+        c.commit()
+        c.close()
+        return jsonify({"ok":True})
+    if request.method == "DELETE":
+        eid = data.get("id")
+        if not eid: return jsonify({"erreur":"ID requis"}), 400
+        c.execute("DELETE FROM exercises WHERE id=?",(eid,))
+        c.commit()
+        c.close()
+        return jsonify({"ok":True})
+
+@app.route("/api/admin/quiz", methods=["GET","POST","DELETE"])
+def api_admin_quiz():
+    if request.headers.get("X-Admin-Password","") != ADMIN_PASSWORD:
+        return jsonify({"erreur":"Authentification requise"}), 403
+    c = db()
+    if request.method == "GET":
+        categorie = request.args.get("categorie","")
+        difficulte = request.args.get("difficulte","")
+        limite = int(request.args.get("limite",50))
+        q = "SELECT * FROM quiz WHERE 1=1"
+        params = []
+        if categorie: q += " AND categorie=?"; params.append(categorie)
+        if difficulte: q += " AND difficulte=?"; params.append(difficulte)
+        q += " ORDER BY id DESC LIMIT ?"
+        params.append(limite)
+        rows = c.execute(q, params).fetchall()
+        c.close()
+        return jsonify({"quiz":[dict(r) for r in rows]})
+    data = request.get_json(silent=True) or {}
+    if request.method == "POST":
+        categorie = data.get("categorie","Maths")
+        question = data.get("question","")
+        reponse = int(data.get("reponse",0))
+        explication = data.get("explication","")
+        difficulte = data.get("difficulte","moyen")
+        if not question: return jsonify({"erreur":"Question requise"}), 400
+        c.execute("INSERT INTO quiz (categorie,question,reponse,explication,difficulte) VALUES (?,?,?,?,?)",(categorie,question,reponse,explication,difficulte))
+        c.commit()
+        c.close()
+        return jsonify({"ok":True})
+    if request.method == "DELETE":
+        qid = data.get("id")
+        if not qid: return jsonify({"erreur":"ID requis"}), 400
+        c.execute("DELETE FROM quiz WHERE id=?",(qid,))
+        c.commit()
+        c.close()
+        return jsonify({"ok":True})
+
 
 # Keepalive thread — empêche Render de suspendre le service
 def keepalive():

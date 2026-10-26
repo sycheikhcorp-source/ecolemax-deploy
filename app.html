@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="clair">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>ÉcoleMax — Espace Élève</title>
+<style>
+:root{
+  --bleu:#1565d8;--bleu-dark:#0d47a1;--bleu-light:#e8f1ff;
+  --violet:#7c3aed;--violet-light:#ede9fe;
+  --bg:#f8fafc;--card:#fff;--ink:#0f172a;--ink-soft:#475569;--line:#e2e8f0;
+  --ok:#16a34a;--warn:#f59e0b;--err:#dc2626;--radius:16px;
+  --shadow:0 4px 20px rgba(15,23,42,.08);--shadow-lg:0 12px 40px rgba(15,23,42,.12);
+  --grad:linear-gradient(135deg,#1565d8 0%,#7c3aed 100%);
+}
+[data-theme="sombre"]{
+  --bg:#0f172a;--card:#1e293b;--ink:#f1f5f9;--ink-soft:#94a3b8;--line:#334155;
+  --bleu-light:#1e3a5f;--violet-light:#2d1b4e;--shadow:0 4px 20px rgba(0,0,0,.3);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5;overflow-x:hidden}
+button{font-family:inherit;cursor:pointer;border:none}
+input,textarea,select{font-family:inherit}
+
+/* Logo */
+.logo-svg{width:36px;height:36px;flex-shrink:0}
+
+/* Screen system */
+.screen{display:none;min-height:calc(100vh - 140px);padding:16px}
+.screen.active{display:block}
+
+/* Header */
+.app-header{background:var(--card);border-bottom:1px solid var(--line);padding:12px 16px;position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;box-shadow:var(--shadow)}
+.app-header .logo-row{display:flex;align-items:center;gap:8px}
+.app-header .logo-text{font-size:18px;font-weight:900}
+.app-header .logo-text span{color:var(--violet)}
+.header-right{display:flex;align-items:center;gap:8px}
+.icon-btn{width:38px;height:38px;border-radius:10px;background:var(--bg);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:18px;transition:.2s}
+.icon-btn:hover{border-color:var(--bleu)}
+.notif-badge{position:relative}
+.notif-badge .dot{position:absolute;top:-4px;right:-4px;background:var(--err);color:#fff;font-size:10px;border-radius:10px;padding:1px 5px;font-weight:700}
+
+/* Auth screen */
+#screen-auth{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--grad)}
+#screen-auth .auth-card{background:var(--card);border-radius:20px;padding:32px 24px;width:100%;max-width:380px;box-shadow:var(--shadow-lg)}
+#screen-auth .auth-card .logo-row{display:flex;flex-direction:column;align-items:center;gap:8px;margin-bottom:24px}
+#screen-auth .auth-card .logo-row .lt{font-size:24px;font-weight:900;text-align:center}
+#screen-auth .auth-card .logo-row .lt span{color:var(--violet)}
+#screen-auth h3{text-align:center;margin-bottom:20px;font-size:20px}
+
+/* Tabbar */
+.tabbar{display:flex;background:var(--card);border-top:1px solid var(--line);position:fixed;bottom:0;left:0;right:0;z-index:100;box-shadow:0 -4px 20px rgba(15,23,42,.06)}
+.tabbar button{flex:1;background:none;padding:8px 4px 12px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;color:var(--ink-soft);transition:.2s;border-top:2px solid transparent}
+.tabbar button .ic{font-size:22px}
+.tabbar button.active{color:var(--bleu);border-top-color:var(--bleu)}
+
+/* Cards & elements */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);margin-bottom:12px}
+.card h3{font-size:16px;font-weight:700;margin-bottom:8px}
+.section-title{font-size:15px;font-weight:700;margin:20px 0 10px;color:var(--ink-soft)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 18px;border-radius:10px;font-weight:600;font-size:14px;transition:.2s;border:none}
+.btn-primary{background:var(--grad);color:#fff}
+.btn-primary:active{transform:scale(.97)}
+.btn-outline{background:var(--card);border:2px solid var(--bleu);color:var(--bleu)}
+.btn-violet{background:var(--violet);color:#fff}
+.btn-danger{background:#fee2e2;color:#991b1b}
+.btn-block{width:100%}
+.btn:disabled{opacity:.5}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:var(--ink-soft)}
+.field input,.field textarea,.field select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font-size:14px}
+.field input:focus,.field textarea:focus{outline:none;border-color:var(--bleu);box-shadow:0 0 0 3px var(--bleu-light)}
+.alert{padding:10px 14px;border-radius:10px;font-size:13px;margin-bottom:12px;display:none}
+.alert.err{background:#fee2e2;color:#991b1b;display:block}
+.alert.ok{background:#dcfce7;color:#166534;display:block}
+.alert.info{background:var(--bleu-light);color:var(--bleu-dark);display:block}
+
+/* Dashboard */
+.dash-hero{background:var(--grad);color:#fff;border-radius:var(--radius);padding:20px;margin-bottom:16px}
+.dash-hero h2{font-size:20px;font-weight:800}
+.dash-hero p{opacity:.9;font-size:13px;margin-top:4px}
+.stat-row{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px}
+.stat-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;box-shadow:var(--shadow)}
+.stat-card .v{font-size:24px;font-weight:800;color:var(--bleu)}
+.stat-card .l{font-size:11px;color:var(--ink-soft);margin-top:2px}
+.quick-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.quick-btn{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 8px;text-align:center;cursor:pointer;transition:.2s;box-shadow:var(--shadow)}
+.quick-btn:active{transform:scale(.95)}
+.quick-btn .ic{font-size:24px;margin-bottom:6px}
+.quick-btn .lb{font-size:11px;font-weight:600;color:var(--ink-soft)}
+.quick-btn:hover{border-color:var(--violet)}
+
+/* Chat IA */
+.chat-header{background:var(--grad);color:#fff;padding:16px;border-radius:var(--radius) var(--radius) 0 0;text-align:center}
+.chat-header h3{font-size:16px;font-weight:700}
+.chat-header p{font-size:12px;opacity:.9;margin-top:2px}
+.chat-messages{background:var(--card);border:1px solid var(--line);border-top:none;border-radius:0 0 var(--radius) var(--radius);padding:16px;min-height:300px;max-height:50vh;overflow-y:auto;margin-bottom:12px}
+.msg{margin-bottom:12px;padding:10px 14px;border-radius:14px;font-size:14px;max-width:85%;word-wrap:break-word}
+.msg.user{background:var(--bleu);color:#fff;margin-left:auto;border-bottom-right-radius:4px}
+.msg.bot{background:var(--bg);border:1px solid var(--line);border-bottom-left-radius:4px}
+.msg.bot .src{display:block;font-size:10px;color:var(--violet);margin-top:6px;font-weight:600}
+.msg.loading{background:var(--bg);border:1px solid var(--line);border-bottom-left-radius:4px;color:var(--ink-soft);font-style:italic}
+.chat-input-row{display:flex;gap:8px;margin-bottom:16px}
+.chat-input-row input{flex:1}
+.suggest-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.suggest-chip{background:var(--card);border:1px solid var(--line);padding:6px 12px;border-radius:20px;font-size:12px;cursor:pointer;transition:.2s}
+.suggest-chip:hover{border-color:var(--violet);color:var(--violet)}
+
+/* Photo */
+.photo-area{margin-bottom:16px}
+.photo-btn{width:100%;background:var(--card);border:2px dashed var(--line);border-radius:14px;padding:32px;text-align:center;cursor:pointer;transition:.2s}
+.photo-btn:active{transform:scale(.98)}
+.photo-btn .ic{font-size:36px;margin-bottom:8px}
+.photo-btn .lb{font-size:13px;font-weight:600;color:var(--ink-soft)}
+.photo-preview{width:100%;max-width:300px;margin:14px auto;display:none;border-radius:12px;border:2px solid var(--line)}
+.photo-preview.show{display:block}
+
+/* Exercices */
+.ex-item{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px;box-shadow:var(--shadow);transition:.2s}
+.ex-item:hover{border-color:var(--bleu)}
+.ex-item .q{font-weight:600;font-size:14px;margin-bottom:8px}
+.ex-item .meta{font-size:11px;color:var(--ink-soft)}
+.ex-q{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px}
+.ex-q .q{font-weight:600;font-size:15px;margin-bottom:12px}
+.ex-opt{display:block;width:100%;text-align:left;background:var(--bg);border:1px solid var(--line);padding:10px 12px;border-radius:10px;margin-bottom:8px;font-size:14px;transition:.2s}
+.ex-opt:active{transform:scale(.98)}
+.ex-opt.correct{background:#dcfce7;border-color:var(--ok);color:#166534}
+.ex-opt.wrong{background:#fee2e2;border-color:var(--err);color:#991b1b}
+.ex-explication{background:var(--violet-light);border-left:3px solid var(--violet);padding:10px 14px;border-radius:0 10px 10px 0;font-size:13px;margin-top:8px}
+
+/* Matières */
+.subject-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.subject-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;text-align:center;cursor:pointer;transition:.2s;box-shadow:var(--shadow)}
+.subject-card:active{transform:scale(.96)}
+.subject-card .ic{font-size:28px;margin-bottom:6px}
+.subject-card .nm{font-size:13px;font-weight:600}
+
+/* Résultats */
+.result-item{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:8px;display:flex;align-items:center;gap:10px}
+.result-item .score{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0}
+.score.ok{background:#dcfce7;color:#166534}
+.score.no{background:#fee2e2;color:#991b1b}
+
+/* Historique */
+.hist-item{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:8px}
+.hist-item .t{font-size:12px;color:var(--ink-soft)}
+.hist-item .c{font-size:13px;margin-top:4px}
+
+/* Abonnement */
+.plan-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin-bottom:12px;box-shadow:var(--shadow)}
+.plan-card.current{border:2px solid var(--violet);background:var(--violet-light)}
+.plan-card .nm{font-size:16px;font-weight:700}
+.plan-card .pr{font-size:24px;font-weight:800;color:var(--bleu);margin:4px 0}
+.plan-card .desc{font-size:12px;color:var(--ink-soft);margin-bottom:8px}
+.quota-bar{background:var(--bg);border-radius:8px;height:8px;overflow:hidden;margin:6px 0}
+.quota-bar .fill{height:100%;background:var(--grad);border-radius:8px;transition:.3s}
+
+/* Profil */
+.prof-header{background:var(--grad);color:#fff;border-radius:var(--radius);padding:20px;text-align:center;margin-bottom:16px}
+.prof-header .av{width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 10px}
+.prof-header .nm{font-size:18px;font-weight:800}
+.prof-header .lv{font-size:13px;opacity:.9;margin-top:2px}
+.prof-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;align-items:center;gap:12px;cursor:pointer;margin-bottom:8px;transition:.2s}
+.prof-card:active{transform:scale(.98)}
+.prof-card .ic{font-size:22px}
+.prof-card .lb{font-size:14px;font-weight:600;flex:1}
+.prof-card .val{font-size:13px;color:var(--ink-soft)}
+
+/* More menu */
+.more-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.more-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 12px;text-align:center;cursor:pointer;transition:.2s;box-shadow:var(--shadow)}
+.more-card:active{transform:scale(.96)}
+.more-card .ic{font-size:32px;margin-bottom:8px}
+.more-card .lb{font-size:13px;font-weight:600}
+
+/* Back button */
+.back-row{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.back-btn{background:var(--card);border:1px solid var(--line);width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
+
+/* Footer (pied de page) */
+.app-footer{padding:20px 16px 70px;text-align:center;font-size:11px;color:var(--ink-soft);border-top:1px solid var(--line);margin-top:20px}
+.app-footer .logo-row{display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:6px}
+.app-footer .logo-text{font-size:14px;font-weight:900}
+.app-footer .logo-text span{color:var(--violet)}
+    .chat-photo-btn{flex-shrink:0;width:40px;height:40px;border:none;border-radius:10px;background:var(--violet-light);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+    .q-number{font-size:12px;color:var(--ink-soft);margin-bottom:8px}
+    .q-text{font-size:16px;font-weight:700;margin-bottom:8px;line-height:1.4}
+    .q-cat{display:inline-block;font-size:11px;padding:2px 8px;background:var(--violet-light);border-radius:8px;color:var(--violet);margin-bottom:12px}
+    .q-options{display:flex;flex-direction:column;gap:8px}
+    .q-option{padding:12px;border:1px solid var(--line);border-radius:10px;font-size:14px;cursor:pointer;background:var(--card);transition:all .15s}
+    .q-option:hover{border-color:var(--violet);background:var(--violet-light)}
+    .q-option.q-right{border-color:var(--ok);background:rgba(25,135,84,0.1)}
+    .q-option.q-wrong{border-color:var(--err);background:rgba(220,53,69,0.1)}
+    .q-option.q-dim{opacity:0.4}
+    .q-explication{margin-top:12px;padding:12px;border-radius:10px;font-size:13px}
+    .q-result{padding:12px;border-radius:10px;font-size:13px}
+    .q-result.q-right{background:rgba(25,135,84,0.1);border:1px solid var(--ok)}
+    .q-result.q-wrong{background:rgba(220,53,69,0.1);border:1px solid var(--err)}
+.app-footer p{margin-top:4px}
+
+@media(min-width:768px){
+  body{max-width:480px;margin:0 auto;box-shadow:var(--shadow-lg)}
+  .tabbar{max-width:480px;left:50%;transform:translateX(-50%)}
+}
+
+  .lang-item{padding:14px 16px;border-bottom:1px solid var(--line);cursor:pointer;font-size:15px;display:flex;align-items:center;gap:10px}
+  .lang-item:hover{background:var(--violet-light)}
+  .lang-item span{font-size:20px}
+</style>
+</head>
+<body>
+
+<!-- LOGO intégré (SVG) -->
+<svg style="position:absolute;top:-9999px" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <defs><linearGradient id="lgA" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0%" stop-color="#1565d8"/><stop offset="100%" stop-color="#7c3aed"/>
+  </linearGradient></defs>
+  <rect width="100" height="100" rx="22" fill="url(#lgA)"/>
+  <text x="50" y="70" font-size="46" text-anchor="middle" fill="white" font-family="Arial" font-weight="bold">EM</text>
+</svg>
+
+<!-- AUTH -->
+<div class="screen active" id="screen-auth">
+  <div class="auth-card">
+    <div class="logo-row">
+      <svg class="logo-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <rect width="100" height="100" rx="22" fill="url(#lgA)"/>
+        <text x="50" y="70" font-size="46" text-anchor="middle" fill="white" font-family="Arial" font-weight="bold">EM</text>
+      </svg>
+      <div class="lt">École<span>Max</span></div>
+    </div>
+    <h3>🎓 Espace Élève</h3>
+    <div class="alert" id="authAlert"></div>
+    <div id="authForm">
+      <div style="text-align:center;margin-bottom:16px">
+        <div style="font-size:36px;margin-bottom:6px">🎓</div>
+        <div style="font-size:13px;color:var(--ink-soft);line-height:1.5">Bienvenue sur ÉcoleMax — ton assistant IA personnel. Professeur IA, Scanner, Correcteur, 56 exercices du CM1 à l'Université. Inscris-toi gratuitement et profite de 48 h d'essai complet.</div>
+      </div>
+      <form onsubmit="doLogin(event)">
+        <div class="field"><label>Pseudo</label><input id="lPseudo" required placeholder="Ton pseudo"></div>
+        <div class="field" style="position:relative"><label>Mot de passe</label>
+          <input id="lMdp" type="password" required placeholder="8+ caractères" style="padding-right:40px">
+          <button type="button" onclick="togglePwd('lMdp',this)" style="position:absolute;right:8px;top:30px;background:none;border:none;cursor:pointer;font-size:18px;color:var(--ink-soft)">👁️</button>
+        </div>
+        <button class="btn btn-primary btn-block" type="submit">Se connecter</button>
+      </form>
+      <p style="text-align:center;margin-top:14px;font-size:13px;color:var(--ink-soft)">Pas encore inscrit ? <a href="#" onclick="showRegister();return false">S'inscrire — Essai 48 H gratuit</a></p>
+      <p style="text-align:center;margin-top:8px;font-size:12px;color:var(--ink-soft)"><a href="#" onclick="doReset();return false">Mot de passe oublié ?</a></p>
+    </div>
+    <div id="authRegister" style="display:none">
+      <form onsubmit="doRegister(event)">
+        <div class="field"><label>Pseudo</label><input id="rPseudo" required placeholder="3+ caractères"></div>
+        <div class="field"><label>Email (optionnel)</label><input id="rEmail" type="email"></div>
+        <div class="field" style="position:relative"><label>Mot de passe</label>
+          <input id="rMdp" type="password" required placeholder="8+ caractères, lettre + chiffre" style="padding-right:40px">
+          <button type="button" onclick="togglePwd('rMdp',this)" style="position:absolute;right:8px;top:30px;background:none;border:none;cursor:pointer;font-size:18px;color:var(--ink-soft)">👁️</button>
+        </div>
+        <div class="field"><label>Niveau</label>
+          <select id="rNiveau"><option>CM1</option><option>CM2</option><option>6ème</option><option>5ème</option><option>4ème</option><option>3ème</option><option>2nde</option><option>1ère</option><option>Terminale</option><option>Université L1</option><option>Université L2</option><option>Université L3</option><option>Université S1</option><option>Université S2</option></select>
+        </div>
+        <button class="btn btn-primary btn-block" type="submit">Créer mon compte</button>
+      </form>
+      <p style="text-align:center;margin-top:14px;font-size:13px;color:var(--ink-soft)">Déjà inscrit ? <a href="#" onclick="showLogin();return false">Se connecter</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- APP PRINCIPALE (cachée si non connecté) -->
+<div id="appMain" style="display:none">
+  <header class="app-header">
+    <div class="logo-row">
+      <svg class="logo-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <rect width="100" height="100" rx="22" fill="url(#lgA)"/>
+        <text x="50" y="70" font-size="46" text-anchor="middle" fill="white" font-family="Arial" font-weight="bold">EM</text>
+      </svg>
+      <div class="logo-text">École<span>Max</span></div>
+    </div>
+    <div class="header-right">
+      <button class="icon-btn" onclick="openContact()" title="Contacter l'administrateur">✉️</button>
+      <button class="icon-btn notif-badge" onclick="goToTab('notifs')" id="notifBtn">🔔<span class="dot" id="notifDot" style="display:none">0</span></button>
+      <button class="icon-btn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+    </div>
+  </header>
+
+  <!-- TABLEAU DE BORD -->
+  <div class="screen" id="screen-home">
+    <div class="dash-hero">
+      <h2>Bonjour, <span id="dashPseudo">Élève</span> 👋</h2>
+      <p id="dashPlan">Essai gratuit 48 H · tout débloqué</p>
+    </div>
+    <div class="stat-row">
+      <div class="stat-card"><div class="v" id="statEx">0</div><div class="l">Exercices faits</div></div>
+      <div class="stat-card"><div class="v" id="statCorr">0</div><div class="l">Corrections</div></div>
+      <div class="stat-card"><div class="v" id="statNotif">0</div><div class="l">Notifications</div></div>
+      <div class="stat-card"><div class="v" id="statFav">0</div><div class="l">Favoris</div></div>
+    </div>
+    <div class="section-title">Accès rapide</div>
+    <div class="quick-grid">
+      <div class="quick-btn" onclick="goToTab('chat')"><div class="ic">🤖</div><div class="lb">Professeur IA</div></div>
+      <div class="quick-btn" onclick="goToTab('photo')"><div class="ic">📸</div><div class="lb">Scanner</div></div>
+      <div class="quick-btn" onclick="goToTab('text')"><div class="ic">✍️</div><div class="lb">Correcteur</div></div>
+      <div class="quick-btn" onclick="goToTab('quiz')"><div class="ic">🎲</div><div class="lb">Quiz Universel</div></div>
+      <div class="quick-btn" onclick="goToTab('trad')"><div class="ic">🌍</div><div class="lb">Traduction</div></div>
+    </div>
+    <div class="section-title">Menu complet</div>
+    <div class="more-grid">
+      <div class="more-card" onclick="goToTab('exercises')"><div class="ic">📚</div><div class="lb">Exercices</div></div>
+      <div class="more-card" onclick="goToTab('quiz')"><div class="ic">🎲</div><div class="lb">Quiz</div></div>
+      <div class="more-card" onclick="goToTab('trad')"><div class="ic">🌍</div><div class="lb">Traduction</div></div>
+      <div class="more-card" onclick="goToTab('matieres')"><div class="ic">🎨</div><div class="lb">Matières</div></div>
+      <div class="more-card" onclick="goToTab('results')"><div class="ic">📊</div><div class="lb">Résultats</div></div>
+      <div class="more-card" onclick="goToTab('history')"><div class="ic">🕒</div><div class="lb">Historique</div></div>
+      <div class="more-card" onclick="goToTab('abonnement')"><div class="ic">💎</div><div class="lb">Abonnement</div></div>
+      <div class="more-card" onclick="goToTab('more')"><div class="ic">⚙️</div><div class="lb">Paramètres</div></div>
+    </div>
+    <div class="app-footer">
+      <div class="logo-row">
+        <svg class="logo-svg" style="width:24px;height:24px" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <rect width="100" height="100" rx="22" fill="url(#lgA)"/>
+          <text x="50" y="70" font-size="46" text-anchor="middle" fill="white" font-family="Arial" font-weight="bold">EM</text>
+        </svg>
+        <div class="logo-text">École<span>Max</span></div>
+      </div>
+      <p>Créé par SYCHEIKHCORP · Dakar, Sénégal</p>
+    </div>
+  </div>
+
+  <!-- PROFESSEUR IA -->
+  <div class="screen" id="screen-chat">
+    <div class="chat-header"><h3>🤖 Professeur IA</h3><p>Pose ta question — réponses pédagogiques</p></div>
+    <div class="chat-messages" id="chatMsgs">
+      <div class="msg bot">Bonjour ! Je suis ton Professeur IA d'ÉcoleMax. Pose-moi une question de cours, un exercice, ou demande-moi de résoudre un problème. 💡</div>
+    </div>
+    <div class="suggest-row">
+      <div class="suggest-chip" onclick="askSuggest('Explique la photosynthèse.')">Photosynthèse</div>
+      <div class="suggest-chip" onclick="askSuggest('2+2 = ?')">2+2</div>
+      <div class="suggest-chip" onclick="askSuggest('Explique la loi de Newton F=ma')">Newton</div>
+      <div class="suggest-chip" onclick="askSuggest('Capitale du Sénégal ?')">Dakar</div>
+    </div>
+    <div class="chat-input-row">
+      <button class="chat-photo-btn" onclick="document.getElementById('chatPhoto').click()" title="Envoyer une photo">📷</button>
+      <input type="file" id="chatPhoto" accept="image/*" capture="environment" style="display:none" onchange="onChatPhotoSelected(event)">
+      <input type="text" id="chatInput" placeholder="Ta question... ou envoie une photo" onkeydown="if(event.key==='Enter')askIA()">
+      <button class="btn btn-primary" onclick="askIA()">➤</button>
+    </div>
+  </div>
+
+  <!-- SCANNER EXERCICE -->
+  <div class="screen" id="screen-photo">
+    <div class="chat-header"><h3>📸 Scanner un exercice</h3><p>Photo, reconnaissance, résolution étape par étape</p></div>
+    <div class="photo-area">
+      <label class="photo-btn" onclick="requestCameraPermission()">
+        <div class="ic">📷</div>
+        <div class="lb">Prendre une photo</div>
+        <input type="file" accept="image/*" capture="environment" onchange="onPhotoSelected(event)" style="display:none" id="cameraInput">
+      </label>
+      <label class="photo-btn" onclick="openGallery()">
+        <div class="ic">🖼️</div>
+        <div class="lb">Choisir dans la galerie</div>
+        <input type="file" accept="image/*" onchange="onPhotoSelected(event)" style="display:none" id="galleryInput">
+      </label>
+      <img class="photo-preview" id="photoPreview">
+    </div>
+    <div class="field"><label>Question (optionnel)</label><input type="text" id="photoQuestion" placeholder="Ex: Résous et explique étape par étape."></div>
+    <button class="btn btn-primary btn-block" id="photoBtn" onclick="analyzePhoto()" disabled>🔍 Analyser et corriger</button>
+    <div class="alert" id="photoAlert"></div>
+    <div id="photoResult" style="margin-top:12px"></div>
+  </div>
+
+  <!-- CORRECTEUR DE TEXTE -->
+  <div class="screen" id="screen-text">
+    <div class="chat-header"><h3>✍️ Correcteur de texte</h3><p>Orthographe, grammaire, conjugaison</p></div>
+    <div class="field"><label>Texte à corriger</label>
+      <textarea id="textInput" rows="5" placeholder="Écris ou colle ton texte... (10+ caractères)"></textarea>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button class="btn btn-primary" style="flex:1" onclick="correctText()">✅ Corriger</button>
+      <button class="btn btn-outline" onclick="document.getElementById('textInput').value='';document.getElementById('correctResult').innerHTML='';document.getElementById('textInput').focus()">🗑 Effacer</button>
+    </div>
+    <div class="alert" id="textAlert"></div>
+    <div id="correctResult"></div>
+    <div style="margin-top:12px">
+      <button class="btn btn-violet btn-block" onclick="saveCorrection()">💾 Enregistrer dans l'historique</button>
+    </div>
+  </div>
+
+  <!-- EXERCICES -->
+  <div class="screen" id="screen-exercises">
+    <div class="back-row"><button class="back-btn" onclick="goToTab('home')">←</button><div class="section-title" style="margin:0">📚 Bibliothèque d'exercices</div></div>
+    <div id="exFilters" style="margin-bottom:12px">
+      <div class="field"><label>Filtrer par matière</label><select id="exSujet" onchange="loadExercises()"><option value="">Toutes</option></select></div>
+      <div class="field"><label>Filtrer par niveau</label><select id="exNiveau" onchange="loadExercises()"><option value="">Tous</option><option>CM1</option><option>CM2</option><option>6ème</option><option>5ème</option><option>4ème</option><option>3ème</option><option>2nde</option><option>1ère</option><option>Terminale</option><option>Université L1</option><option>Université L2</option><option>Université L3</option><option>Université S1</option><option>Université S2</option></select></div>
+    </div>
+    <div id="exList"></div>
+  </div>
+
+  <!-- QUIZ UNIVERSEL -->
+  <div class="screen" id="screen-quiz">
+    <div class="back-row"><button class="back-btn" onclick="goToTab('home')">←</button><div class="section-title" style="margin:0">🎲 Quiz Universel</div></div>
+    <div class="alert" id="quizAlert"></div>
+    <div class="section-title">Catégorie</div>
+    <div class="quick-grid" id="quizCats"></div>
+    <div class="section-title">Difficulté</div>
+    <div class="quick-grid" id="quizDiffs">
+      <div class="quick-btn active" onclick="selectDiff('Toutes',this)"><div class="ic">⭐</div><div class="lb">Toutes</div></div>
+      <div class="quick-btn" onclick="selectDiff('facile',this)"><div class="ic">🟢</div><div class="lb">Facile</div></div>
+      <div class="quick-btn" onclick="selectDiff('moyen',this)"><div class="ic">🟡</div><div class="lb">Moyen</div></div>
+      <div class="quick-btn" onclick="selectDiff('difficile',this)"><div class="ic">🔴</div><div class="lb">Difficile</div></div>
+    </div>
+    <div class="section-title">Ton score</div>
+    <div class="stat-row">
+      <div class="stat-card"><div class="v" id="quizScore">0</div><div class="l">Bonne réponses</div></div>
+      <div class="stat-card"><div class="v" id="quizTotal">0</div><div class="l">Questions</div></div>
+    </div>
+    <div id="quizList"></div>
+    <div style="margin-top:12px">
+      <button class="btn btn-primary btn-block" onclick="lancerSession()">🎲 Lancer une session (15 questions)</button>
+    </div>
+  </div>
+
+    <!-- TRADUCTION IA -->
+  <div class="screen" id="screen-trad">
+    <div class="back-row"><button class="back-btn" onclick="goToTab('home')">←</button><div class="section-title" style="margin:0">🌍 Traduction IA</div></div>
+    <div class="alert" id="tradAlert"></div>
+    <div class="section-title">Langue de traduction</div>
+    <div class="quick-grid" id="tradLangs"></div>
+    <div class="field"><label>Texte à traduire</label>
+      <textarea id="tradInput" rows="4" placeholder="Écris ou colle le texte à traduire..." style="width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;font-size:14px;resize:vertical"></textarea>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn btn-primary" style="flex:1" onclick="traduire()">🌐 Traduire</button>
+      <button class="btn btn-outline" onclick="document.getElementById('tradInput').value='';document.getElementById('tradResult').innerHTML=''">🗑 Effacer</button>
+    </div>
+    <div id="tradResult" style="margin-top:12px"></div>
+  </div>
+
+  <!-- MATIERES -->
+  <div class="screen" id="screen-matieres">
+    <div class="back-row"><button class="back-btn" onclick="goToTab('home')">←</button><div class="section-title" style="margin:0">🎨 Matières & Cours</div></div>
+    <div class="subject-grid" id="subjectsGrid"></div>
+  </div>
+
+  <!-- RESULTATS -->
+  <div class="screen" id="screen-results">
+    <div class="back-row"><button class="back-btn" onclick="goToTab('home')">←</button><div class="section-title" style="margin:0">📊 Résultats</div></div>
+    <div id="resultsList"></div>
+  </div>
+
+  <!-- HISTORIQUE -->
+  <div class="screen" id="screen-history">
+    <div class="back-row"><button class="back-btn" onclick="goToTab('home')">←</button><div class="section-title" style="margin:0">🕒 Historique des corrections</div></div>
+    <div id="histList"></div>
+  </div>
+
+  <!-- ABONNEMENT -->
+  <div class="screen" id="screen-abonnement">
+    <div class="back-row"><button class="back-btn" onclick="goToTab('home')">←</button><div class="section-title" style="margin:0">💎 Abonnement</div></div>
+    <div class="alert" id="abAlert"></div>
+    <div class="card" id="myPlan"></div>
+    <div class="section-title">🔄 Changer de plan</div>
+    <div class="card" style="padding:14px">
+      <p style="font-size:13px;color:var(--ink-soft);margin-bottom:12px">Tu peux changer de plan à tout moment. Le nouveau plan s'active après confirmation du paiement.</p>
+      <div class="field"><label>Choisis ton nouveau plan</label>
+        <select id="changePlanSelect" onchange="updateChangePlanPreview()">
+          <option value="">— Sélectionne un plan —</option>
+        </select>
+      </div>
+      <div id="changePlanPreview" style="font-size:13px;margin-top:8px;color:var(--ink-soft)"></div>
+      <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="changePlan()">🔄 Valider le changement</button>
+      <div class="alert" id="changePlanAlert"></div>
+    </div>
+    <div class="section-title">Choisis ton abonnement</div>
+    <div id="plansList"></div>
+  </div>
+
+  <!-- PROFIL & PARAMETRES -->
+  <div class="screen" id="screen-profile">
+    <div class="prof-header">
+      <div class="av" id="profAv">👤</div>
+      <div class="nm" id="profPseudo">Élève</div>
+      <div class="lv" id="profNiveau">Terminale</div>
+    </div>
+    <div class="card">
+      <div class="prof-card" onclick="goToTab('more')"><div class="ic">⚙️</div><div class="lb">Paramètres</div><div class="val">→</div></div>
+      <div class="prof-card" onclick="goToTab('abonnement')"><div class="ic">💎</div><div class="lb">Abonnement / Changer de plan</div><div class="val" id="profPlan">—</div></div>
+      <div class="prof-card" onclick="goToTab('history')"><div class="ic">🕒</div><div class="lb">Historique</div><div class="val">→</div></div>
+      <div class="prof-card" onclick="goToTab('results')"><div class="ic">📊</div><div class="lb">Résultats</div><div class="val">→</div></div>
+      <div class="prof-card" onclick="goToTab('notifs')"><div class="ic">🔔</div><div class="lb">Notifications</div><div class="val" id="profNotif">0</div></div>
+      <div class="prof-card" onclick="goToTab('text')"><div class="ic">✍️</div><div class="lb">Correcteur de texte</div><div class="val">→</div></div>
+      <div class="prof-card" onclick="goToTab('photo')"><div class="ic">📸</div><div class="lb">Scanner d'exercice</div><div class="val">→</div></div>
+      <div class="prof-card" onclick="openSupport()"><div class="ic">💬</div><div class="lb">Support</div><div class="val">→</div></div>
+      <div class="prof-card" onclick="logout()"><div class="ic" style="color:var(--err)">🚪</div><div class="lb">Déconnexion</div><div class="val">→</div></div>
+    </div>
+  </div>
+
+  <!-- MORE (paramètres) -->
+  <div class="screen" id="screen-more">
+    <div class="back-row"><button class="back-btn" onclick="goToTab('home')">←</button><div class="section-title" style="margin:0">⚙️ Paramètres</div></div>
+    <div class="card">
+      <div class="prof-card" onclick="goToTab('chat')"><div class="ic">🤖</div><div class="lb">Professeur IA</div><div class="val">→</div></div>
+      <div class="prof-card" onclick="goToTab('text')"><div class="ic">✍️</div><div class="lb">Correcteur de texte</div><div class="val">→</div></div>
+      <div class="prof-card" onclick="goToTab('photo')"><div class="ic">📸</div><div class="lb">Scanner exercice</div><div class="val">→</div></div>
+      <div class="prof-card" onclick="goToTab('exercises')"><div class="ic">📚</div><div class="lb">Exercices</div><div class="val">→</div></div>
+      <div class="prof-card" onclick="goToTab('matieres')"><div class="ic">🎨</div><div class="lb">Matières</div><div class="val">→</div></div>
+      <div class="prof-card" onclick="goToTab('results')"><div class="ic">📊</div><div class="lb">Résultats</div><div class="val">→</div></div>
+      <div class="prof-card" onclick="goToTab('history')"><div class="ic">🕒</div><div class="lb">Historique</div><div class="val">→</div></div>
+      <div class="prof-card" onclick="goToTab('notifs')"><div class="ic">🔔</div><div class="lb">Notifications</div><div class="val">→</div></div>
+      <div class="prof-card" onclick="goToTab('abonnement')"><div class="ic">💎</div><div class="lb">Abonnement</div><div class="val">→</div></div>
+      <div class="prof-card" onclick="openSupport()"><div class="ic">💬</div><div class="lb">Support technique</div><div class="val">→</div></div>
+      <div class="prof-card" onclick="toggleTheme()"><div class="ic">🌙</div><div class="lb">Mode clair / sombre</div><div class="val" id="modeVal">clair</div></div>
+      <div class="prof-card" onclick="showLangPicker()"><div class="ic">🌍</div><div class="lb">Langue</div><div class="val" id="langVal">Français</div></div>
+      <div class="prof-card" onclick="goToTab('profile')"><div class="ic">👤</div><div class="lb">Profil</div><div class="val">→</div></div>
+      <div class="prof-card" onclick="logout()"><div class="ic" style="color:var(--err)">🚪</div><div class="lb">Déconnexion</div><div class="val">→</div></div>
+    </div>
+    <div class="app-footer">
+      <div class="logo-row">
+        <svg class="logo-svg" style="width:24px;height:24px" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <rect width="100" height="100" rx="22" fill="url(#lgA)"/>
+          <text x="50" y="70" font-size="46" text-anchor="middle" fill="white" font-family="Arial" font-weight="bold">EM</text>
+        </svg>
+        <div class="logo-text">École<span>Max</span></div>
+      </div>
+      <p>Créé par SYCHEIKHCORP · Dakar, Sénégal</p>
+    </div>
+  </div>
+
+  <!-- NOTIFICATIONS -->
+  <div class="screen" id="screen-notifs">
+    <div class="back-row"><button class="back-btn" onclick="goToTab('home')">←</button><div class="section-title" style="margin:0">🔔 Notifications</div></div>
+    <div id="notifsList"></div>
+  </div>
+
+  <!-- Tabbar -->
+  <nav class="tabbar">
+    <button onclick="goToTab('home')" data-tab="home"><span class="ic">🏠</span>Accueil</button>
+    <button onclick="goToTab('chat')" data-tab="chat"><span class="ic">🤖</span>IA</button>
+    <button onclick="goToTab('quiz')" data-tab="quiz"><span class="ic">🎲</span>Quiz</button>
+    <button onclick="goToTab('trad')" data-tab="trad"><span class="ic">🌍</span>Trad</button>
+    <button onclick="goToTab('exercises')" data-tab="exercises"><span class="ic">📚</span>Exercices</button>
+    <button onclick="goToTab('profile')" data-tab="profile"><span class="ic">👤</span>Profil</button>
+  </nav>
+</div>
+
+<script src="app.js" defer></script>
+
+<!-- Modal Contact -->
+<div id="contactModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center">
+  <div style="background:var(--card);border-radius:20px;padding:24px;width:90%;max-width:420px;max-height:90vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h3 style="font-size:18px;font-weight:800">Contacter l'Administrateur</h3>
+      <button onclick="closeContact()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--ink-soft)">✕</button>
+    </div>
+    <form onsubmit="sendContact(event)">
+      <input type="text" id="cNom" placeholder="Votre nom" required style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;margin-bottom:10px;background:var(--bg);color:var(--ink)">
+      <input type="email" id="cEmail" placeholder="Votre email" required style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;margin-bottom:10px;background:var(--bg);color:var(--ink)">
+      <input type="tel" id="cTel" placeholder="Téléphone (+221...)" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;margin-bottom:10px;background:var(--bg);color:var(--ink)">
+      <select id="cCat" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;margin-bottom:10px;background:var(--bg);color:var(--ink)">
+        <option value="question">Question</option>
+        <option value="bug">Bug</option>
+        <option value="compte">Problème de compte</option>
+        <option value="abonnement">Abonnement</option>
+        <option value="autre">Autre</option>
+      </select>
+      <input type="text" id="cObjet" placeholder="Objet" required style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;margin-bottom:10px;background:var(--bg);color:var(--ink)">
+      <textarea id="cMsg" placeholder="Votre message" required style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;margin-bottom:10px;background:var(--bg);color:var(--ink);min-height:80px"></textarea>
+      <button type="submit" style="width:100%;padding:12px;background:var(--grad);color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer">Envoyer</button>
+    </form>
+    <p style="font-size:12px;color:var(--ink-soft);margin-top:10px;text-align:center">📧 sycheikhcorp@gmail.com · 📞 +221 76 728 39 59</p>
+  </div>
+</div>
+<script src="app.js" defer></script>
+</body>
+</html>

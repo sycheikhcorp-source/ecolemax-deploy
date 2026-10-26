@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="clair">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ÉcoleMax — Plateforme éducative complète | IA, Exercices, Abonnements</title>
+<meta name="description" content="ÉcoleMax : plateforme éducative complète avec Professeur IA, Scanner d'exercices, Correcteur de texte, bibliothèque d'exercices et abonnements adaptés au Sénégal.">
+<style>
+:root{
+  --bleu:#1565d8;--bleu-dark:#0d47a1;--bleu-light:#e8f1ff;
+  --violet:#7c3aed;--violet-light:#ede9fe;
+  --bg:#f8fafc;--card:#fff;--ink:#0f172a;--ink-soft:#475569;--line:#e2e8f0;
+  --ok:#16a34a;--warn:#f59e0b;--err:#dc2626;--radius:16px;
+  --shadow:0 4px 20px rgba(15,23,42,.08);--shadow-lg:0 12px 40px rgba(15,23,42,.12);
+  --grad:linear-gradient(135deg,#1565d8 0%,#7c3aed 100%);
+  --maxw:1140px;
+}
+[data-theme="sombre"]{
+  --bg:#0f172a;--card:#1e293b;--ink:#f1f5f9;--ink-soft:#94a3b8;--line:#334155;
+  --bleu-light:#1e3a5f;--violet-light:#2d1b4e;--shadow:0 4px 20px rgba(0,0,0,.3);--shadow-lg:0 12px 40px rgba(0,0,0,.4);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink);line-height:1.6;transition:.3s}
+a{color:var(--bleu);text-decoration:none}
+img,svg{max-width:100%}
+.container{max-width:var(--maxw);margin:0 auto;padding:0 20px}
+
+/* Logo */
+.logo-svg{width:42px;height:42px;flex-shrink:0}
+.logo-row{display:flex;align-items:center;gap:10px}
+.logo-text{font-size:22px;font-weight:900;letter-spacing:-.5px}
+.logo-text span{color:var(--violet)}
+
+/* Header */
+header{background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:100;box-shadow:var(--shadow)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;height:64px}
+nav.main-nav{display:flex;gap:24px}
+nav.main-nav a{color:var(--ink-soft);font-weight:600;font-size:14px;transition:.2s}
+nav.main-nav a:hover{color:var(--bleu)}
+.header-actions{display:flex;align-items:center;gap:10px}
+.theme-btn{background:none;border:1px solid var(--line);border-radius:10px;width:40px;height:40px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:.2s}
+.theme-btn:hover{border-color:var(--bleu)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 20px;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer;border:none;transition:.2s;text-decoration:none}
+.btn-primary{background:var(--grad);color:#fff;box-shadow:0 4px 14px rgba(21,101,216,.35)}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(21,101,216,.45)}
+.btn-outline{background:transparent;border:2px solid var(--bleu);color:var(--bleu)}
+.btn-outline:hover{background:var(--bleu-light)}
+.btn-violet{background:var(--violet);color:#fff}
+.btn-violet:hover{background:#6d28d9;transform:translateY(-2px)}
+.btn-lg{padding:14px 32px;font-size:16px}
+
+/* Hero */
+.hero{padding:60px 0 48px;background:var(--grad);color:#fff;position:relative;overflow:hidden}
+.hero::before{content:"";position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 5l25 14v28L30 61 5 47V19z' fill='none' stroke='rgba(255,255,255,.06)' stroke-width='1'/%3E%3C/svg%3E")}
+.hero-inner{position:relative;z-index:1;text-align:center}
+.hero h1{font-size:clamp(32px,5vw,56px);font-weight:900;line-height:1.1;margin-bottom:16px}
+.hero p{font-size:clamp(16px,2.5vw,20px);opacity:.92;max-width:640px;margin:0 auto 28px}
+.hero-cta{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.hero .btn-white{background:#fff;color:var(--bleu)}
+.hero .btn-ghost{background:transparent;border:2px solid rgba(255,255,255,.5);color:#fff}
+.hero-badges{display:flex;gap:18px;justify-content:center;flex-wrap:wrap;margin-top:28px;font-size:14px;opacity:.9}
+.hero-badges span{background:rgba(255,255,255,.15);padding:6px 14px;border-radius:20px;backdrop-filter:blur(8px)}
+
+/* Sections */
+section{padding:56px 0}
+section h2{font-size:clamp(24px,4vw,34px);font-weight:800;text-align:center;margin-bottom:8px}
+section .subtitle{text-align:center;color:var(--ink-soft);margin-bottom:36px;font-size:16px}
+
+/* Cards */
+.grid{display:grid;gap:20px}
+.grid-3{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.grid-2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:28px;box-shadow:var(--shadow);transition:.25s}
+.card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg);border-color:var(--bleu)}
+.card .ic{width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:16px}
+.ic-blue{background:var(--bleu-light);color:var(--bleu)}
+.ic-violet{background:var(--violet-light);color:var(--violet)}
+.card h3{font-size:18px;font-weight:700;margin-bottom:8px}
+.card p{color:var(--ink-soft);font-size:14px}
+
+/* Matières */
+.subject-chip{display:inline-flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--line);padding:10px 16px;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;transition:.2s}
+.subject-chip:hover{border-color:var(--violet);color:var(--violet);transform:translateY(-2px)}
+.subject-chip .dot{width:8px;height:8px;border-radius:50%;background:var(--grad)}
+
+/* Pricing */
+.pricing-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:32px;text-align:center;position:relative;box-shadow:var(--shadow);transition:.25s}
+.pricing-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg)}
+.pricing-card.popular{border:2px solid var(--violet);transform:scale(1.02)}
+.pricing-card .badge{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--violet);color:#fff;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:700}
+.pricing-card .prix{font-size:36px;font-weight:900;margin:8px 0}
+.pricing-card .prix small{font-size:14px;font-weight:600;color:var(--ink-soft)}
+.pricing-card .features{list-style:none;margin:20px 0;text-align:left}
+.pricing-card .features li{padding:6px 0;font-size:14px;color:var(--ink-soft);display:flex;align-items:center;gap:8px}
+.pricing-card .features li::before{content:"✓";color:var(--ok);font-weight:700}
+
+/* FAQ accordéon */
+.faq-item{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:12px;overflow:hidden}
+.faq-q{padding:18px 20px;cursor:pointer;font-weight:600;display:flex;justify-content:space-between;align-items:center;transition:.2s}
+.faq-q:hover{background:var(--bleu-light)}
+.faq-q .arrow{transition:.3s;color:var(--violet)}
+.faq-item.open .faq-q .arrow{transform:rotate(180deg)}
+.faq-a{max-height:0;overflow:hidden;transition:.3s;padding:0 20px}
+.faq-item.open .faq-a{max-height:300px;padding-bottom:18px}
+.faq-a p{color:var(--ink-soft);font-size:14px}
+
+/* Formulaires */
+.form-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:32px;box-shadow:var(--shadow);max-width:440px;margin:0 auto}
+.form-card h3{text-align:center;margin-bottom:20px;font-size:22px}
+.field{margin-bottom:16px}
+.field label{display:block;font-weight:600;font-size:13px;margin-bottom:6px;color:var(--ink-soft)}
+.field input,.field textarea,.field select{width:100%;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font-size:14px;font-family:inherit;transition:.2s}
+.field input:focus,.field textarea:focus{outline:none;border-color:var(--bleu);box-shadow:0 0 0 3px var(--bleu-light)}
+.form-card .btn{width:100%;margin-top:8px}
+.form-msg{padding:10px 14px;border-radius:10px;font-size:13px;margin-top:12px;display:none}
+.form-msg.ok{background:#dcfce7;color:#166534;display:block}
+.form-msg.err{background:#fee2e2;color:#991b1b;display:block}
+.form-msg.info{background:var(--bleu-light);color:var(--bleu-dark);display:block}
+
+/* Footer */
+footer{background:var(--card);border-top:1px solid var(--line);padding:40px 0 24px}
+.footer-grid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:32px;margin-bottom:24px}
+.footer-col h4{font-size:14px;font-weight:700;margin-bottom:12px}
+.footer-col a{display:block;color:var(--ink-soft);font-size:13px;padding:3px 0;transition:.2s}
+.footer-col a:hover{color:var(--bleu)}
+.footer-bottom{border-top:1px solid var(--line);padding-top:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+.footer-bottom p{font-size:12px;color:var(--ink-soft)}
+.footer-logo{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.6);backdrop-filter:blur(4px);z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.show{display:flex}
+.modal{background:var(--card);border-radius:var(--radius);padding:32px;max-width:420px;width:100%;box-shadow:var(--shadow-lg);max-height:90vh;overflow-y:auto}
+.modal h3{margin-bottom:20px;font-size:22px}
+.modal-close{float:right;background:none;border:none;font-size:24px;cursor:pointer;color:var(--ink-soft)}
+
+/* Alerte */
+.alert{padding:12px 16px;border-radius:10px;font-size:13px;margin-bottom:16px;display:none}
+.alert.err{background:#fee2e2;color:#991b1b;display:block}
+.alert.ok{background:#dcfce7;color:#166534;display:block}
+
+@media(max-width:768px){
+  nav.main-nav{display:none}
+  .footer-grid{grid-template-columns:1fr}
+  .pricing-card.popular{transform:none}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGO ÉCOLEMAX (SVG intégré) -->
+<svg class="logo-svg" style="position:absolute;top:-9999px" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0%" stop-color="#1565d8"/><stop offset="100%" stop-color="#7c3aed"/>
+  </linearGradient></defs>
+  <rect width="100" height="100" rx="22" fill="url(#lg)"/>
+  <text x="50" y="70" font-size="46" text-anchor="middle" fill="white" font-family="Arial" font-weight="bold">EM</text>
+</svg>
+
+<!-- HEADER -->
+<header>
+  <div class="container header-inner">
+    <div class="logo-row">
+      <svg class="logo-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <defs><linearGradient id="lg2" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#1565d8"/><stop offset="100%" stop-color="#7c3aed"/>
+        </linearGradient></defs>
+        <rect width="100" height="100" rx="22" fill="url(#lg2)"/>
+        <text x="50" y="70" font-size="46" text-anchor="middle" fill="white" font-family="Arial" font-weight="bold">EM</text>
+      </svg>
+      <div class="logo-text">École<span>Max</span></div>
+    </div>
+    <nav class="main-nav">
+      <a href="#accueil">Accueil</a>
+      <a href="#fonctionnalites">Fonctionnalités</a>
+      <a href="#matieres">Matières</a>
+      <a href="#tarifs">Tarifs</a>
+      <a href="#faq">FAQ</a>
+      <a href="#contact">Contact</a>
+    </nav>
+    <div class="header-actions">
+      <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+      <button class="btn btn-outline" onclick="openModal('connexion')">Connexion</button>
+      <button class="btn btn-primary" onclick="openModal('inscription')">S'inscrire</button>
+    </div>
+  </div>
+</header>
+
+<!-- HERO -->
+<div class="hero" id="accueil">
+  <div class="container hero-inner">
+    <h1>ÉcoleMax : ton école intelligente<br>avec Professeur IA 24h/24 🎓</h1>
+    <p>Plateforme éducative complète : cours, exercices, correction photo, correcteur de texte et accompagnement personnalisé. Inscription gratuite, essai 48 H tout débloqué.</p>
+    <div class="hero-cta">
+      <button class="btn btn-white btn-lg" onclick="openModal('inscription')">👉 Commencer gratuitement</button>
+      <a class="btn btn-ghost btn-lg" href="#fonctionnalites">Découvrir les outils</a>
+    </div>
+    <div class="hero-badges">
+      <span>🤖 IA pédagogique</span>
+      <span>📱 App mobile Android/iOS</span>
+      <span>📸 Scanner d'exercices</span>
+      <span>✍️ Correcteur de texte</span>
+    </div>
+  </div>
+</div>
+
+<!-- FONCTIONNALITÉS -->
+<section id="fonctionnalites">
+  <div class="container">
+    <h2>Trois outils IA pour réussir</h2>
+    <p class="subtitle">Connectés à une API IA réelle — pas de simulation</p>
+    <div class="grid grid-3">
+      <div class="card">
+        <div class="ic ic-blue">🤖</div>
+        <h3>Professeur IA</h3>
+        <p>Pose toutes tes questions. Obtient des réponses pédagogiques, des étapes de résolution, des quiz adaptés à ton niveau. Calcul instantané, explications claires.</p>
+        <button class="btn btn-primary" style="margin-top:14px" onclick="openModal('connexion')">💬 Parler au Professeur IA</button>
+      </div>
+      <div class="card">
+        <div class="ic ic-violet">📸</div>
+        <h3>Scanner d'exercices</h3>
+        <p>Photographie ton devoir ou importe une image. L'IA reconnaît l'énoncé, résout l'exercice et explique chaque étape. Enregistre la correction dans ton historique.</p>
+        <button class="btn btn-violet" style="margin-top:14px" onclick="openModal('connexion')">📷 Scanner un exercice</button>
+      </div>
+      <div class="card">
+        <div class="ic ic-blue">✍️</div>
+        <h3>Correcteur de texte</h3>
+        <p>Corrige l'orthographe, la grammaire, la conjugaison et la syntaxe. Affiche le texte original et corrigé, explique chaque erreur. Enregistre et recopie les résultats.</p>
+        <button class="btn btn-primary" style="margin-top:14px" onclick="openModal('connexion')">✅ Corriger un texte</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- QUIZ UNIVERSEL -->
+<section id="quiz">
+  <div class="container">
+    <h2>🎲 Quiz Universel — Teste tes connaissances</h2>
+    <p class="subtitle">Géographie, Sciences, Histoire, Maths, Français... — 30 questions pour s'amuser et apprendre</p>
+    <div class="grid grid-3" id="quizCats"></div>
+    <div id="quizContainer" style="max-width:680px;margin:24px auto 0"></div>
+    <div style="text-align:center;margin-top:24px">
+      <button class="btn btn-primary btn-lg" onclick="startSiteQuiz()">🎲 Lancer le quiz</button>
+    </div>
+  </div>
+</section>
+
+<!-- TRADUCTION IA -->
+<section id="traduction">
+  <div class="container">
+    <h2>🌍 Traduction IA — 10 langues mondiales</h2>
+    <p class="subtitle">Français, Anglais, Espagnol, Portugais, Arabe, Allemand, Mandarin, Hindi, Russe, Japonais</p>
+    <div class="grid grid-3" id="tradLangsSite"></div>
+    <div style="max-width:680px;margin:24px auto 0" id="tradSiteContainer">
+      <div class="form-card">
+        <h3>Traduire un texte</h3>
+        <div class="alert" id="tradSiteAlert"></div>
+        <div class="field"><label>Texte à traduire</label>
+          <textarea id="tradSiteInput" rows="4" placeholder="Écris ou colle le texte à traduire..." required></textarea>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <div class="field" style="flex:1"><label>Langue cible</label>
+            <select id="tradSiteLang" required>
+              <option value="">— Choisir une langue —</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-block" onclick="traduireSite()">🌐 Traduire</button>
+        <div id="tradSiteResult" style="margin-top:16px"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MATIERES ET NIVEAUX -->
+<section id="matieres" style="background:var(--card)">
+  <div class="container">
+    <h2>Matières et niveaux scolaires</h2>
+    <p class="subtitle">18 matières · Adaptées à tous les niveaux (CP → Terminale)</p>
+    <div class="grid" style="gap:12px" id="subjectsGrid"></div>
+    <div style="text-align:center;margin-top:24px">
+      <button class="btn btn-primary btn-lg" onclick="openModal('connexion')">Accéder aux cours et exercices</button>
+    </div>
+  </div>
+</section>
+
+<!-- TARIFS -->
+<section id="tarifs">
+  <div class="container">
+    <h2>Tarifs et abonnements</h2>
+    <p class="subtitle">Essai gratuit 48 H · Paiements Wave, Orange Money, cartes (Sénégal)</p>
+    <div class="grid grid-3" id="pricingGrid"></div>
+    <p style="text-align:center;margin-top:24px;font-size:13px;color:var(--ink-soft)">
+      ⚠️ Un abonnement est activé seulement après confirmation sécurisée du paiement par le serveur.
+    </p>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq" style="background:var(--card)">
+  <div class="container" style="max-width:760px">
+    <h2>FAQ — Questions fréquentes</h2>
+    <p class="subtitle">Tout ce que tu dois savoir sur ÉcoleMax</p>
+    <div id="faqList"></div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section id="contact">
+  <div class="container">
+    <h2>Contact & Support</h2>
+    <p class="subtitle">Une question ? Notre équipe te répond</p>
+    <div class="form-card">
+      <h3>Envoyer un message</h3>
+      <div class="alert" id="contactAlert"></div>
+      <form onsubmit="sendContact(event)">
+        <div class="field"><label>Sujet</label>
+          <select id="contactSujet" required>
+            <option value="">— Choisir un sujet —</option>
+            <option>Question sur l'application</option>
+            <option>Abonnement & Paiement</option>
+            <option>Support technique</option>
+            <option>Suggestion</option>
+            <option>Autre</option>
+          </select>
+        </div>
+        <div class="field"><label>Message</label>
+          <textarea id="contactMsg" rows="4" placeholder="Décris ta question..." required></textarea>
+        </div>
+        <button class="btn btn-primary" type="submit">📨 Envoyer le message</button>
+      </form>
+      <div style="margin-top:20px;text-align:center;font-size:13px;color:var(--ink-soft)">
+        📧 contact@ecolemax.sn · 📞 Appel via l'app · 💬 Support dans l'application
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CONDITIONS -->
+<section style="background:var(--card);padding:40px 0">
+  <div class="container" style="max-width:760px">
+    <h2 style="font-size:24px;margin-bottom:20px">Conditions d'utilisation & Confidentialité</h2>
+    <div style="font-size:14px;color:var(--ink-soft);line-height:1.8">
+      <p><strong>Conditions d'utilisation :</strong> L'utilisation d'ÉcoleMax implique l'acceptation des présentes conditions. Les services éducatifs sont fournis « tels quels » avec une disponibilité visée de 99 %. Les abonnements sont activés uniquement après confirmation sécurisée du paiement. Les achats ne sont remboursables que dans les 24 h après activation si le service est défaillant.</p>
+      <p style="margin-top:12px"><strong>Politique de confidentialité :</strong> ÉcoleMax collecte uniquement les données nécessaires au fonctionnement (pseudo, mot de passe haché, niveau, historique des apprentissages). Les mots de passe sont hachés avec SHA-256. Aucune donnée n'est vendue à des tiers. Les élèves mineurs bénéficient d'une protection supplémentaire. Vous pouvez demander la suppression de vos données à tout moment via le support.</p>
+      <p style="margin-top:12px"><strong>Protection des mineurs :</strong> Les données des élèves de moins de 13 ans sont traitées avec un consentement parental. Aucune publicité ciblée n'est affichée dans l'espace élève.</p>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-col">
+        <div class="footer-logo">
+          <svg class="logo-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <rect width="100" height="100" rx="22" fill="url(#lg2)"/>
+            <text x="50" y="70" font-size="46" text-anchor="middle" fill="white" font-family="Arial" font-weight="bold">EM</text>
+          </svg>
+          <div class="logo-text">École<span>Max</span></div>
+        </div>
+        <p style="font-size:13px;color:var(--ink-soft)">Plateforme éducative complète avec IA, exercices, abonnements et dashboard administrateur. Conçue pour les élèves du Sénégal et d'Afrique francophone.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Plateforme</h4>
+        <a href="#accueil">Accueil</a>
+        <a href="#fonctionnalites">Fonctionnalités</a>
+        <a href="#tarifs">Tarifs</a>
+        <a href="#faq">FAQ</a>
+      </div>
+      <div class="footer-col">
+        <h4>Liens</h4>
+        <a href="/app.html">Espace élève</a>
+        <a href="/dashboard.html">Dashboard admin</a>
+        <a href="/EcoleMax-1.0.0.apk">📱 Télécharger l'app</a>
+        <a href="#contact">Contact</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2026 ÉcoleMax — Créé par <strong>SYCHEIKHCORP</strong> · Dakar, Sénégal</p>
+      <p>Version 1.0.0 · Powered by Python + SQLite + Pollinations AI</p>
+    </div>
+  </div>
+</footer>
+
+<!-- MODAL CONNEXION / INSCRIPTION -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">×</button>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<script src="index.js" defer></script>
+</body>
+</html>
