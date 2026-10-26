@@ -4,3 +4,4 @@ apk-build/sortie/
 apk-build/assets/
 *.db-shm
 *.db-wal
+trigger
