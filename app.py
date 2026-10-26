@@ -1875,6 +1875,16 @@ _threading.Thread(target=keepalive, daemon=True).start()
 # Initialiser la base de données au démarrage (fonctionne avec Gunicorn et Flask dev)
 init_db()
 
+
+@app.route('/catalogue')
+@app.route('/catalogue.html')
+def catalogue_page():
+    return send_file('catalogue-SYCHEIKHCORP.html')
+
+@app.route('/catalogue-SYCHEIKHCORP.html')
+def catalogue_page2():
+    return send_file('catalogue-SYCHEIKHCORP.html')
+
 if __name__ == "__main__":
     print("🟢 ÉcoleMax Flask → http://0.0.0.0:" + str(PORT))
     app.run(host="0.0.0.0", port=PORT)
