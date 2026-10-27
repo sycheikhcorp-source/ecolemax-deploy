@@ -573,6 +573,23 @@ def get_user_by_token(req):
     c.close()
     return u
 
+
+# ============================================================
+#  CORS — indispensable pour l'APK (origine file:// → "null")
+# ============================================================
+@app.after_request
+def _add_cors(resp):
+    resp.headers["Access-Control-Allow-Origin"] = "*"
+    resp.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    resp.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Admin-Password, X-Requested-With"
+    resp.headers["Access-Control-Max-Age"] = "86400"
+    resp.headers["Access-Control-Expose-Headers"] = "Content-Disposition"
+    return resp
+
+@app.route("/api/<path:_p>", methods=["OPTIONS"])
+def _cors_preflight(_p):
+    return Response("", status=204)
+
 @app.route("/health")
 @app.route("/api/health")
 def health():
