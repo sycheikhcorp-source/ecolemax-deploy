@@ -52,10 +52,10 @@ OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 
 def _gemini_call(prompt, max_tokens=700, temperature=0.4, system=None, timeout=25):
     """Google Gemini (clé gratuite AI Studio)."""
-    if not GEMINI_API_KEY:
+    if not cle_api("GEMINI_API_KEY"):
         return False, "", "Gemini"
     url = ("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s"
-           % (GEMINI_MODEL, GEMINI_API_KEY))
+           % (GEMINI_MODEL, cle_api("GEMINI_API_KEY")))
     payload = {
         "system_instruction": {"parts": [{"text": system or _SYS_IA}]},
         "contents": [{"role": "user", "parts": [{"text": prompt}]}],
@@ -76,7 +76,7 @@ def _gemini_call(prompt, max_tokens=700, temperature=0.4, system=None, timeout=2
 
 
 def _groq_call(prompt, max_tokens=700, temperature=0.4, system=None, timeout=25):
-    if not GROQ_API_KEY:
+    if not cle_api("GROQ_API_KEY"):
         return False, "", "Groq"
     payload = {"model": GROQ_MODEL,
                "messages": [{"role": "system", "content": system or _SYS_IA},
@@ -86,7 +86,7 @@ def _groq_call(prompt, max_tokens=700, temperature=0.4, system=None, timeout=25)
         req = urllib.request.Request("https://api.groq.com/openai/v1/chat/completions",
                                      data=json.dumps(payload).encode(), method="POST")
         req.add_header("Content-Type", "application/json")
-        req.add_header("Authorization", "Bearer " + GROQ_API_KEY)
+        req.add_header("Authorization", "Bearer " + cle_api("GROQ_API_KEY"))
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             d = json.loads(resp.read().decode())
             txt = d["choices"][0]["message"]["content"].strip()
@@ -98,7 +98,7 @@ def _groq_call(prompt, max_tokens=700, temperature=0.4, system=None, timeout=25)
 
 
 def _openai_call(prompt, max_tokens=700, temperature=0.4, system=None, timeout=25):
-    if not OPENAI_API_KEY:
+    if not cle_api("OPENAI_API_KEY"):
         return False, "", "OpenAI"
     payload = {"model": OPENAI_MODEL,
                "messages": [{"role": "system", "content": system or _SYS_IA},
@@ -108,7 +108,7 @@ def _openai_call(prompt, max_tokens=700, temperature=0.4, system=None, timeout=2
         req = urllib.request.Request("https://api.openai.com/v1/chat/completions",
                                      data=json.dumps(payload).encode(), method="POST")
         req.add_header("Content-Type", "application/json")
-        req.add_header("Authorization", "Bearer " + OPENAI_API_KEY)
+        req.add_header("Authorization", "Bearer " + cle_api("OPENAI_API_KEY"))
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             d = json.loads(resp.read().decode())
             txt = d["choices"][0]["message"]["content"].strip()
@@ -122,11 +122,11 @@ def _openai_call(prompt, max_tokens=700, temperature=0.4, system=None, timeout=2
 def fournisseurs_ia():
     """Liste ordonnée des fournisseurs disponibles (les clés d'abord)."""
     liste = []
-    if GEMINI_API_KEY:
+    if cle_api("GEMINI_API_KEY"):
         liste.append(("gemini", _gemini_call))
-    if GROQ_API_KEY:
+    if cle_api("GROQ_API_KEY"):
         liste.append(("groq", _groq_call))
-    if OPENAI_API_KEY:
+    if cle_api("OPENAI_API_KEY"):
         liste.append(("openai", _openai_call))
     liste.append(("ovh", None))
     liste.append(("pollinations", None))
@@ -462,6 +462,57 @@ def db():
     conn.execute("PRAGMA synchronous=NORMAL")
     conn.execute("PRAGMA busy_timeout=30000")
     return conn
+
+
+# ─── Réglages modifiables depuis le tableau de bord (clés API, e-mail) ───
+_REGLAGES = {}
+
+
+def init_reglages():
+    try:
+        c = db()
+        c.execute("CREATE TABLE IF NOT EXISTS reglages (cle TEXT PRIMARY KEY, valeur TEXT, maj TEXT)")
+        c.commit()
+        c.close()
+    except Exception as e:
+        print("init_reglages:", e)
+
+
+def reglage_get(cle, defaut=""):
+    if cle in _REGLAGES:
+        return _REGLAGES[cle]
+    try:
+        c = db()
+        r = c.execute("SELECT valeur FROM reglages WHERE cle=?", (cle,)).fetchone()
+        c.close()
+        v = (r["valeur"] if r else "") or defaut
+    except Exception:
+        v = defaut
+    if v:
+        _REGLAGES[cle] = v
+    return v
+
+
+def reglage_set(cle, valeur):
+    valeur = (valeur or "").strip()
+    try:
+        c = db()
+        c.execute("INSERT INTO reglages(cle,valeur,maj) VALUES(?,?,?) "
+                  "ON CONFLICT(cle) DO UPDATE SET valeur=excluded.valeur, maj=excluded.maj",
+                  (cle, valeur, now()))
+        c.commit()
+        c.close()
+    except Exception as e:
+        print("reglage_set:", e)
+    if valeur:
+        _REGLAGES[cle] = valeur
+    else:
+        _REGLAGES.pop(cle, None)
+
+
+def cle_api(nom):
+    """Clé API : variable d'environnement prioritaire, sinon réglage du dashboard."""
+    return (os.environ.get(nom, "").strip() or reglage_get(nom, "")).strip()
 
 def init_db():
     c = db()
@@ -1000,7 +1051,7 @@ def _trad_gtx(texte, src, dst):
 def _trad_mymemory(texte, src, dst):
     """MyMemory — quota élargi grâce au paramètre de= (adresse de contact)."""
     url = ("https://api.mymemory.translated.net/get?q=%s&langpair=%s|%s&de=%s"
-           % (urllib.parse.quote(texte[:450]), src, dst, urllib.parse.quote(TRAD_EMAIL)))
+           % (urllib.parse.quote(texte[:450]), src, dst, urllib.parse.quote(os.environ.get("TRAD_EMAIL") or reglage_get("TRAD_EMAIL", TRAD_EMAIL))))
     try:
         req = urllib.request.Request(url)
         req.add_header("User-Agent", "Mozilla/5.0")
@@ -1016,9 +1067,9 @@ def _trad_mymemory(texte, src, dst):
 
 def _trad_deepl(texte, src, dst):
     """DeepL — activé si DEEPL_API_KEY est défini (gratuit : 500 000 caractères/mois)."""
-    if not DEEPL_API_KEY:
+    if not cle_api("DEEPL_API_KEY"):
         return False, "", "DeepL"
-    base = ("https://api-free.deepl.com" if DEEPL_API_KEY.endswith(":fx")
+    base = ("https://api-free.deepl.com" if cle_api("DEEPL_API_KEY").endswith(":fx")
             else "https://api.deepl.com")
     corps = urllib.parse.urlencode({
         "text": texte[:4000],
@@ -1027,7 +1078,7 @@ def _trad_deepl(texte, src, dst):
     }).encode()
     try:
         req = urllib.request.Request(base + "/v2/translate", data=corps, method="POST")
-        req.add_header("Authorization", "DeepL-Auth-Key " + DEEPL_API_KEY)
+        req.add_header("Authorization", "DeepL-Auth-Key " + cle_api("DEEPL_API_KEY"))
         req.add_header("Content-Type", "application/x-www-form-urlencoded")
         with urllib.request.urlopen(req, timeout=10) as resp:
             d = json.loads(resp.read().decode())
@@ -1079,7 +1130,7 @@ def reponse_traduction(texte, langue, plan=None):
 
     # 3) moteurs de traduction dédiés (rapides, sans clé)
     moteurs = []
-    if DEEPL_API_KEY:
+    if cle_api("DEEPL_API_KEY"):
         moteurs.append(("deepl", _trad_deepl))
     moteurs += [("google", _trad_gtx), ("mymemory", _trad_mymemory),
                 ("libretranslate", _trad_libretranslate)]
@@ -1799,6 +1850,50 @@ def api_payment_test():
     log_sec(1, "test_paiement", "Test " + method + " " + ref)
     return jsonify({"ok": True, "reference": ref, "statut": "test_success", "montant": montant,
                     "message": "Paiement test simulé — " + str(montant) + " FCFA"})
+
+
+@app.route("/api/admin/reglages", methods=["GET"])
+def api_admin_reglages_get():
+    if request.headers.get("X-Admin-Password", "") != ADMIN_PASSWORD:
+        return jsonify({"erreur": "Non autorisé"}), 401
+    def masque(v):
+        if not v:
+            return ""
+        return v[:4] + "…" + v[-4:] if len(v) > 10 else "défini"
+    out = {}
+    for nom in ("GEMINI_API_KEY", "DEEPL_API_KEY", "GROQ_API_KEY", "OPENAI_API_KEY", "TRAD_EMAIL"):
+        v = cle_api(nom) if nom != "TRAD_EMAIL" else (os.environ.get("TRAD_EMAIL") or reglage_get("TRAD_EMAIL", TRAD_EMAIL))
+        out[nom] = {"defini": bool(v), "apercu": masque(v)}
+    out["GEMINI_MODEL"] = GEMINI_MODEL
+    return jsonify(out)
+
+
+@app.route("/api/admin/reglage", methods=["POST"])
+def api_admin_reglage_set():
+    if request.headers.get("X-Admin-Password", "") != ADMIN_PASSWORD:
+        return jsonify({"erreur": "Non autorisé"}), 401
+    data = request.get_json(silent=True) or {}
+    cle = (data.get("cle") or "").strip().upper()
+    valeur = (data.get("valeur") or "").strip()
+    autorisees = {"GEMINI_API_KEY", "DEEPL_API_KEY", "GROQ_API_KEY", "OPENAI_API_KEY", "TRAD_EMAIL"}
+    if cle not in autorisees:
+        return jsonify({"ok": False, "erreur": "Réglage inconnu"}), 400
+    reglage_set(cle, valeur)
+    return jsonify({"ok": True, "cle": cle, "defini": bool(valeur)})
+
+
+@app.route("/api/admin/reglage/test", methods=["POST"])
+def api_admin_reglage_test():
+    """Teste la traduction réelle dans 4 langues et renvoie le moteur utilisé."""
+    if request.headers.get("X-Admin-Password", "") != ADMIN_PASSWORD:
+        return jsonify({"erreur": "Non autorisé"}), 401
+    res = {}
+    for lg in ("en", "es", "ar", "zh"):
+        t0 = time.time()
+        r = reponse_traduction("Bonjour, comment vas-tu aujourd'hui ?", lg)
+        res[lg] = {"sortie": r.get("reponse", "")[:80], "moteur": r.get("source"),
+                   "ms": int((time.time() - t0) * 1000), "ok": bool(r.get("succes"))}
+    return jsonify({"ok": all(v["ok"] for v in res.values()), "resultats": res})
 
 
 @app.route("/api/diag/moteurs")
@@ -2952,6 +3047,7 @@ def catalogue_page2():
     return send_file('catalogue-SYCHEIKHCORP.html')
 
 init_ai_cache()
+init_reglages()
 ensure_user_columns()
 
 if __name__ == "__main__":
