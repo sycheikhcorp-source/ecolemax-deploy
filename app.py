@@ -40,6 +40,7 @@ _SYS_IA = "Tu es un professeur clair et concis. Réponds en français, 6 lignes 
 
 
 # ─── Fournisseurs IA à clé (optionnels, via variables d'environnement Render) ───
+UA_NAVIGATEUR = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "").strip()
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "").strip()
@@ -87,6 +88,8 @@ def _groq_call(prompt, max_tokens=700, temperature=0.4, system=None, timeout=25)
                                      data=json.dumps(payload).encode(), method="POST")
         req.add_header("Content-Type", "application/json")
         req.add_header("Authorization", "Bearer " + cle_api("GROQ_API_KEY"))
+        req.add_header("User-Agent", UA_NAVIGATEUR)
+        req.add_header("Accept", "application/json")
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             d = json.loads(resp.read().decode())
             txt = d["choices"][0]["message"]["content"].strip()
@@ -1918,6 +1921,8 @@ def _sonde_fournisseur(nom):
             corps = {"contents": [{"parts": [{"text": "Traduis en espagnol : Bonjour"}]}]}
         req = urllib.request.Request(url, data=json.dumps(corps).encode(), method="POST")
         req.add_header("Content-Type", "application/json")
+        req.add_header("User-Agent", UA_NAVIGATEUR)
+        req.add_header("Accept", "application/json")
         if nom != "gemini":
             req.add_header("Authorization", "Bearer " + cle_api(nom.upper() + "_API_KEY"))
         t0 = time.time()
