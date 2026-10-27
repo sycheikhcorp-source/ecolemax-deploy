@@ -1045,6 +1045,11 @@ _TRAD_CODES = {
 DEEPL_API_KEY = os.environ.get("DEEPL_API_KEY", "").strip()
 TRAD_EMAIL = os.environ.get("TRAD_EMAIL", "ecolemax.app@gmail.com")
 
+# Coordonnées de l'établissement (valeurs par défaut persistantes, modifiables depuis le dashboard)
+NUM_WAVE_DEFAUT = "+221 77 306 97 71"
+NUM_ORANGE_DEFAUT = "+221 76 728 39 59"
+MARCHAND_DEFAUT = "ÉcoleMax / SYCHEIKHCORP"
+
 
 def _nettoyer_traduction(trad, source):
     """Retire les préfixes et commentaires que les modèles ajoutent parfois."""
@@ -1830,13 +1835,13 @@ def api_support():
 def api_payment_infos():
     """Numéros marchands et moyens de paiement affichés aux élèves (configurables depuis le dashboard)."""
     moyens = [
-        {"code": "wave",   "nom": "Wave",         "numero": reglage_get("NUM_WAVE", "")},
-        {"code": "orange", "nom": "Orange Money", "numero": reglage_get("NUM_ORANGE", "")},
-        {"code": "free",   "nom": "Free Money",   "numero": reglage_get("NUM_FREE", "")},
+        {"code": "wave",   "nom": "Wave",         "numero": reglage_get("NUM_WAVE", NUM_WAVE_DEFAUT)},
+        {"code": "orange", "nom": "Orange Money", "numero": reglage_get("NUM_ORANGE", NUM_ORANGE_DEFAUT)},
+        {"code": "free",   "nom": "Free Money",   "numero": reglage_get("NUM_FREE", NUM_WAVE_DEFAUT)},
         {"code": "card",   "nom": "Carte bancaire", "numero": ""},
     ]
     return jsonify({"moyens": moyens,
-                    "beneficiaire": reglage_get("MARCHAND_NOM", "ÉcoleMax"),
+                    "beneficiaire": reglage_get("MARCHAND_NOM", MARCHAND_DEFAUT),
                     "devise": "FCFA",
                     "validation": "Ton abonnement est activé dès que le paiement est vérifié par l'administration."})
 
@@ -1864,12 +1869,13 @@ def api_subscribe():
     c.commit()
     c.close()
     log_sec(u["id"], "paiement_creation", plan_code + " " + method + " " + ref)
-    nums = {"wave": reglage_get("NUM_WAVE", ""), "orange": reglage_get("NUM_ORANGE", ""),
-            "free": reglage_get("NUM_FREE", ""), "card": ""}
+    nums = {"wave": reglage_get("NUM_WAVE", NUM_WAVE_DEFAUT),
+            "orange": reglage_get("NUM_ORANGE", NUM_ORANGE_DEFAUT),
+            "free": reglage_get("NUM_FREE", NUM_WAVE_DEFAUT), "card": ""}
     return jsonify({"ok": True, "reference": ref, "abonnement_id": aid,
                     "montant": plan["prix"], "plan_nom": plan["nom"], "method": method,
                     "numero": nums.get(method, ""),
-                    "beneficiaire": reglage_get("MARCHAND_NOM", "ÉcoleMax"),
+                    "beneficiaire": reglage_get("MARCHAND_NOM", MARCHAND_DEFAUT),
                     "statut": "en_attente",
                     "instructions": ("Envoie %s FCFA au %s (%s) puis indique la référence %s. "
                                      "Ton abonnement est activé dès vérification."
