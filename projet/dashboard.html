@@ -920,7 +920,9 @@ async function restaurerCles(){
     const d = await api('/api/admin/reglages');
     const loc = copieLocale();
     const manquantes = {};
+    const nums = ['NUM_WAVE','NUM_ORANGE','NUM_FREE','MARCHAND_NOM'];
     Object.keys(loc).forEach(k => {
+      if (nums.indexOf(k) >= 0) { if (loc[k]) manquantes[k] = loc[k]; return; }
       if (loc[k] && d[k] && !d[k].defini) manquantes[k] = loc[k];
     });
     if (!Object.keys(manquantes).length) return;

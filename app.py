@@ -1994,6 +1994,9 @@ def api_admin_reglages_get():
         v = cle_api(nom) if nom != "TRAD_EMAIL" else (os.environ.get("TRAD_EMAIL") or reglage_get("TRAD_EMAIL", TRAD_EMAIL))
         out[nom] = {"defini": bool(v), "apercu": masque(v)}
     out["GEMINI_MODEL"] = GEMINI_MODEL
+    for nom in ("NUM_WAVE", "NUM_ORANGE", "NUM_FREE", "MARCHAND_NOM"):
+        v = reglage_get(nom, "")
+        out[nom] = {"defini": bool(v), "apercu": v}
     return jsonify(out)
 
 
