@@ -1896,12 +1896,49 @@ def api_admin_reglage_test():
     return jsonify({"ok": all(v["ok"] for v in res.values()), "resultats": res})
 
 
+def _sonde_fournisseur(nom):
+    """Teste un fournisseur à clé et renvoie le code HTTP + message d'erreur."""
+    try:
+        if nom == "groq":
+            url = "https://api.groq.com/openai/v1/chat/completions"
+            model = GROQ_MODEL
+        elif nom == "gemini":
+            url = ("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s"
+                   % (GEMINI_MODEL, cle_api("GEMINI_API_KEY")))
+            model = GEMINI_MODEL
+        else:
+            url = "https://api.openai.com/v1/chat/completions"
+            model = OPENAI_MODEL
+        if not cle_api(nom.upper() + "_API_KEY"):
+            return {"ok": False, "erreur": "aucune clé"}
+        corps = {"model": model,
+                 "messages": [{"role": "user", "content": "Traduis en espagnol : Bonjour"}],
+                 "max_tokens": 20}
+        if nom == "gemini":
+            corps = {"contents": [{"parts": [{"text": "Traduis en espagnol : Bonjour"}]}]}
+        req = urllib.request.Request(url, data=json.dumps(corps).encode(), method="POST")
+        req.add_header("Content-Type", "application/json")
+        if nom != "gemini":
+            req.add_header("Authorization", "Bearer " + cle_api(nom.upper() + "_API_KEY"))
+        t0 = time.time()
+        with urllib.request.urlopen(req, timeout=15) as r:
+            d = json.loads(r.read().decode())
+        return {"ok": True, "ms": int((time.time() - t0) * 1000), "modele": model,
+                "sortie": str(d)[:120]}
+    except urllib.error.HTTPError as e:
+        return {"ok": False, "code": e.code, "erreur": e.read().decode()[:220]}
+    except Exception as e:
+        return {"ok": False, "erreur": str(e)[:160]}
+
+
 @app.route("/api/diag/moteurs")
 def api_diag_moteurs():
     """Diagnostic : quels moteurs de traduction répondent depuis ce serveur."""
     if request.headers.get("X-Admin-Password","") != ADMIN_PASSWORD:
         return jsonify({"erreur":"Non autorisé"}), 403
     resultat = {}
+    resultat["groq"] = _sonde_fournisseur("groq")
+    resultat["gemini"] = _sonde_fournisseur("gemini")
     txt = "Bonjour, comment allez-vous ?"
 
     def chrono(nom, fn):
