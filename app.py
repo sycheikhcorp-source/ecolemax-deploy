@@ -1876,6 +1876,155 @@ _threading.Thread(target=keepalive, daemon=True).start()
 init_db()
 
 
+
+# ============================================================
+#  TEMPS RÉEL + GESTION ADMIN (ajout 2026-10-27)
+# ============================================================
+def _admin_ok():
+    return request.headers.get("X-Admin-Password","") == ADMIN_PASSWORD
+
+@app.route("/api/admin/live")
+def api_admin_live():
+    """Flux temps réel pour le tableau de bord (polling léger)."""
+    if not _admin_ok():
+        return jsonify({"erreur":"Non autorisé"}), 403
+    c = db()
+    g = lambda q, *a: (c.execute(q, a).fetchone() or [0])[0]
+    stats = {
+        "total_users":   g("SELECT COUNT(*) FROM users"),
+        "total_abos":    g("SELECT COUNT(*) FROM abonnements"),
+        "abos_actifs":   g("SELECT COUNT(*) FROM abonnements WHERE statut='actif'"),
+        "abos_attente":  g("SELECT COUNT(*) FROM abonnements WHERE statut='en_attente'"),
+        "total_pays":    g("SELECT COUNT(*) FROM paiements"),
+        "pays_attente":  g("SELECT COUNT(*) FROM paiements WHERE statut='en_attente'"),
+        "total_ex":      g("SELECT COUNT(*) FROM exercises"),
+        "total_quiz":    g("SELECT COUNT(*) FROM quiz"),
+        "total_cours":   g("SELECT COUNT(*) FROM cours"),
+        "inscrits_24h":  g("SELECT COUNT(*) FROM users WHERE datetime(created_at) >= datetime('now','-1 day')"),
+        "inscrits_7j":   g("SELECT COUNT(*) FROM users WHERE datetime(created_at) >= datetime('now','-7 day')"),
+        "bloques":       g("SELECT COUNT(*) FROM users WHERE role='bloque'"),
+        "revenus":       g("SELECT COALESCE(SUM(montant),0) FROM paiements WHERE statut='confirme'"),
+        "revenus_mois":  g("SELECT COALESCE(SUM(montant),0) FROM paiements WHERE statut='confirme' AND strftime('%Y-%m',created_at)=strftime('%Y-%m','now')"),
+        "quiz_joues":    g("SELECT COUNT(*) FROM quiz_resultats"),
+        "supports_ouverts": g("SELECT COUNT(*) FROM supports"),
+    }
+    inscrits = [dict(r) for r in c.execute("""
+        SELECT u.id, u.pseudo, u.email, u.niveau, u.role, u.created_at,
+               a.plan_code, p.nom AS plan_nom, a.statut AS abo_statut, a.expire
+        FROM users u
+        LEFT JOIN abonnements a ON a.id = (SELECT id FROM abonnements WHERE user_id=u.id ORDER BY id DESC LIMIT 1)
+        LEFT JOIN plans p ON p.code = a.plan_code
+        ORDER BY u.id DESC LIMIT 15""").fetchall()]
+    abonnes = [dict(r) for r in c.execute("""
+        SELECT a.id, a.user_id, u.pseudo, u.email, a.plan_code, p.nom AS plan_nom,
+               a.statut, a.debut, a.expire, a.montant
+        FROM abonnements a LEFT JOIN users u ON u.id=a.user_id
+        LEFT JOIN plans p ON p.code=a.plan_code
+        ORDER BY a.id DESC LIMIT 15""").fetchall()]
+    paiements = [dict(r) for r in c.execute("""
+        SELECT pa.id, pa.user_id, u.pseudo, pa.montant, pa.method, pa.statut,
+               pa.reference, pa.created_at, pa.confirmed_at
+        FROM paiements pa LEFT JOIN users u ON u.id=pa.user_id
+        ORDER BY pa.id DESC LIMIT 15""").fetchall()]
+    activite = [dict(r) for r in c.execute(
+        "SELECT action, detail, date FROM logs_sec ORDER BY id DESC LIMIT 12").fetchall()]
+    c.close()
+    return jsonify({"ok":True, "stats":stats, "inscrits":inscrits, "abonnes":abonnes,
+                    "paiements":paiements, "activite":activite,
+                    "serveur_time":datetime.datetime.now().isoformat(timespec="seconds")})
+
+@app.route("/api/admin/user/unblock", methods=["POST"])
+def api_admin_user_unblock():
+    if not _admin_ok():
+        return jsonify({"erreur":"Non autorisé"}), 403
+    data = request.get_json(silent=True) or {}
+    uid = data.get("user_id")
+    c = db()
+    if not c.execute("SELECT id FROM users WHERE id=?", (uid,)).fetchone():
+        c.close(); return jsonify({"erreur":"Utilisateur non trouvé"}), 404
+    c.execute("UPDATE users SET role='eleve' WHERE id=?", (uid,))
+    c.commit(); c.close()
+    return jsonify({"ok":True})
+
+@app.route("/api/admin/export/<kind>")
+def api_admin_export(kind):
+    if not _admin_ok():
+        return jsonify({"erreur":"Non autorisé"}), 403
+    c = db()
+    if kind == "users":
+        rows = c.execute("""SELECT u.id,u.pseudo,u.email,u.niveau,u.role,u.created_at,
+            a.plan_code,p.nom AS plan, a.statut AS abo_statut,a.expire,a.montant
+            FROM users u LEFT JOIN abonnements a ON a.id=(SELECT id FROM abonnements WHERE user_id=u.id ORDER BY id DESC LIMIT 1)
+            LEFT JOIN plans p ON p.code=a.plan_code ORDER BY u.id DESC""").fetchall()
+    elif kind == "paiements":
+        rows = c.execute("""SELECT pa.id,u.pseudo,pa.montant,pa.method,pa.statut,pa.reference,pa.created_at
+            FROM paiements pa LEFT JOIN users u ON u.id=pa.user_id ORDER BY pa.id DESC""").fetchall()
+    elif kind == "abonnements":
+        rows = c.execute("""SELECT a.id,u.pseudo,a.plan_code,p.nom AS plan,a.statut,a.debut,a.expire,a.montant
+            FROM abonnements a LEFT JOIN users u ON u.id=a.user_id LEFT JOIN plans p ON p.code=a.plan_code
+            ORDER BY a.id DESC""").fetchall()
+    else:
+        c.close(); return jsonify({"erreur":"Type inconnu"}), 400
+    c.close()
+    import csv, io
+    buf = io.StringIO()
+    if rows:
+        w = csv.DictWriter(buf, fieldnames=list(rows[0].keys()))
+        w.writeheader()
+        for r in rows: w.writerow({k: ("" if v is None else v) for k, v in dict(r).items()})
+    return Response(buf.getvalue(), mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=ecolemax-%s.csv" % kind})
+
+@app.route("/api/admin/import_users", methods=["POST"])
+def api_admin_import_users():
+    """Réinjecte des comptes (secours après redéploiement). Ne supprime rien."""
+    if not _admin_ok():
+        return jsonify({"erreur":"Non autorisé"}), 403
+    data = request.get_json(silent=True) or {}
+    users = data.get("users") or []
+    abos = data.get("abonnements") or []
+    n_u = n_a = 0
+    c = db()
+    for u in users:
+        try:
+            cur = c.execute("""INSERT INTO users (id,pseudo,email,mot_de_passe,niveau,role,created_at)
+                VALUES (?,?,?,?,?,?,?)
+                ON CONFLICT(id) DO UPDATE SET pseudo=excluded.pseudo, email=excluded.email,
+                mot_de_passe=excluded.mot_de_passe, niveau=excluded.niveau, role=excluded.role""",
+                (u.get("id"),u.get("pseudo"),u.get("email"),u.get("mot_de_passe"),
+                 u.get("niveau"),u.get("role") or "eleve",u.get("created_at")))
+            n_u += 1
+        except Exception:
+            pass
+    for a in abos:
+        try:
+            c.execute("""INSERT INTO abonnements (id,user_id,plan_code,statut,debut,expire,montant)
+                VALUES (?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING""",
+                (a.get("id"),a.get("user_id"),a.get("plan_code"),a.get("statut"),
+                 a.get("debut"),a.get("expire"),a.get("montant")))
+            n_a += 1
+        except Exception:
+            pass
+    c.commit(); c.close()
+    return jsonify({"ok":True,"users_importes":n_u,"abos_importes":n_a})
+
+@app.route("/api/admin/purge_test", methods=["POST"])
+def api_admin_purge_test():
+    """Supprime les comptes de test/fantômes (noms commençant par test/final/photo/loadtest)."""
+    if not _admin_ok():
+        return jsonify({"erreur":"Non autorisé"}), 403
+    pats = ('test%','final_%','photo_%','loadtest%','demo%')
+    c = db()
+    ids = [r[0] for r in c.execute(
+        "SELECT id FROM users WHERE " + " OR ".join(["pseudo LIKE ?"]*len(pats)), pats).fetchall()]
+    for uid in ids:
+        for t in ("sessions","favoris","notifications","usages","abonnements","paiements","results","supports"):
+            c.execute("DELETE FROM %s WHERE user_id=?" % t, (uid,))
+        c.execute("DELETE FROM users WHERE id=?", (uid,))
+    c.commit(); c.close()
+    return jsonify({"ok":True,"supprimes":len(ids)})
+
+
 @app.route('/catalogue')
 @app.route('/catalogue.html')
 def catalogue_page():

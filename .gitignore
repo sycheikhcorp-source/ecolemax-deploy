@@ -5,3 +5,8 @@ apk-build/assets/
 *.db-shm
 *.db-wal
 trigger
+*.bak_*
+*.OLD_*
+*.OLD_EXPOSE_PW
+cloudflared.log
+images/
