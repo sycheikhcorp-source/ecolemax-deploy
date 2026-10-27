@@ -364,6 +364,31 @@ tbody tr.nouveau{animation:rowNew 3s ease}
       </div>
 
       <div class="card">
+        <div class="card-head"><div class="card-title">🔑 Moteurs IA &amp; traduction (clés API)</div><span class="card-badge" id="badge-ia">—</span></div>
+        <p class="muted" style="margin:0 0 10px">Colle ici une clé gratuite pour rendre la traduction instantanée et fiable dans les 13 langues. Gemini : <strong>aistudio.google.com/apikey</strong> · DeepL : <strong>deepl.com/pro-api</strong>. Sans clé, l'application utilise les moteurs gratuits puis l'IA locale.</p>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Service</th><th>Clé API</th><th>État</th><th></th></tr></thead>
+          <tbody>
+            <tr><td><strong>Google Gemini</strong><br><span class="muted">gratuit · 15 req/min</span></td>
+                <td><input id="kGEMINI_API_KEY" type="password" placeholder="AIza…" style="width:100%;padding:7px;border:1px solid #d5dbe8;border-radius:8px"></td>
+                <td id="sGEMINI_API_KEY" class="muted">—</td>
+                <td><button class="btn-sm" onclick="saveKey('GEMINI_API_KEY')">Enregistrer</button></td></tr>
+            <tr><td><strong>DeepL</strong><br><span class="muted">gratuit · 500 k car/mois</span></td>
+                <td><input id="kDEEPL_API_KEY" type="password" placeholder="xxxxxxxx:fx" style="width:100%;padding:7px;border:1px solid #d5dbe8;border-radius:8px"></td>
+                <td id="sDEEPL_API_KEY" class="muted">—</td>
+                <td><button class="btn-sm" onclick="saveKey('DEEPL_API_KEY')">Enregistrer</button></td></tr>
+            <tr><td><strong>Groq</strong><br><span class="muted">gratuit · très rapide</span></td>
+                <td><input id="kGROQ_API_KEY" type="password" placeholder="gsk_…" style="width:100%;padding:7px;border:1px solid #d5dbe8;border-radius:8px"></td>
+                <td id="sGROQ_API_KEY" class="muted">—</td>
+                <td><button class="btn-sm" onclick="saveKey('GROQ_API_KEY')">Enregistrer</button></td></tr>
+          </tbody>
+        </table></div>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn-sm" onclick="testTrad()">🚀 Tester la traduction (4 langues)</button>
+          <span id="tradRes" class="muted"></span>
+        </div>
+      </div>
+      <div class="card">
         <div class="card-head">
           <div class="card-title">Dernières inscriptions</div>
           <span class="card-badge" id="badge-inscrits">0</span>
@@ -441,31 +466,6 @@ tbody tr.nouveau{animation:rowNew 3s ease}
           <thead><tr><th>Ressource</th><th>Quantité</th><th>État</th></tr></thead>
           <tbody id="tb-contenu"></tbody>
         </table></div>
-      </div>
-      <div class="card">
-        <div class="card-head"><div class="card-title">🔑 Moteurs IA &amp; traduction</div><span class="card-badge" id="badge-ia">—</span></div>
-        <p class="muted" style="margin:0 0 10px">Colle ici une clé gratuite pour rendre la traduction instantanée et fiable dans les 13 langues. Gemini : <strong>aistudio.google.com/apikey</strong> · DeepL : <strong>deepl.com/pro-api</strong>. Sans clé, l'application utilise les moteurs gratuits puis l'IA locale.</p>
-        <div class="tbl-wrap"><table>
-          <thead><tr><th>Service</th><th>Clé API</th><th>État</th><th></th></tr></thead>
-          <tbody>
-            <tr><td><strong>Google Gemini</strong><br><span class="muted">gratuit · 15 req/min</span></td>
-                <td><input id="kGEMINI_API_KEY" type="password" placeholder="AIza…" style="width:100%;padding:7px;border:1px solid #d5dbe8;border-radius:8px"></td>
-                <td id="sGEMINI_API_KEY" class="muted">—</td>
-                <td><button class="btn-sm" onclick="saveKey('GEMINI_API_KEY')">Enregistrer</button></td></tr>
-            <tr><td><strong>DeepL</strong><br><span class="muted">gratuit · 500 k car/mois</span></td>
-                <td><input id="kDEEPL_API_KEY" type="password" placeholder="xxxxxxxx:fx" style="width:100%;padding:7px;border:1px solid #d5dbe8;border-radius:8px"></td>
-                <td id="sDEEPL_API_KEY" class="muted">—</td>
-                <td><button class="btn-sm" onclick="saveKey('DEEPL_API_KEY')">Enregistrer</button></td></tr>
-            <tr><td><strong>Groq</strong><br><span class="muted">gratuit · très rapide</span></td>
-                <td><input id="kGROQ_API_KEY" type="password" placeholder="gsk_…" style="width:100%;padding:7px;border:1px solid #d5dbe8;border-radius:8px"></td>
-                <td id="sGROQ_API_KEY" class="muted">—</td>
-                <td><button class="btn-sm" onclick="saveKey('GROQ_API_KEY')">Enregistrer</button></td></tr>
-          </tbody>
-        </table></div>
-        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn-sm" onclick="testTrad()">🚀 Tester la traduction (4 langues)</button>
-          <span id="tradRes" class="muted"></span>
-        </div>
       </div>
       <div class="card">
         <div class="card-head"><div class="card-title">État des services</div><span class="card-badge" id="badge-health">—</span></div>
