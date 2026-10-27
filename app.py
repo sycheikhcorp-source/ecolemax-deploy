@@ -1691,6 +1691,52 @@ def api_payment_test():
     return jsonify({"ok": True, "reference": ref, "statut": "test_success", "montant": montant,
                     "message": "Paiement test simulé — " + str(montant) + " FCFA"})
 
+
+@app.route("/api/diag/moteurs")
+def api_diag_moteurs():
+    """Diagnostic : quels moteurs de traduction répondent depuis ce serveur."""
+    if request.headers.get("X-Admin-Password","") != ADMIN_PASSWORD:
+        return jsonify({"erreur":"Non autorisé"}), 403
+    resultat = {}
+    txt = "Bonjour, comment allez-vous ?"
+
+    def chrono(nom, fn):
+        a = time.time()
+        try:
+            ok, out, src = fn(txt, "fr", "en")
+            resultat[nom] = {"ok": bool(ok), "ms": int((time.time()-a)*1000),
+                             "sortie": (out or "")[:60]}
+        except Exception as e:
+            resultat[nom] = {"ok": False, "ms": int((time.time()-a)*1000),
+                             "erreur": type(e).__name__ + ": " + str(e)[:80]}
+
+    chrono("google", _trad_gtx)
+    chrono("mymemory", _trad_mymemory)
+
+    # IA
+    a = time.time()
+    try:
+        ok, out, src = ai_smart("Traduis en anglais : " + txt, max_tokens=100, temperature=0)
+        resultat["ia"] = {"ok": bool(ok), "ms": int((time.time()-a)*1000),
+                          "source": src, "sortie": (out or "")[:60]}
+    except Exception as e:
+        resultat["ia"] = {"ok": False, "erreur": str(e)[:80]}
+
+    # connectivité générale
+    for nom, url in (("googleapis", "https://translate.googleapis.com/"),
+                     ("mymemory", "https://api.mymemory.translated.net/get?q=test&langpair=fr|en")):
+        a = time.time()
+        try:
+            req = urllib.request.Request(url)
+            req.add_header("User-Agent", "Mozilla/5.0")
+            with urllib.request.urlopen(req, timeout=8) as r:
+                resultat["net_" + nom] = {"code": r.status, "ms": int((time.time()-a)*1000)}
+        except Exception as e:
+            resultat["net_" + nom] = {"erreur": type(e).__name__ + ": " + str(e)[:80],
+                                      "ms": int((time.time()-a)*1000)}
+    return jsonify(resultat)
+
+
 @app.route("/api/admin/stats")
 def api_admin_stats():
     if request.headers.get("X-Admin-Password","") != ADMIN_PASSWORD:
