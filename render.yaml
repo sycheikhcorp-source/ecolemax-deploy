@@ -8,6 +8,17 @@ services:
     healthCheckPath: /health
     autoDeploy: true
     healthCheckPeriod: 300
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: DEEPL_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: TRAD_EMAIL
+        sync: false
 
   - type: cron
     name: ecolemax-keepalive

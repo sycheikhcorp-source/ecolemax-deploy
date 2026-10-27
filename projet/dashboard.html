@@ -365,6 +365,11 @@ tbody tr.nouveau{animation:rowNew 3s ease}
 
       <div class="card">
         <div class="card-head"><div class="card-title">🔑 Moteurs IA &amp; traduction (clés API)</div><span class="card-badge" id="badge-ia">—</span></div>
+        <div style="background:#fff6e0;border:1px solid #f0c674;border-radius:10px;padding:10px 12px;margin:0 0 12px;font-size:13px;line-height:1.5">
+          ⚠️ <strong>Important :</strong> une clé saisie ici fonctionne immédiatement, mais elle est effacée à chaque nouveau déploiement du site.
+          Pour la rendre <strong>permanente</strong> : Render → service <em>ecolemax-flask</em> → <strong>Environment</strong> → <em>Add Environment Variable</em>
+          → nom <code>DEEPL_API_KEY</code> (ou <code>GEMINI_API_KEY</code>) → colle la clé → <em>Save</em>.
+        </div>
         <p class="muted" style="margin:0 0 10px">Colle ici une clé gratuite pour rendre la traduction instantanée et fiable dans les 13 langues. Gemini : <strong>aistudio.google.com/apikey</strong> · DeepL : <strong>deepl.com/pro-api</strong>. Sans clé, l'application utilise les moteurs gratuits puis l'IA locale.</p>
         <div class="tbl-wrap"><table>
           <thead><tr><th>Service</th><th>Clé API</th><th>État</th><th></th></tr></thead>
