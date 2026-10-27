@@ -72,3 +72,47 @@ curl -H "X-Admin-Password: ecolemax2026" \
 ```
 
 La réponse indique, pour chaque moteur, s'il répond et en combien de millisecondes.
+
+---
+
+## 🔒 Rendre les clés PERMANENTES (survivent à tous les déploiements)
+
+Render (offre gratuite) n'a **pas de disque permanent** : la base SQLite est réinitialisée à chaque
+déploiement. Trois niveaux de protection sont en place :
+
+### Niveau 1 — automatique (déjà actif, aucune action)
+Le tableau de bord garde une copie des clés dans le navigateur de l'administrateur.
+À chaque ouverture du dashboard, si le serveur a perdu ses clés, elles sont **réinjectées seules**
+(`POST /api/admin/reglages/restore`). Message affiché : « Clés restaurées automatiquement ».
+
+### Niveau 2 — recommandé : fichier secret Render (définitif, même sans navigateur)
+1. Render → service **ecolemax-flask** → onglet **Environment**
+2. Section **Secret Files** → **Add Secret File**
+3. Nom du fichier : `cles.env`
+4. Contenu :
+   ```
+   DEEPL_API_KEY=ta_cle_deepl:fx
+   GEMINI_API_KEY=ta_cle_gemini
+   TRAD_EMAIL=ecolemax.app@gmail.com
+   ```
+5. **Save** → Render redéploie et le serveur lit `/etc/secrets/cles.env` au démarrage.
+   Ce fichier n'est pas dans le dépôt GitHub : il reste privé et persistant.
+
+### Niveau 3 — variables d'environnement Render
+Environment → **Add Environment Variable** → `DEEPL_API_KEY`, `GEMINI_API_KEY`.
+
+**Ordre de priorité du code :** variable d'environnement Render > fichier secret > réglages du dashboard.
+
+---
+
+## 📡 Garder le serveur toujours éveillé
+
+| Mécanisme | Fréquence | Rôle |
+|---|---|---|
+| Cron Render `ecolemax-keepalive` | 5 min | ping externe `/health` |
+| Thread interne `keepalive()` | 4 min | auto-ping de `https://ecolemax.onrender.com/health` |
+| `GET /api/ping` | à la demande | réponse ultra-légère (« pong ») pour les moniteurs |
+
+**Recommandé en plus (gratuit) :** moniteur sur https://uptimerobot.com
+→ type HTTPS, URL `https://ecolemax.onrender.com/api/ping`, intervalle **5 minutes**.
+C'est le seul mécanisme qui réveille le service même si Render l'a endormi.

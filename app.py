@@ -40,6 +40,38 @@ _SYS_IA = "Tu es un professeur clair et concis. Réponds en français, 6 lignes 
 
 
 # ─── Fournisseurs IA à clé (optionnels, via variables d'environnement Render) ───
+# ─── Clés persistantes : fichiers secrets Render (/etc/secrets) ───
+# Un fichier « cles.env » déposé dans Render → Environment → Secret Files
+# survit à TOUS les déploiements (contrairement à la base SQLite).
+def _charger_cles_persistantes():
+    import glob
+    chemins = ["/etc/secrets/cles.env", "/etc/secrets/.env", "/etc/secrets/cles.txt",
+               os.path.join(os.path.dirname(os.path.abspath(__file__)), "cles.env")]
+    charges = 0
+    for chemin in chemins:
+        try:
+            if not os.path.exists(chemin):
+                continue
+            with open(chemin, "r", encoding="utf-8") as f:
+                for ligne in f:
+                    ligne = ligne.strip()
+                    if not ligne or ligne.startswith("#") or "=" not in ligne:
+                        continue
+                    cle, valeur = ligne.split("=", 1)
+                    cle = cle.strip().upper()
+                    valeur = valeur.strip().strip('"').strip("'")
+                    if cle and valeur and not os.environ.get(cle):
+                        os.environ[cle] = valeur
+                        charges += 1
+        except Exception as e:
+            print("[cles] %s : %s" % (chemin, e))
+    if charges:
+        print("[cles] %d clé(s) chargée(s) depuis un fichier secret persistant" % charges)
+    return charges
+
+
+_charger_cles_persistantes()
+
 UA_NAVIGATEUR = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "").strip()
@@ -1235,6 +1267,12 @@ def _cors_preflight(_p):
 def health():
     return jsonify({"status":"ok","service":"ecolemax","time":now()})
 
+
+@app.route("/api/ping")
+def api_ping():
+    """Ping ultra-léger : sert aux moniteurs externes pour garder le serveur éveillé."""
+    return Response("pong", mimetype="text/plain")
+
 # ─── Serveur de fichiers statiques ───
 PROJET_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "projet")
 
@@ -1893,6 +1931,23 @@ def api_admin_reglages_get():
         out[nom] = {"defini": bool(v), "apercu": masque(v)}
     out["GEMINI_MODEL"] = GEMINI_MODEL
     return jsonify(out)
+
+
+@app.route("/api/admin/reglages/restore", methods=["POST"])
+def api_admin_reglages_restore():
+    """Restaure plusieurs clés d'un coup (utilisé par le dashboard après un déploiement)."""
+    if request.headers.get("X-Admin-Password", "") != ADMIN_PASSWORD:
+        return jsonify({"erreur": "Non autorisé"}), 401
+    data = request.get_json(silent=True) or {}
+    cles = data.get("cles") or {}
+    autorisees = {"GEMINI_API_KEY", "DEEPL_API_KEY", "GROQ_API_KEY", "OPENAI_API_KEY", "TRAD_EMAIL"}
+    restaurees = []
+    for cle, valeur in cles.items():
+        cle = (cle or "").strip().upper()
+        if cle in autorisees and (valeur or "").strip():
+            reglage_set(cle, valeur)
+            restaurees.append(cle)
+    return jsonify({"ok": True, "restaurees": restaurees})
 
 
 @app.route("/api/admin/reglage", methods=["POST"])
@@ -2843,9 +2898,9 @@ def keepalive():
     """Demande /health toutes les 4 minutes pour éviter la suspension Render."""
     import urllib.request as urlreq
     # Déterminer l'URL du service
-    service_url = os.environ.get("RENDER_SERVICE_URL", "")
-    if not service_url:
-        service_url = "http://localhost:" + str(PORT)
+    service_url = (os.environ.get("RENDER_EXTERNAL_URL", "")
+                   or os.environ.get("RENDER_SERVICE_URL", "")
+                   or "https://ecolemax.onrender.com").rstrip("/")
     while True:
         try:
             urlreq.urlopen(service_url + "/health", timeout=10)

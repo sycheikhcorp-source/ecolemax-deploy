@@ -366,8 +366,8 @@ tbody tr.nouveau{animation:rowNew 3s ease}
       <div class="card">
         <div class="card-head"><div class="card-title">🔑 Moteurs IA &amp; traduction (clés API)</div><span class="card-badge" id="badge-ia">—</span></div>
         <div style="background:#fff6e0;border:1px solid #f0c674;border-radius:10px;padding:10px 12px;margin:0 0 12px;font-size:13px;line-height:1.5">
-          ⚠️ <strong>Important :</strong> une clé saisie ici fonctionne immédiatement, mais elle est effacée à chaque nouveau déploiement du site.
-          Pour la rendre <strong>permanente</strong> : Render → service <em>ecolemax-flask</em> → <strong>Environment</strong> → <em>Add Environment Variable</em>
+          💾 <strong>Persistance automatique :</strong> les clés saisies ici sont gardées dans ce navigateur et <strong>réinjectées toutes seules</strong> dans le serveur à chaque déploiement — tu n'as rien à refaire.
+          Pour une persistance côté serveur (même sans navigateur) : Render → service <em>ecolemax-flask</em> → <strong>Environment</strong> → <em>Add Environment Variable</em>
           → nom <code>DEEPL_API_KEY</code> (ou <code>GEMINI_API_KEY</code>) → colle la clé → <em>Save</em>.
         </div>
         <p class="muted" style="margin:0 0 10px">Colle ici une clé gratuite pour rendre la traduction instantanée et fiable dans les 13 langues. Gemini : <strong>aistudio.google.com/apikey</strong> · DeepL : <strong>deepl.com/pro-api</strong>. Sans clé, l'application utilise les moteurs gratuits puis l'IA locale.</p>
@@ -598,6 +598,7 @@ $('nav').addEventListener('click', ev => {
 /* ---------------- LIVE ---------------- */
 function startLive(){
   refresh();
+  try { restaurerCles(); } catch(e){}
   try { loadKeys(); } catch(e){}
   if (timer) clearInterval(timer);
   timer = setInterval(refresh, 5000);
@@ -898,11 +899,33 @@ async function loadKeys(){
     const b = $('badge-ia'); if(b) b.textContent = n ? n + ' clé(s) active(s)' : 'sans clé';
   }catch(e){ console.warn('reglages', e); }
 }
+function copieLocale(){
+  try { return JSON.parse(localStorage.getItem('em_keys') || '{}'); } catch(e){ return {}; }
+}
+function garderLocal(k, v){
+  const o = copieLocale(); o[k] = v;
+  localStorage.setItem('em_keys', JSON.stringify(o));
+}
+async function restaurerCles(){
+  try{
+    const d = await api('/api/admin/reglages');
+    const loc = copieLocale();
+    const manquantes = {};
+    Object.keys(loc).forEach(k => {
+      if (loc[k] && d[k] && !d[k].defini) manquantes[k] = loc[k];
+    });
+    if (!Object.keys(manquantes).length) return;
+    await api('/api/admin/reglages/restore', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({cles: manquantes})});
+    toast('Clés restaurées automatiquement après le déploiement', 'ok');
+    loadKeys();
+  }catch(e){ console.warn('restauration', e); }
+}
 async function saveKey(k){
   const v = ($('k'+k) ? $('k'+k).value : '').trim();
   if(!v){ toast('Colle une clé avant d\'enregistrer', 'err'); return; }
   try{
     await api('/api/admin/reglage', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({cle:k, valeur:v})});
+    garderLocal(k, v);
     if($('k'+k)) $('k'+k).value = '';
     toast('Clé enregistrée : ' + k, 'ok');
     loadKeys();
