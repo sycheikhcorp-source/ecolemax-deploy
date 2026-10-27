@@ -935,12 +935,46 @@ DEEPL_API_KEY = os.environ.get("DEEPL_API_KEY", "").strip()
 TRAD_EMAIL = os.environ.get("TRAD_EMAIL", "ecolemax.app@gmail.com")
 
 
+def _nettoyer_traduction(trad, source):
+    """Retire les préfixes et commentaires que les modèles ajoutent parfois."""
+    t = (trad or "").strip()
+    # blocs de réflexion éventuels
+    for marque in ("<｜end▁of▁thinking｜>", "</thinking>"):
+        if marque in t:
+            t = t.split(marque)[-1]
+    lignes = [l.strip() for l in t.splitlines() if l.strip()]
+    prefixes = (
+        "voici la traduction", "traduction :", "traduction:", "la traduction est",
+        "en anglais :", "en espagnol :", "en arabe :", "en portugais :",
+        "here is the translation", "translation:", "traducción:", "tradução:",
+        "c'est la traduction", "note :", "note:",
+    )
+    if len(lignes) > 1 and lignes[-1].lower().startswith(prefixes):
+        lignes = lignes[:-1]
+    if lignes:
+        prem = lignes[0]
+        bas = prem.lower()
+        if bas.startswith(prefixes) and ":" in prem:
+            prem = prem.split(":", 1)[1].strip()
+            lignes[0] = prem
+    t = "\n".join([l for l in lignes if l])
+    t = t.strip()
+    while len(t) > 1 and t[0] in "\"'«\u201c" and t[-1] in "\"'»\u201d":
+        t = t[1:-1].strip()
+    # si le modèle recopie la source, on rejette
+    if t.strip().lower() == (source or "").strip().lower():
+        return ""
+    return t
+
+
 def _trad_gtx(texte, src, dst):
     """Google Translate (points d'accès publics) — plusieurs variantes."""
     variantes = [
         ("https://translate.googleapis.com/translate_a/single?client=gtx&sl=%s&tl=%s&dt=t&q=%s", "Mozilla/5.0"),
         ("https://clients5.google.com/translate_a/single?client=dict-chrome-ex&sl=%s&tl=%s&dt=t&q=%s", "Mozilla/5.0"),
         ("https://translate.googleapis.com/translate_a/single?client=dict-chrome-ex&sl=%s&tl=%s&dt=t&q=%s", "Mozilla/5.0"),
+        ("https://translate.google.com/translate_a/single?client=gtx&sl=%s&tl=%s&dt=t&q=%s", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"),
+        ("https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=%s&tl=%s&q=%s", "Mozilla/5.0"),
     ]
     for gabarit, ua in variantes:
         try:
@@ -950,7 +984,12 @@ def _trad_gtx(texte, src, dst):
             req.add_header("Accept", "*/*")
             with urllib.request.urlopen(req, timeout=8) as resp:
                 d = json.loads(resp.read().decode())
-            txt = "".join(p[0] for p in d[0] if p and p[0])
+            if isinstance(d, dict):
+                txt = d.get("sentences") and "".join(x.get("trans", "") for x in d["sentences"]) or ""
+            elif isinstance(d[0], str):
+                txt = d[0]
+            else:
+                txt = "".join(p[0] for p in d[0] if p and p[0])
             if txt.strip():
                 return True, txt.strip(), "Google"
         except Exception:
@@ -1062,17 +1101,19 @@ def reponse_traduction(texte, langue, plan=None):
     prompt = "Traduis en " + nom_langue + ". Réponds uniquement par la traduction :\n" + texte
     sys_trad = "Tu es un traducteur professionnel. Tu réponds uniquement par la traduction demandée."
     try:
-        ok, trad, src_nom = ai_smart(prompt, max_tokens=700, temperature=0.0,
+        mt = min(1800, max(400, len(texte) * 3))
+        ok, trad, src_nom = ai_smart(prompt, max_tokens=mt, temperature=0.0,
                                      timeout=12, system=sys_trad)
         if ok and trad:
-            trad = trad.strip().strip('"').strip()
+            trad = _nettoyer_traduction(trad, texte)
             ai_cache_set("trad", texte, trad, langue)
             return {"reponse": trad, "langue": langue, "source": src_nom, "succes": True}
     except Exception:
         pass
 
-    return {"reponse": "⚠️ Traduction indisponible momentanément. Réessaie dans quelques secondes.",
-            "langue": langue, "source": "Local", "succes": False}
+    # dernier recours : on renvoie le texte original plutôt qu'un message d'erreur
+    return {"reponse": texte, "langue": langue, "source": "Original",
+            "succes": False, "note": "traduction automatique indisponible"}
 
 
 # ─── Flask App ───
