@@ -3,3 +3,4 @@ ecolemax.db.avant-contenu-*
 ecolemax.db.*
 __pycache__/
 *.pyc
+apk-build/
