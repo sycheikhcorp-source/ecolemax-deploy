@@ -931,30 +931,93 @@ _TRAD_CODES = {
 }
 
 
+DEEPL_API_KEY = os.environ.get("DEEPL_API_KEY", "").strip()
+TRAD_EMAIL = os.environ.get("TRAD_EMAIL", "ecolemax.app@gmail.com")
+
+
 def _trad_gtx(texte, src, dst):
-    """Google Translate (point d'accès public) — rapide et fiable."""
-    url = ("https://translate.googleapis.com/translate_a/single?client=gtx"
-           "&sl=%s&tl=%s&dt=t&q=%s" % (src, dst, urllib.parse.quote(texte[:1500])))
-    req = urllib.request.Request(url)
-    req.add_header("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/131.0 Mobile Safari/537.36")
-    with urllib.request.urlopen(req, timeout=8) as resp:
-        d = json.loads(resp.read().decode())
-    txt = "".join(part[0] for part in d[0] if part and part[0])
-    return (True, txt.strip(), "Google") if txt.strip() else (False, "", "Google")
+    """Google Translate (points d'accès publics) — plusieurs variantes."""
+    variantes = [
+        ("https://translate.googleapis.com/translate_a/single?client=gtx&sl=%s&tl=%s&dt=t&q=%s", "Mozilla/5.0"),
+        ("https://clients5.google.com/translate_a/single?client=dict-chrome-ex&sl=%s&tl=%s&dt=t&q=%s", "Mozilla/5.0"),
+        ("https://translate.googleapis.com/translate_a/single?client=dict-chrome-ex&sl=%s&tl=%s&dt=t&q=%s", "Mozilla/5.0"),
+    ]
+    for gabarit, ua in variantes:
+        try:
+            url = gabarit % (src, dst, urllib.parse.quote(texte[:1500]))
+            req = urllib.request.Request(url)
+            req.add_header("User-Agent", ua)
+            req.add_header("Accept", "*/*")
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                d = json.loads(resp.read().decode())
+            txt = "".join(p[0] for p in d[0] if p and p[0])
+            if txt.strip():
+                return True, txt.strip(), "Google"
+        except Exception:
+            continue
+    return False, "", "Google"
 
 
 def _trad_mymemory(texte, src, dst):
-    """MyMemory — second moteur, sans clé."""
-    url = ("https://api.mymemory.translated.net/get?q=%s&langpair=%s|%s"
-           % (urllib.parse.quote(texte[:500]), src, dst))
-    req = urllib.request.Request(url)
-    req.add_header("User-Agent", "Mozilla/5.0")
-    with urllib.request.urlopen(req, timeout=8) as resp:
-        d = json.loads(resp.read().decode())
-    txt = (d.get("responseData") or {}).get("translatedText", "") or ""
-    if txt and "MYMEMORY WARNING" not in txt.upper():
-        return True, txt.strip(), "MyMemory"
+    """MyMemory — quota élargi grâce au paramètre de= (adresse de contact)."""
+    url = ("https://api.mymemory.translated.net/get?q=%s&langpair=%s|%s&de=%s"
+           % (urllib.parse.quote(texte[:450]), src, dst, urllib.parse.quote(TRAD_EMAIL)))
+    try:
+        req = urllib.request.Request(url)
+        req.add_header("User-Agent", "Mozilla/5.0")
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            d = json.loads(resp.read().decode())
+        txt = (d.get("responseData") or {}).get("translatedText", "") or ""
+        if txt and "MYMEMORY WARNING" not in txt.upper() and "QUERY LENGTH LIMIT" not in txt.upper():
+            return True, txt.strip(), "MyMemory"
+    except Exception:
+        pass
     return False, "", "MyMemory"
+
+
+def _trad_deepl(texte, src, dst):
+    """DeepL — activé si DEEPL_API_KEY est défini (gratuit : 500 000 caractères/mois)."""
+    if not DEEPL_API_KEY:
+        return False, "", "DeepL"
+    base = ("https://api-free.deepl.com" if DEEPL_API_KEY.endswith(":fx")
+            else "https://api.deepl.com")
+    corps = urllib.parse.urlencode({
+        "text": texte[:4000],
+        "source_lang": src.upper(),
+        "target_lang": dst.upper(),
+    }).encode()
+    try:
+        req = urllib.request.Request(base + "/v2/translate", data=corps, method="POST")
+        req.add_header("Authorization", "DeepL-Auth-Key " + DEEPL_API_KEY)
+        req.add_header("Content-Type", "application/x-www-form-urlencoded")
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            d = json.loads(resp.read().decode())
+        txt = d["translations"][0]["text"]
+        if txt:
+            return True, txt, "DeepL"
+    except Exception:
+        pass
+    return False, "", "DeepL"
+
+
+def _trad_libretranslate(texte, src, dst):
+    """LibreTranslate — instances publiques (secours)."""
+    for base in ("https://libretranslate.de", "https://translate.argosopentech.com",
+                 "https://lt.vern.cc"):
+        try:
+            corps = urllib.parse.urlencode({
+                "q": texte[:1500], "source": src, "target": dst, "format": "text"
+            }).encode()
+            req = urllib.request.Request(base + "/translate", data=corps, method="POST")
+            req.add_header("Content-Type", "application/x-www-form-urlencoded")
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                d = json.loads(resp.read().decode())
+            txt = d.get("translatedText", "")
+            if txt and txt.strip() and "error" not in str(txt).lower():
+                return True, txt.strip(), "LibreTranslate"
+        except Exception:
+            continue
+    return False, "", "LibreTranslate"
 
 
 def reponse_traduction(texte, langue, plan=None):
@@ -976,7 +1039,12 @@ def reponse_traduction(texte, langue, plan=None):
         return {"reponse": hit, "langue": langue, "source": "Cache", "succes": True, "cache": True}
 
     # 3) moteurs de traduction dédiés (rapides, sans clé)
-    for nom, fn in (("google", _trad_gtx), ("mymemory", _trad_mymemory)):
+    moteurs = []
+    if DEEPL_API_KEY:
+        moteurs.append(("deepl", _trad_deepl))
+    moteurs += [("google", _trad_gtx), ("mymemory", _trad_mymemory),
+                ("libretranslate", _trad_libretranslate)]
+    for nom, fn in moteurs:
         try:
             ok, txt, src_nom = fn(texte, src, dst)
             if ok and txt:
@@ -1710,8 +1778,10 @@ def api_diag_moteurs():
             resultat[nom] = {"ok": False, "ms": int((time.time()-a)*1000),
                              "erreur": type(e).__name__ + ": " + str(e)[:80]}
 
+    chrono("deepl", _trad_deepl)
     chrono("google", _trad_gtx)
     chrono("mymemory", _trad_mymemory)
+    chrono("libretranslate", _trad_libretranslate)
 
     # IA
     a = time.time()
