@@ -46,9 +46,16 @@ def main():
     res_quiz = G.build(cible)
 
     # Nombre retenu par matière = minimum atteint sur tous les niveaux
+    # (garantit un total strictement identique sur les 14 niveaux)
+    PLAFOND = {
+        "math": 2200, "phys": 600, "chim": 160, "fr": 200,
+        "svt": 80, "hist": 100, "geo": 150, "eng": 150,
+        "info": 3000, "eco": 3000, "es": 150, "ara": 120,
+    }
     par_matiere = {}
     for code, _ in G.SUBJECTS:
-        par_matiere[code] = min(len(res_ex[(code, l)]) for l in G.LEVELS)
+        dispo = min(len(res_ex[(code, l)]) for l in G.LEVELS)
+        par_matiere[code] = min(dispo, PLAFOND.get(code, dispo))
 
     total_par_niveau = sum(par_matiere.values())
     print("\n--- Répartition retenue (identique sur les 14 niveaux) ---")

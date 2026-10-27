@@ -1243,7 +1243,18 @@ def api_quiz():
         qz["bonne_index"] = idx
         qz["reponse"] = idx
         result.append(qz)
-    return jsonify({"quiz": result})
+    c2 = db()
+    cond = " WHERE 1=1"
+    par = []
+    if categorie:
+        cond += " AND categorie=?"
+        par.append(categorie)
+    if difficulte:
+        cond += " AND difficulte=?"
+        par.append(difficulte)
+    total = c2.execute("SELECT COUNT(*) FROM quiz" + cond, par).fetchone()[0]
+    c2.close()
+    return jsonify({"quiz": result, "total": total})
 
 @app.route("/api/register", methods=["POST"])
 def api_register():

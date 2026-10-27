@@ -24,6 +24,8 @@ le la les un une des du de d au aux a et ou ou est sont etait etaient quel quell
 que qui quoi dont ou comment pourquoi combien quand dans sur sous pour par avec sans ce cet cette ces
 son sa ses leur leurs mon ma mes ton ta tes notre nos votre vos il elle ils elles on nous vous je tu
 the of and is are what which who how why when where a an to in on for with
+explique expliquer expliquez parle parler parlez dis dire donne donnez definais definir
+moi toi nous vous cest quoi qu est ce que signifie veux voudrais savoir peux pouvez
 """.split())
 
 
@@ -242,7 +244,54 @@ def _essai_conjugaison(q):
 # ─────────────────────────────────────────────────────────────
 # Point d'entrée
 # ─────────────────────────────────────────────────────────────
-def repondre_localement(question):
+# ─────────────────────────────────────────────────────────────
+# Recherche dans les leçons (table `cours`)
+# ─────────────────────────────────────────────────────────────
+_COURS_CACHE = {"t": 0.0, "index": []}
+
+
+def _charge_cours(conn):
+    """Indexe les leçons en mémoire (rechargé toutes les 10 minutes)."""
+    import time as _t
+    if _COURS_CACHE["index"] and (_t.time() - _COURS_CACHE["t"]) < 600:
+        return _COURS_CACHE["index"]
+    index = []
+    try:
+        for r in conn.execute("SELECT titre, contenu FROM cours"):
+            titre, contenu = (r[0] or ""), (r[1] or "")
+            index.append((titre, contenu, set(_norm(titre + " " + contenu[:600]))))
+    except Exception:
+        pass
+    _COURS_CACHE["index"] = index
+    _COURS_CACHE["t"] = _t.time()
+    return index
+
+
+def chercher_cours(question, conn, seuil=0.45):
+    """Retourne (titre, extrait) de la leçon la plus proche."""
+    mots = set(_norm(question))
+    if not mots:
+        return None
+    best, score_best = None, 0.0
+    for titre, contenu, idx in _charge_cours(conn):
+        if not idx:
+            continue
+        inter = len(mots & idx)
+        if inter == 0:
+            continue
+        score = (inter / float(len(mots))) * (0.6 + 0.4 * min(1.0, inter / 2.0))
+        if score > score_best:
+            score_best, best = score, (titre, contenu)
+    if best is None or score_best < seuil:
+        return None
+    titre, contenu = best
+    extrait = contenu.strip()
+    if len(extrait) > 1100:
+        extrait = extrait[:1100].rsplit("\n", 1)[0] + "\n…"
+    return titre, extrait
+
+
+def repondre_localement(question, conn=None):
     q = (question or "").strip()
     if not q:
         return "Pose-moi une question : un calcul, une définition, une date, une règle de grammaire…"
@@ -267,6 +316,14 @@ def repondre_localement(question):
         if hq and _norm(hq) != _norm(q):
             txt += "\n\n_Question liée : %s_" % hq
         return txt
+
+    if conn is not None:
+        try:
+            cr = chercher_cours(q, conn)
+            if cr:
+                return "**%s**\n\n%s" % (cr[0], cr[1])
+        except Exception:
+            pass
 
     return ("Je n'ai pas trouvé de réponse précise hors ligne. Reformule ta question "
             "en une phrase courte (ex. « Quelle est la capitale du Mali ? », « Combien font 25 % de 80 ? »). "

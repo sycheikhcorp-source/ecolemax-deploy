@@ -828,7 +828,42 @@ GEO_EXTRA2 = [
     ('Quel océan est le plus vaste ?', "L'océan Pacifique", ["L'Atlantique", "L'Indien", "L'Arctique"], 'Un tiers de la surface du globe.'),
 ]
 
-HIST_BANK = [(f[0], f[1]) for f in HIST_DATES] + [(f[0], f[1]) for f in HIST_PERSONNES] + [(f[0], f[1]) for f in HIST_EXTRA2]
+
+
+HIST_ADD2 = [
+    ('Quel empire africain a été dirigé par Soundiata Keïta ?', "L'empire du Mali", ["L'empire du Ghana", "L'empire Songhaï", 'Le Kanem-Bornou'], 'Fondé au XIIIe siècle.'),
+    ("Quelle conférence a partagé l'Afrique en 1884-1885 ?", 'La conférence de Berlin', ['Le congrès de Vienne', 'La conférence de Yalta', 'Le traité de Versailles'], 'Organisée par Bismarck.'),
+    ('En quelle année le Sénégal a-t-il obtenu son indépendance ?', '1960', ['1958', '1962', '1957'], 'Le 4 avril 1960.'),
+    ('Qui fut le premier président du Sénégal ?', 'Léopold Sédar Senghor', ['Abdou Diouf', 'Mamadou Dia', 'Abdoulaye Wade'], '1960-1980.'),
+    ('Quelle grande guerre a eu lieu de 1914 à 1918 ?', 'La Première Guerre mondiale', ['La Seconde Guerre mondiale', 'La guerre de Cent Ans', 'La guerre de Crimée'], '1914-1918.'),
+    ('Quelle organisation a été créée en 1945 après la Seconde Guerre mondiale ?', "L'ONU", ['La SDN', "L'OTAN", "L'UE"], 'Organisation des Nations unies.'),
+    ('Quel mur est tombé en 1989 ?', 'Le mur de Berlin', ["Le mur d'Hadrien", 'La Grande Muraille', 'Le mur de Chine'], 'Symbole de la fin de la Guerre froide.'),
+    ('Quelle révolution a commencé en 1789 ?', 'La Révolution française', ['La Révolution russe', 'La révolution industrielle', 'La Révolution américaine'], 'Prise de la Bastille.'),
+    ("Qui a mené la lutte contre l'apartheid en Afrique du Sud ?", 'Nelson Mandela', ['Desmond Tutu', 'Thabo Mbeki', 'Julius Nyerere'], 'Prix Nobel de la paix 1993.'),
+    ('Quel pays a colonisé le Sénégal ?', 'La France', ['Le Portugal', 'Le Royaume-Uni', "L'Espagne"], "Jusqu'en 1960."),
+    ('Quelle île au large de Dakar fut un lieu de traite négrière ?', 'Gorée', ['Zanzibar', 'Madagascar', 'Malte'], 'Mémorial de la traite atlantique.'),
+    ('Quel roi du Cayor a résisté à la colonisation française ?', 'Lat Dior', ['Samory Touré', 'Behanzin', 'Mansa Moussa'], 'Damél du Cayor.'),
+    ('Quelle civilisation a construit les pyramides de Gizeh ?', "L'Égypte antique", ['La Grèce', 'Rome', 'Carthage'], 'Vers 2560 av. J.-C.'),
+    ('Quel empire a construit le Colisée ?', "L'Empire romain", ['La Grèce', "L'Égypte", 'Les Perses'], 'Rome, 80 ap. J.-C.'),
+    ('Quel événement a déclenché la Première Guerre mondiale ?', "L'attentat de Sarajevo", ['La Révolution russe', 'La chute du mur de Berlin', 'La guerre de Sécession'], 'Assassinat de François-Ferdinand.'),
+    ("En quelle année l'ONU a-t-elle adopté la Déclaration universelle des droits de l'homme ?", '1948', ['1945', '1950', '1960'], '10 décembre 1948.'),
+    ('Quel traité met fin à la Première Guerre mondiale ?', 'Le traité de Versailles', ['Le traité de Rome', 'Le traité de Paris', 'Le traité de Berlin'], 'Signé en 1919.'),
+    ('Qui était Cléopâtre ?', "Une reine d'Égypte", ['Une impératrice romaine', 'Une reine de France', 'Une reine du Mali'], 'Dernière reine ptolémaïque.'),
+    ("Quel explorateur a atteint l'Amérique en 1492 ?", 'Christophe Colomb', ['Vasco de Gama', 'Magellan', 'Marco Polo'], "Au service de l'Espagne."),
+    ("Quel peuple a inventé l'écriture cunéiforme ?", 'Les Sumériens', ['Les Égyptiens', 'Les Grecs', 'Les Romains'], 'Mésopotamie.'),
+    ('Quelle cité grecque a inventé la démocratie ?', 'Athènes', ['Sparte', 'Rome', 'Carthage'], 'Ve siècle av. J.-C.'),
+    ('Quel empire ouest-africain avait pour capitale Gao ?', "L'empire Songhaï", ["L'empire du Mali", "L'empire du Ghana", 'Le Kanem'], 'Gao, capitale politique.'),
+    ("Quel pays africain n'a jamais été colonisé durablement ?", "L'Éthiopie", ['Le Sénégal', 'Le Ghana', 'Le Mali'], "Victoire d'Adoua en 1896."),
+    ("Quelle guerre a opposé l'Est et l'Ouest de 1947 à 1991 ?", 'La guerre froide', ['La guerre de Cent Ans', 'La guerre de Sécession', 'La Grande Guerre'], 'Sans affrontement direct.'),
+    ('Quel roi de France a été guillotiné en 1793 ?', 'Louis XVI', ['Louis XIV', 'Henri IV', 'Charles X'], 'Révolution française.'),
+    ('Quelle bataille marque la chute définitive de Napoléon en 1815 ?', 'Waterloo', ['Austerlitz', 'Iéna', 'Trafalgar'], '18 juin 1815.'),
+    ('Quel pays a obtenu son indépendance en 1957 ?', 'Le Ghana', ['Le Sénégal', 'Le Mali', "L'Algérie"], "Premier pays d'Afrique subsaharienne indépendant."),
+    ('Quelle dynastie a régné en France de 987 à 1328 ?', 'Les Capétiens', ['Les Bourbons', 'Les Mérovingiens', 'Les Carolingiens'], 'Hugues Capet en 987.'),
+    ('Quel empire fut dirigé par Mansa Moussa ?', "L'empire du Mali", ["L'empire du Ghana", "L'empire Songhaï", 'Le Kanem-Bornou'], 'XIVe siècle.'),
+    ("Quelle organisation africaine a remplacé l'OUA en 2002 ?", "L'Union africaine", ['La CEDEAO', "L'ONU", 'La Ligue arabe'], 'Créée à Durban.'),
+]
+
+HIST_BANK = [(f[0], f[1]) for f in HIST_DATES] + [(f[0], f[1]) for f in HIST_PERSONNES] + [(f[0], f[1]) for f in HIST_EXTRA2] + [(f[0], f[1]) for f in HIST_ADD2]
 
 
 def gen_hist(level, count):
@@ -852,7 +887,7 @@ def gen_hist(level, count):
     items += _cycle(HIST_DATES, level, max(1, count // 3), t_date)
     items += _cycle(HIST_PERSONNES, level, max(1, count // 6), t_pers)
     # faits généraux
-    bank = list(HIST_EXTRA2)
+    bank = list(HIST_EXTRA2) + list(HIST_ADD2)
     rnd.shuffle(bank)
     i = 0
     while len(items) < count and i < len(bank):
@@ -861,6 +896,29 @@ def gen_hist(level, count):
         i += 1
     return items[:count]
 
+
+GEO_ADD2 = [
+    ("Quel est le plus long fleuve d'Afrique ?", 'Le Nil', ['Le Congo', 'Le Niger', 'Le Zambèze'], 'Environ 6 700 km.'),
+    ("Quelle est la plus haute montagne d'Afrique ?", 'Le Kilimandjaro', ['Le mont Kenya', 'Le Ruwenzori', "L'Atlas"], '5 895 m en Tanzanie.'),
+    ('Quel océan borde le Sénégal ?', "L'océan Atlantique", ["L'océan Indien", "L'océan Pacifique", "L'océan Arctique"], "À l'ouest du pays."),
+    ('Quel pays est presque entièrement enclavé dans le Sénégal ?', 'La Gambie', ['La Guinée-Bissau', 'La Mauritanie', 'Le Mali'], 'Enclave le long du fleuve Gambie.'),
+    ('Quelle est la capitale de la Mauritanie ?', 'Nouakchott', ['Nouadhibou', 'Rosso', 'Atar'], 'Depuis 1960.'),
+    ("Quel est le plus grand pays d'Afrique par la superficie ?", "L'Algérie", ['Le Soudan', 'La RDC', 'Le Mali'], '2,38 millions de km².'),
+    ("Quel pays africain compte le plus d'habitants ?", 'Le Nigeria', ["L'Égypte", "L'Éthiopie", "L'Afrique du Sud"], 'Plus de 220 millions.'),
+    ("Quel est le plus grand lac d'Afrique ?", 'Le lac Victoria', ['Le lac Tanganyika', 'Le lac Tchad', 'Le lac Malawi'], 'Environ 68 000 km².'),
+    ('Quel canal relie la Méditerranée à la mer Rouge ?', 'Le canal de Suez', ['Le canal de Panama', 'Le canal de Corinthe', 'Le canal de Kiel'], 'Égypte, ouvert en 1869.'),
+    ("Quel détroit sépare l'Afrique de l'Europe ?", 'Le détroit de Gibraltar', ['Le Bosphore', 'Le détroit de Malacca', 'Le pas de Calais'], '14 km de large.'),
+    ('Quel est le plus grand désert chaud du monde ?', 'Le Sahara', ['Le Gobi', "L'Atacama", 'Le Kalahari'], 'Environ 9 millions de km².'),
+    ("Quelle chaîne de montagnes sépare l'Europe de l'Asie ?", "L'Oural", ['Les Alpes', 'Les Pyrénées', 'Le Caucase'], 'Frontière naturelle.'),
+    ("Quelle est la capitale de la Côte d'Ivoire ?", 'Yamoussoukro', ['Abidjan', 'Bouaké', 'Daloa'], 'Capitale politique depuis 1983.'),
+    ('Quel est le plus vaste pays du monde ?', 'La Russie', ['Le Canada', 'La Chine', 'Les États-Unis'], '17 millions de km².'),
+    ('Quelle est la plus grande forêt tropicale du monde ?', 'La forêt amazonienne', ['La forêt du Congo', 'La forêt de Bornéo', 'La forêt indienne'], 'Amérique du Sud.'),
+    ('Quelle mer est la plus salée ?', 'La mer Morte', ['La Méditerranée', 'La mer Rouge', 'La mer Noire'], 'Environ 34 % de sel.'),
+    ("Quelle est la capitale de l'Espagne ?", 'Madrid', ['Barcelone', 'Séville', 'Valence'], 'Capitale depuis 1561.'),
+    ('Quelle région du Sénégal est la plus arrosée ?', 'La Casamance', ['Le Ferlo', 'La Petite Côte', 'Le Siné-Saloum'], 'Climat soudano-guinéen.'),
+    ('Quel fleuve marque la frontière nord du Sénégal ?', 'Le fleuve Sénégal', ['La Gambie', 'Le Sine', 'Le Saloum'], 'Frontière avec la Mauritanie.'),
+    ('Quel est le plus petit État du monde ?', 'Le Vatican', ['Monaco', 'Saint-Marin', 'Le Liechtenstein'], '0,44 km².'),
+]
 
 def gen_geo(level, count):
     items = []
@@ -894,7 +952,7 @@ def gen_geo(level, count):
     items += _cycle(PAYS_UNIK, level, part, t_rev)
     items += _cycle(FLEUVES, level, part, t_fleuve)
     items += _cycle(MONTS, level, max(1, count // 5), t_mont)
-    bank = list(GEO_EXTRA2)
+    bank = list(GEO_EXTRA2) + list(GEO_ADD2)
     rnd.shuffle(bank)
     i = 0
     while len(items) < count and i < len(bank):
@@ -907,8 +965,46 @@ def gen_geo(level, count):
 SVT_FACTS = list({f[0]: f for f in (SVT_FACTS + SVT_EXTRA)}.values())
 
 
+SVT_ADD2 = [
+    ('Quel est le plus grand organe du corps humain ?', 'La peau', ['Le foie', 'Le cœur', 'Les poumons'], 'La peau couvre environ 2 m².'),
+    ("Combien d'os compte le squelette humain adulte ?", '206', ['186', '226', '246'], "206 os chez l'adulte."),
+    ("Quel organe produit l'insuline ?", 'Le pancréas', ['Le foie', 'Les reins', "L'estomac"], 'Cellules bêta des îlots de Langerhans.'),
+    ('Quel est le rôle des globules rouges ?', "Transporter l'oxygène", ['Détruire les microbes', 'Coaguler le sang', 'Produire des anticorps'], "Grâce à l'hémoglobine."),
+    ('Quel gaz les plantes absorbent-elles pour la photosynthèse ?', 'Le dioxyde de carbone', ["L'oxygène", "L'azote", 'Le méthane'], 'CO₂ + eau + lumière → glucose + O₂.'),
+    ('Quel organe filtre le sang ?', 'Le rein', ['Le foie', 'La rate', 'Le pancréas'], "Le rein filtre et forme l'urine."),
+    ("Quelle est l'unité de base du système nerveux ?", 'Le neurone', ['La cellule gliale', 'Le nerf', 'Le ganglion'], "Le neurone transmet l'influx nerveux."),
+    ('Quel muscle permet la respiration ?', 'Le diaphragme', ['Le cœur', 'Le biceps', 'Le triceps'], 'Muscle respiratoire principal.'),
+    ('Quel groupe sanguin est dit « donneur universel » ?', 'O−', ['AB+', 'A+', 'B−'], "L'absence d'antigènes A, B et Rh."),
+    ('Quel est le rôle des plaquettes ?', 'La coagulation du sang', ['Le transport du fer', 'La défense immunitaire', 'La digestion'], 'Les plaquettes forment le caillot.'),
+    ("Quelle partie de la cellule contient l'ADN ?", 'Le noyau', ['La membrane', 'Le cytoplasme', 'La vacuole'], 'Chez les eucaryotes.'),
+    ('Quel organe est responsable de la détoxification ?', 'Le foie', ['Le rein', 'Le poumon', 'Le cœur'], 'Le foie métabolise les toxines.'),
+    ('Quelle vitamine est produite par la peau au soleil ?', 'La vitamine D', ['La vitamine C', 'La vitamine A', 'La vitamine B12'], "Sous l'action des UV."),
+    ('Combien de chambres compte le cœur humain ?', '4', ['2', '3', '6'], 'Deux oreillettes et deux ventricules.'),
+    ('Quel est le nom du vaisseau qui transporte le sang du cœur vers les organes ?', "L'artère", ['La veine', 'Le capillaire', 'Le nerf'], 'Les artères partent du cœur.'),
+    ('Quel est le plus long os du corps humain ?', 'Le fémur', ['Le tibia', "L'humérus", 'Le radius'], 'Os de la cuisse.'),
+    ("Quel organe sécrète l'acide chlorhydrique ?", "L'estomac", ["L'intestin grêle", 'Le foie', 'Le côlon'], 'pH gastrique très acide.'),
+    ('Quelle membrane entoure les poumons ?', 'La plèvre', ['Le péricarde', 'Le péritoine', 'La méninge'], 'La plèvre protège les poumons.'),
+    ("Quel est le rôle des reins dans l'équilibre du corps ?", "Réguler l'eau et les sels minéraux", ['Produire des globules rouges', 'Digérer les protéines', "Transporter l'oxygène"], 'Filtration et équilibre hydro-minéral.'),
+    ('Quel organe produit la bile ?', 'Le foie', ['La vésicule biliaire', 'Le pancréas', "L'estomac"], 'La bile est stockée dans la vésicule.'),
+    ('Quel est le mode de reproduction des bactéries ?', 'La division cellulaire', ['La fécondation', 'Le bourgeonnement sexué', 'La sporulation sexuée'], 'Scissiparité (division binaire).'),
+    ('Quelle maladie est causée par un manque de fer ?', "L'anémie", ['Le diabète', "L'asthme", 'La grippe'], 'Anémie ferriprive.'),
+    ('Quel organe est touché par la bronchite ?', 'Les bronches', ["L'estomac", 'Le rein', 'Le foie'], 'Inflammation des bronches.'),
+    ("Quelle partie du cerveau contrôle l'équilibre ?", 'Le cervelet', ['Le bulbe rachidien', "L'hypothalamus", 'Le cortex'], 'Le cervelet coordonne les mouvements.'),
+    ('Quel est le pH normal du sang ?', 'Environ 7,4', ['Environ 5,0', 'Environ 9,0', 'Environ 2,0'], 'Légèrement basique.'),
+    ('Quel est le rôle de la chlorophylle ?', 'Capter la lumière', ["Transporter l'eau", 'Digérer les aliments', 'Absorber les sels'], 'Pigment vert des chloroplastes.'),
+    ('Quelle est la plus petite unité du vivant ?', 'La cellule', ["L'atome", 'La molécule', 'Le tissu'], 'Unité structurale et fonctionnelle.'),
+    ("Quel type de cellule n'a pas de noyau ?", 'La bactérie', ['Le neurone', 'La cellule végétale', 'Le globule blanc'], 'Procaryote.'),
+    ("Quel organe permet l'absorption des nutriments ?", "L'intestin grêle", ["L'estomac", 'Le côlon', "L'œsophage"], 'Villositsés intestinaux.'),
+    ('Quel est le rôle des enzymes digestives ?', 'Accélérer la dégradation des aliments', ["Transporter l'oxygène", 'Détruire les bactéries', 'Coaguler le sang'], 'Catalyseurs biologiques.'),
+    ('Quelle hormone régule le taux de sucre dans le sang ?', "L'insuline", ["L'adrénaline", 'La thyroxine', 'La testostérone'], 'Hypoglycémiante.'),
+    ('Quel organe est le siège de la phonation ?', 'Le larynx', ['Le pharynx', 'La trachée', "L'œsophage"], "Les cordes vocales s'y trouvent."),
+    ('Quel est le rôle des lymphocytes ?', "Défendre l'organisme", ["Transporter l'oxygène", 'Digérer les lipides', "Filtrer l'urine"], 'Immunité spécifique.'),
+    ("Combien de paires de chromosomes possède l'humain ?", '23', ['22', '24', '46'], '23 paires = 46 chromosomes.'),
+    ('Quel organe produit les spermatozoïdes ?', 'Le testicule', ['La prostate', "L'épididyme", 'Le pénis'], 'Glande sexuelle mâle.'),
+]
+
 def gen_svt(level, count):
-    return _cycle(SVT_FACTS, level, count,
+    return _cycle(list(SVT_FACTS) + list(SVT_ADD2), level, count,
                   lambda f, i: mkq(f[0], f[1], f[2], f[3]))
 
 
