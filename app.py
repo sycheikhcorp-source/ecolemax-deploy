@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """ÉcoleMax — Serveur Flask + Gunicorn (production stable)"""
-import os, json, re, base64, hashlib, datetime, secrets, sqlite3, urllib.request, urllib.parse, time, threading, hmac, random
+import os, json, re, base64, hashlib, datetime, secrets, sqlite3, urllib.request, urllib.error, urllib.parse, time, threading, hmac, random
 
 HOST = "0.0.0.0"
 PORT = int(os.environ.get("PORT", 8000))
@@ -51,29 +51,53 @@ GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
 OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 
 
+_GEMINI_MODELES_OK = []   # modèles validés une fois pour toutes (évite les 404 à répétition)
+
+
+def _gemini_modeles():
+    """Modèles à essayer : celui du dashboard d'abord, puis les plus récents."""
+    tries = [GEMINI_MODEL]
+    for m in ("gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash",
+              "gemini-2.0-flash-001", "gemini-1.5-flash", "gemini-flash-latest"):
+        if m not in tries:
+            tries.append(m)
+    return _GEMINI_MODELES_OK + [m for m in tries if m not in _GEMINI_MODELES_OK]
+
+
 def _gemini_call(prompt, max_tokens=700, temperature=0.4, system=None, timeout=25):
-    """Google Gemini (clé gratuite AI Studio)."""
+    """Google Gemini (clé gratuite AI Studio) — bascule automatique de modèle."""
     if not cle_api("GEMINI_API_KEY"):
         return False, "", "Gemini"
-    url = ("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s"
-           % (GEMINI_MODEL, cle_api("GEMINI_API_KEY")))
     payload = {
         "system_instruction": {"parts": [{"text": system or _SYS_IA}]},
         "contents": [{"role": "user", "parts": [{"text": prompt}]}],
         "generationConfig": {"maxOutputTokens": max_tokens, "temperature": temperature},
     }
-    try:
-        req = urllib.request.Request(url, data=json.dumps(payload).encode(), method="POST")
-        req.add_header("Content-Type", "application/json")
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            d = json.loads(resp.read().decode())
+    dernier = ""
+    for modele in _gemini_modeles():
+        url = ("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s"
+               % (modele, cle_api("GEMINI_API_KEY")))
+        try:
+            req = urllib.request.Request(url, data=json.dumps(payload).encode(), method="POST")
+            req.add_header("Content-Type", "application/json")
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                d = json.loads(resp.read().decode())
             txt = d["candidates"][0]["content"]["parts"][0]["text"].strip()
             if txt:
-                return True, txt, "Gemini/" + GEMINI_MODEL
-    except Exception as e:
-        if getattr(e, "code", 0) == 429:
-            return False, "", "Gemini-429"
-    return False, "", "Gemini"
+                if modele not in _GEMINI_MODELES_OK:
+                    _GEMINI_MODELES_OK.insert(0, modele)
+                return True, txt, "Gemini/" + modele
+        except urllib.error.HTTPError as e:
+            code = e.code
+            dernier = "Gemini-%d" % code
+            if code in (400, 404):      # modèle inconnu ou non supporté → suivant
+                continue
+            if code in (401, 403):      # clé invalide → inutile d'insister
+                return False, "", dernier
+            continue
+        except Exception:
+            continue
+    return False, "", dernier or "Gemini"
 
 
 def _groq_call(prompt, max_tokens=700, temperature=0.4, system=None, timeout=25):
