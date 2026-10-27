@@ -1136,10 +1136,12 @@ def _trad_deepl(texte, src, dst):
         return False, "", "DeepL"
     base = ("https://api-free.deepl.com" if cle_api("DEEPL_API_KEY").endswith(":fx")
             else "https://api.deepl.com")
+    # DeepL attend ZH (et non zh-CN) ; on normalise le code cible
+    cible = {"zh-CN": "ZH", "zh": "ZH", "pt-BR": "PT-BR", "pt": "PT-PT"}.get(dst, dst.upper())
     corps = urllib.parse.urlencode({
         "text": texte[:4000],
         "source_lang": src.upper(),
-        "target_lang": dst.upper(),
+        "target_lang": cible,
     }).encode()
     try:
         req = urllib.request.Request(base + "/v2/translate", data=corps, method="POST")
