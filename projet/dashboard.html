@@ -732,8 +732,10 @@ function loadUsersList(d){
 }
 
 function statutTag(s){
-  const m = {actif:['vert','Actif'], en_attente:['orange','En attente'],
-             confirme:['vert','Confirmé'], expire:['gris','Expiré'], annule:['rouge','Annulé']};
+  const m = {actif:['vert','✅ Actif'], en_attente:['orange','⏳ En attente'],
+             confirme:['vert','✅ Confirmé'], expire:['gris','Expiré'],
+             annule:['rouge','Annulé'], refuse:['rouge','⛔ Refusé'],
+             suspendu:['orange','⏸ Suspendu'], bloque:['rouge','Bloqué']};
   const [c, t] = m[s] || ['gris', s || '—'];
   return '<span class="tag ' + c + '">' + esc(t) + '</span>';
 }
