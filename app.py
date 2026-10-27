@@ -1891,12 +1891,21 @@ def api_admin_reglage_test():
     if request.headers.get("X-Admin-Password", "") != ADMIN_PASSWORD:
         return jsonify({"erreur": "Non autorisé"}), 401
     res = {}
+    phrases = [
+        "Bonjour, comment vas-tu aujourd'hui ?",
+        "Les élèves doivent réviser leurs leçons ce soir.",
+        "Pouvez-vous m'expliquer cet exercice de mathématiques ?",
+        "L'eau bout à cent degrés Celsius.",
+        "Le développement durable protège notre planète.",
+        "Mon professeur de physique est très patient.",
+    ]
+    phrase = random.choice(phrases)
     for lg in ("en", "es", "ar", "zh"):
         t0 = time.time()
-        r = reponse_traduction("Bonjour, comment vas-tu aujourd'hui ?", lg)
+        r = reponse_traduction(phrase, lg)
         res[lg] = {"sortie": r.get("reponse", "")[:80], "moteur": r.get("source"),
                    "ms": int((time.time() - t0) * 1000), "ok": bool(r.get("succes"))}
-    return jsonify({"ok": all(v["ok"] for v in res.values()), "resultats": res})
+    return jsonify({"ok": all(v["ok"] for v in res.values()), "phrase": phrase, "resultats": res})
 
 
 def _sonde_fournisseur(nom):
