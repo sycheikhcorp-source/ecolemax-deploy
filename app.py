@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """ÉcoleMax — Serveur Flask + Gunicorn (production stable)"""
-import os, json, re, base64, hashlib, datetime, secrets, sqlite3, urllib.request, time, threading, hmac, random
+import os, json, re, base64, hashlib, datetime, secrets, sqlite3, urllib.request, urllib.parse, time, threading, hmac, random
 
 HOST = "0.0.0.0"
 PORT = int(os.environ.get("PORT", 8000))
@@ -31,7 +31,7 @@ OVH_AI_MODEL = "Qwen2.5-VL-72B-Instruct"
 OVH_AI_FALLBACK = "Meta-Llama-3_3-70B-Instruct"
 OVH_AI_MAX_TOKENS = 800
 OVH_AI_TIMEOUT = 12
-_POLLINATIONS_MIN_INTERVAL = 8
+_POLLINATIONS_MIN_INTERVAL = 2
 _ai_sem = threading.BoundedSemaphore(12)  # max 5 appels IA simultanés (évite la saturation du fournisseur)
 
 
@@ -136,7 +136,7 @@ _OVH_COOLDOWN_UNTIL = 0.0      # disjoncteur : plus d'appel OVH avant cette date
 _OVH_COOLDOWN_SECS = 45.0      # durée d'un refroidissement après un 429
 _OVH_STATS = {"ok": 0, "429": 0, "err": 0}
 _ia_lock = threading.Lock()
-_poll_sem = threading.BoundedSemaphore(4)
+_poll_sem = threading.BoundedSemaphore(8)
 
 
 def ovh_dispo():
@@ -183,29 +183,36 @@ def _ovh_call(model, prompt, max_tokens=700, temperature=0.4, timeout=None, syst
     return False, "", model, 0
 
 
+_POLL_MODELES = ["openai-fast", "openai", "qwen-fast"]
+
+
 def _pollinations_raw(prompt, max_tokens=600, timeout=18, system=None):
-    """Appel Pollinations (gratuit, sans clé) — secours immédiat."""
-    payload = {
-        "model": "openai",
-        "messages": [
-            {"role": "system", "content": system or _SYS_IA},
-            {"role": "user", "content": prompt},
-        ],
-        "max_tokens": max_tokens,
-        "temperature": 0.3,
-    }
-    data = json.dumps(payload).encode()
-    with _poll_sem:
-        try:
-            req = urllib.request.Request(POLLINATIONS_URL, data=data, method="POST")
-            req.add_header("Content-Type", "application/json")
-            with urllib.request.urlopen(req, timeout=timeout) as resp:
-                d = json.loads(resp.read().decode())
-                txt = d["choices"][0]["message"]["content"].strip()
-                if txt:
-                    return True, txt, "Pollinations"
-        except Exception:
-            pass
+    """Pollinations (gratuit, sans clé). Essaie plusieurs modèles connus."""
+    for modele in _POLL_MODELES:
+        payload = {
+            "model": modele,
+            "messages": [
+                {"role": "system", "content": system or _SYS_IA},
+                {"role": "user", "content": prompt},
+            ],
+            "max_tokens": max_tokens,
+            "temperature": 0.3,
+            "seed": int(time.time()) % 99991,
+        }
+        data = json.dumps(payload).encode()
+        with _poll_sem:
+            try:
+                req = urllib.request.Request(POLLINATIONS_URL, data=data, method="POST")
+                req.add_header("Content-Type", "application/json")
+                with urllib.request.urlopen(req, timeout=timeout) as resp:
+                    d = json.loads(resp.read().decode())
+                    txt = d["choices"][0]["message"]["content"].strip()
+                    if txt:
+                        return True, txt, "Pollinations/" + modele
+            except Exception as e:
+                if getattr(e, "code", 0) == 402:
+                    continue
+                continue
     return False, "", "Pollinations"
 
 
@@ -915,38 +922,90 @@ def reponse_ia_photo(question, image_b64, plan=None):
     if ok: return {"reponse": text, "source": src, "succes": True}
     return {"reponse": "⚠️ Correction photo indisponible. Veuillez réessayer.", "source": "Local", "succes": False}
 
-def reponse_traduction(texte, langue, plan=None):
-    langues = {
-        "fr": "français", "en": "anglais", "es": "espagnol",
-        "pt": "portugais", "ar": "arabe", "de": "allemand",
-        "zh": "mandarin", "hi": "hindi", "ru": "russe", "ja": "japonais"
-    }
-    nom_langue = langues.get(langue, langue)
-    texte = (texte or "").strip()[:1200]
 
-    # 1) dictionnaire local instantané
+# ─── Moteurs de traduction (gratuits, sans clé) ───
+_TRAD_CODES = {
+    "fr": "fr", "en": "en", "es": "es", "pt": "pt", "ar": "ar", "de": "de",
+    "it": "it", "ru": "ru", "zh": "zh-CN", "ja": "ja", "hi": "hi",
+    "tr": "tr", "nl": "nl", "wo": "wo",
+}
+
+
+def _trad_gtx(texte, src, dst):
+    """Google Translate (point d'accès public) — rapide et fiable."""
+    url = ("https://translate.googleapis.com/translate_a/single?client=gtx"
+           "&sl=%s&tl=%s&dt=t&q=%s" % (src, dst, urllib.parse.quote(texte[:1500])))
+    req = urllib.request.Request(url)
+    req.add_header("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/131.0 Mobile Safari/537.36")
+    with urllib.request.urlopen(req, timeout=8) as resp:
+        d = json.loads(resp.read().decode())
+    txt = "".join(part[0] for part in d[0] if part and part[0])
+    return (True, txt.strip(), "Google") if txt.strip() else (False, "", "Google")
+
+
+def _trad_mymemory(texte, src, dst):
+    """MyMemory — second moteur, sans clé."""
+    url = ("https://api.mymemory.translated.net/get?q=%s&langpair=%s|%s"
+           % (urllib.parse.quote(texte[:500]), src, dst))
+    req = urllib.request.Request(url)
+    req.add_header("User-Agent", "Mozilla/5.0")
+    with urllib.request.urlopen(req, timeout=8) as resp:
+        d = json.loads(resp.read().decode())
+    txt = (d.get("responseData") or {}).get("translatedText", "") or ""
+    if txt and "MYMEMORY WARNING" not in txt.upper():
+        return True, txt.strip(), "MyMemory"
+    return False, "", "MyMemory"
+
+
+def reponse_traduction(texte, langue, plan=None):
+    texte = (texte or "").strip()[:1500]
+    if not texte:
+        return {"reponse": "", "langue": langue, "source": "Local", "succes": False}
+
+    src = "fr"
+    dst = _TRAD_CODES.get(langue, langue)
+
+    # 1) dictionnaire local instantané (mots et expressions courantes)
     loc = traduction_locale(texte, langue)
     if loc:
         return {"reponse": loc, "langue": langue, "source": "Local", "succes": True, "cache": True}
 
-    # 2) cache (traduction déjà faite)
+    # 2) cache
     hit = ai_cache_get("trad", texte, langue)
     if hit:
         return {"reponse": hit, "langue": langue, "source": "Cache", "succes": True, "cache": True}
 
-    # 3) IA : consigne minimale, sortie courte
+    # 3) moteurs de traduction dédiés (rapides, sans clé)
+    for nom, fn in (("google", _trad_gtx), ("mymemory", _trad_mymemory)):
+        try:
+            ok, txt, src_nom = fn(texte, src, dst)
+            if ok and txt:
+                ai_cache_set("trad", texte, txt, langue)
+                return {"reponse": txt, "langue": langue, "source": src_nom, "succes": True}
+        except Exception:
+            pass
+
+    # 4) IA en dernier recours
+    nom_langue = {
+        "fr": "français", "en": "anglais", "es": "espagnol", "pt": "portugais",
+        "ar": "arabe", "de": "allemand", "zh": "mandarin", "hi": "hindi",
+        "ru": "russe", "ja": "japonais", "wo": "wolof", "it": "italien", "tr": "turc",
+    }.get(langue, langue)
     prompt = "Traduis en " + nom_langue + ". Réponds uniquement par la traduction :\n" + texte
-    sys_trad = "Tu es un traducteur professionnel. Tu réponds uniquement par la traduction demandée, sans commentaire."
+    sys_trad = "Tu es un traducteur professionnel. Tu réponds uniquement par la traduction demandée."
     try:
-        ok, trad, src = ai_smart(prompt, max_tokens=700, temperature=0.0,
-                                 timeout=12, system=sys_trad)
+        ok, trad, src_nom = ai_smart(prompt, max_tokens=700, temperature=0.0,
+                                     timeout=12, system=sys_trad)
+        if ok and trad:
+            trad = trad.strip().strip('"').strip()
+            ai_cache_set("trad", texte, trad, langue)
+            return {"reponse": trad, "langue": langue, "source": src_nom, "succes": True}
     except Exception:
-        ok, trad, src = False, "", ""
-    if ok and trad:
-        trad = trad.strip().strip('"').strip()
-        ai_cache_set("trad", texte, trad, langue)
-        return {"reponse": trad, "langue": langue, "source": src, "succes": True}
-    return {"reponse": "⚠️ Traduction indisponible momentanément", "langue": langue, "source": "Local", "succes": False}
+        pass
+
+    return {"reponse": "⚠️ Traduction indisponible momentanément. Réessaie dans quelques secondes.",
+            "langue": langue, "source": "Local", "succes": False}
+
 
 # ─── Flask App ───
 # Import des données seeds (528 exercices, 720 quiz)
@@ -1757,6 +1816,96 @@ def api_admin_abonnement_confirm():
     c.close()
     log_sec(1, "admin_action", "Admin a confirmé abonnement " + plan_code + " pour user " + str(uid))
     return jsonify({"ok":True, "message":"Abonnement confirmé pour " + u["pseudo"]})
+
+
+@app.route("/api/admin/abonnement/reject", methods=["POST"])
+def api_admin_abonnement_reject():
+    if request.headers.get("X-Admin-Password","") != ADMIN_PASSWORD:
+        return jsonify({"erreur":"Non autorisé"}), 403
+    data = request.get_json(silent=True) or {}
+    aid = data.get("abonnement_id")
+    motif = (data.get("motif") or "Refusé par l'administrateur")[:200]
+    c = db()
+    a = c.execute("SELECT * FROM abonnements WHERE id=?", (aid,)).fetchone()
+    if not a:
+        c.close()
+        return jsonify({"erreur":"Abonnement introuvable"}), 404
+    c.execute("UPDATE abonnements SET statut='refuse' WHERE id=?", (aid,))
+    c.execute("INSERT INTO notifications (user_id,titre,message,type,lu,date) VALUES (?,?,?,?,?,?)",
+              (a["user_id"], "Abonnement refusé", motif, "system", 0, now()))
+    c.commit()
+    c.close()
+    log_sec(1, "admin_action", "Abonnement %s refusé" % str(aid))
+    return jsonify({"ok":True, "message":"Abonnement refusé"})
+
+
+@app.route("/api/admin/abonnement/suspend", methods=["POST"])
+def api_admin_abonnement_suspend():
+    if request.headers.get("X-Admin-Password","") != ADMIN_PASSWORD:
+        return jsonify({"erreur":"Non autorisé"}), 403
+    data = request.get_json(silent=True) or {}
+    aid = data.get("abonnement_id")
+    c = db()
+    a = c.execute("SELECT * FROM abonnements WHERE id=?", (aid,)).fetchone()
+    if not a:
+        c.close()
+        return jsonify({"erreur":"Abonnement introuvable"}), 404
+    nouveau = "suspendu" if a["statut"] == "actif" else "actif"
+    c.execute("UPDATE abonnements SET statut=? WHERE id=?", (nouveau, aid))
+    c.commit()
+    c.close()
+    log_sec(1, "admin_action", "Abonnement %s → %s" % (str(aid), nouveau))
+    return jsonify({"ok":True, "statut":nouveau})
+
+
+@app.route("/api/admin/abonnement/confirmer_id", methods=["POST"])
+def api_admin_abonnement_confirmer_id():
+    """Confirme un abonnement par son identifiant (bouton du tableau de bord)."""
+    if request.headers.get("X-Admin-Password","") != ADMIN_PASSWORD:
+        return jsonify({"erreur":"Non autorisé"}), 403
+    data = request.get_json(silent=True) or {}
+    aid = data.get("abonnement_id")
+    c = db()
+    a = c.execute("SELECT * FROM abonnements WHERE id=?", (aid,)).fetchone()
+    if not a:
+        c.close()
+        return jsonify({"erreur":"Abonnement introuvable"}), 404
+    plan = c.execute("SELECT * FROM plans WHERE code=?", (a["plan_code"],)).fetchone()
+    jours = plan["duree_jours"] if plan else 30
+    debut = datetime.datetime.now().isoformat()
+    expire = (datetime.datetime.now() + datetime.timedelta(days=jours)).isoformat()
+    c.execute("UPDATE abonnements SET statut='actif', debut=?, expire=? WHERE id=?", (debut, expire, aid))
+    c.execute("INSERT INTO notifications (user_id,titre,message,type,lu,date) VALUES (?,?,?,?,?,?)",
+              (a["user_id"], "Abonnement activé",
+               "Ton abonnement est actif jusqu'au " + expire[:10] + ". Bon apprentissage !", "system", 0, now()))
+    c.commit()
+    c.close()
+    log_sec(1, "admin_action", "Abonnement %s confirmé" % str(aid))
+    return jsonify({"ok":True, "message":"Abonnement activé", "expire":expire})
+
+
+@app.route("/api/admin/abonnement/create", methods=["POST"])
+def api_admin_abonnement_create():
+    """Crée/active manuellement un abonnement pour un élève (contrôle admin)."""
+    if request.headers.get("X-Admin-Password","") != ADMIN_PASSWORD:
+        return jsonify({"erreur":"Non autorisé"}), 403
+    data = request.get_json(silent=True) or {}
+    uid = data.get("user_id")
+    code = data.get("plan", "")
+    c = db()
+    plan = c.execute("SELECT * FROM plans WHERE code=?", (code,)).fetchone()
+    u = c.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone()
+    if not plan or not u:
+        c.close()
+        return jsonify({"erreur":"Élève ou formule introuvable"}), 404
+    debut = datetime.datetime.now().isoformat()
+    expire = (datetime.datetime.now() + datetime.timedelta(days=plan["duree_jours"])).isoformat()
+    c.execute("INSERT INTO abonnements (user_id,plan_code,statut,debut,expire,montant) VALUES (?,?,?,?,?,?)",
+              (uid, code, "actif", debut, expire, plan["prix"]))
+    c.commit()
+    c.close()
+    log_sec(1, "admin_action", "Abonnement créé pour %s" % u["pseudo"])
+    return jsonify({"ok":True, "message":"Abonnement créé pour " + u["pseudo"]})
 
 @app.route("/api/admin/matieres")
 def api_admin_matieres():

@@ -269,6 +269,12 @@ tbody tr.nouveau{animation:rowNew 3s ease}
   thead th,tbody td{padding:10px 12px}
   .login-card{padding:30px 22px;border-radius:20px}
 }
+
+.mini{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:5px 9px;font-size:11.5px;font-weight:700;cursor:pointer;margin:1px 2px;transition:.15s}
+.mini:hover{transform:translateY(-1px)}
+.mini.ok{color:#047857;border-color:#a7f3d0;background:#ecfdf5}
+.mini.ko{color:#b91c1c;border-color:#fecaca;background:#fef2f2}
+.mini.warn{color:#b45309;border-color:#fde68a;background:#fffbeb}
 </style>
 </head>
 <body>
@@ -390,7 +396,7 @@ tbody tr.nouveau{animation:rowNew 3s ease}
       <div class="card">
         <div class="card-head"><div class="card-title">Abonnements</div><span class="card-badge" id="badge-abos">0</span></div>
         <div class="tbl-wrap"><table>
-          <thead><tr><th>Élève</th><th>Formule</th><th>Canal</th><th>Statut</th><th>Début</th><th>Expiration</th><th>Montant</th></tr></thead>
+          <thead><tr><th>Élève</th><th>Formule</th><th>Canal</th><th>Statut</th><th>Début</th><th>Expiration</th><th>Montant</th><th>Contrôle</th></tr></thead>
           <tbody id="tb-abonnes"></tbody>
         </table></div>
       </div>
@@ -581,6 +587,20 @@ async function refresh(){
   }
 }
 
+
+async function aboAction(action, abonnementId){
+  const libelle = {confirmer_id:'activer', reject:'refuser', suspend:'suspendre'}[action] || action;
+  try {
+    const r = await api('/api/admin/abonnement/' + action, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({abonnement_id: abonnementId})
+    });
+    const d = await r.json();
+    if (d.ok) { toast('✅ Abonnement ' + libelle + ' · ' + (d.message || d.statut || ''), ''); await refresh(); }
+    else toast('⚠️ ' + (d.erreur || 'Action impossible'), '');
+  } catch(e) { toast('⚠️ Erreur réseau', ''); }
+}
+
 function renderAll(d){
   const s = d.stats;
 
@@ -651,8 +671,16 @@ function renderAll(d){
         <td class="muted">${esc(fmtDate(a.debut))}</td>
         <td class="muted">${esc(fmtDate(a.expire))}</td>
         <td><strong>${nf(a.montant)}</strong> <span class="muted">FCFA</span></td>
+        <td style="white-space:nowrap">
+          ${a.statut === 'en_attente'
+            ? `<button class="mini ok" onclick="aboAction('confirmer_id',${a.id})">✅ Activer</button>
+               <button class="mini ko" onclick="aboAction('reject',${a.id})">⛔ Refuser</button>`
+            : a.statut === 'actif'
+              ? `<button class="mini warn" onclick="aboAction('suspend',${a.id})">⏸ Suspendre</button>`
+              : `<button class="mini ok" onclick="aboAction('confirmer_id',${a.id})">✅ Réactiver</button>`}
+        </td>
       </tr>`).join('')
-    : emptyRow(7, 'Aucun abonnement enregistré');
+    : emptyRow(8, 'Aucun abonnement enregistré');
   $('badge-abos').textContent = s.total_abos;
 
   // --- Paiements ---
