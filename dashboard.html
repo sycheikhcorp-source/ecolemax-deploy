@@ -728,6 +728,7 @@ function renderUsers(){
         <td><span class="tag gris">—</span></td>
         <td>${u.role === 'bloque' ? '<span class="tag rouge">Bloqué</span>' : '<span class="tag vert">Actif</span>'}</td>
         <td><div class="acts">
+          <button class="act" onclick="resetPwd(${u.id},'${esc(u.pseudo)}')">Mot de passe</button>
           ${u.role === 'bloque'
             ? `<button class="act ok" onclick="unblockUser(${u.id})">Débloquer</button>`
             : `<button class="act" onclick="blockUser(${u.id})">Bloquer</button>`}
@@ -747,6 +748,21 @@ async function unblockUser(id){
   try { await api('/api/admin/user/unblock', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({user_id:id})});
     toast('Élève débloqué'); window._usersAt = 0; refresh(); }
   catch(e){ toast('Erreur : ' + e.message, 'err'); }
+}
+
+async function resetPwd(id, pseudo){
+  if (!confirm('Générer un nouveau mot de passe pour « ' + pseudo + ' » ?')) return;
+  try {
+    const r = await api('/api/admin/user/reset_password', {method:'POST',
+      headers:{'Content-Type':'application/json'}, body: JSON.stringify({user_id:id})});
+    window._dernierReset = r;
+    toast('Nouveau mot de passe pour ' + r.pseudo + ' : ' + r.nouveau_mdp, '');
+    alert('🔑 NOUVEAU MOT DE PASSE — ' + r.pseudo +
+          '\n\nMot de passe : ' + r.nouveau_mdp +
+          '\nCode de récupération : ' + r.code_recuperation +
+          '\n\nDonnez ces informations à l\'élève. Il pourra se connecter immédiatement.');
+    window._usersAt = 0;
+  } catch(e){ toast('Erreur : ' + e.message, 'err'); }
 }
 async function delUser(id, pseudo){
   if (!confirm('Supprimer définitivement « ' + pseudo + ' » et toutes ses données ?')) return;

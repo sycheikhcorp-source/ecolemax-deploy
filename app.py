@@ -114,6 +114,11 @@ def init_db():
     c.execute("""CREATE TABLE IF NOT EXISTS supports (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, sujet TEXT, message TEXT, date TEXT)""")
     c.execute("""CREATE TABLE IF NOT EXISTS sessions (token TEXT PRIMARY KEY, user_id INTEGER, expires_at TEXT, created_at TEXT)""")
     c.execute("""CREATE TABLE IF NOT EXISTS logs_sec (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, action TEXT, detail TEXT, date TEXT)""")
+    try:
+        c.execute("ALTER TABLE users ADD COLUMN recovery_code TEXT DEFAULT ''")
+        c.execute("ALTER TABLE users ADD COLUMN wants_delete INTEGER DEFAULT 0")
+    except Exception:
+        pass
     c.execute("CREATE INDEX IF NOT EXISTS idx_users_pseudo ON users(pseudo)")
     c.execute("CREATE INDEX IF NOT EXISTS idx_abos_user ON abonnements(user_id)")
     c.execute("CREATE INDEX IF NOT EXISTS idx_pays_ref ON paiements(reference)")
@@ -625,6 +630,14 @@ def tester():
 def securite():
     return serve_html("securite.html")
 
+@app.route("/EcoleMax.aab")
+def download_aab():
+    fp = os.path.join(os.path.dirname(os.path.abspath(__file__)), "EcoleMax.aab")
+    if not os.path.isfile(fp):
+        return Response("AAB non disponible", status=404)
+    return send_file(fp, mimetype="application/octet-stream",
+                     as_attachment=True, download_name="EcoleMax.aab")
+
 @app.route("/EcoleMax.apk")
 def apk():
     return send_file(os.path.join(os.path.dirname(os.path.abspath(__file__)), "EcoleMax.apk"), as_attachment=True)
@@ -822,8 +835,9 @@ def api_register():
     if c.execute("SELECT id FROM users WHERE pseudo=?", (pseudo,)).fetchone():
         c.close()
         return jsonify({"erreur":"Ce pseudo est déjà pris"}), 409
-    c.execute("INSERT INTO users (pseudo,email,mot_de_passe,niveau,created_at) VALUES (?,?,?,?,?)",
-              (pseudo,email,hash_pass(mdp),niveau,now()))
+    code_recup = "-".join([secrets.token_hex(2).upper() for _ in range(2)])
+    c.execute("INSERT INTO users (pseudo,email,mot_de_passe,niveau,created_at,recovery_code) VALUES (?,?,?,?,?,?)",
+              (pseudo,email,hash_pass(mdp),niveau,now(),hash_pass(code_recup.replace("-","").upper())))
     uid = c.execute("SELECT id FROM users WHERE pseudo=?", (pseudo,)).fetchone()["id"]
     c.execute("INSERT INTO sessions (token,user_id,expires_at,created_at) VALUES (?,?,?,?)",
               (jwt_create(uid),uid,datetime.datetime.now().isoformat(),now()))
@@ -832,7 +846,9 @@ def api_register():
     c.commit()
     c.close()
     log_sec(uid, "inscription", "Nouvel élève")
-    return jsonify({"ok":True,"token":jwt_create(uid),"user":{"id":uid,"pseudo":pseudo}})
+    return jsonify({"ok":True,"token":jwt_create(uid),"user":{"id":uid,"pseudo":pseudo},
+                    "code_recuperation":code_recup,
+                    "message":"Note ce code : il te permettra de recuperer ton compte si tu oublies ton mot de passe."})
 
 @app.route("/api/login", methods=["POST"])
 def api_login():
@@ -1328,16 +1344,34 @@ def api_admin_rapports():
 
 @app.route("/api/reset", methods=["POST"])
 def api_reset():
+    """Récupération de compte : exige le code de récupération remis à l'inscription.
+    Sans ce code, seul l'administrateur peut réinitialiser (depuis le tableau de bord)."""
     data = request.get_json(silent=True) or {}
-    pseudo = data.get("pseudo","")
+    pseudo = (data.get("pseudo") or "").strip()
+    code   = (data.get("code") or "").strip().upper().replace(" ", "").replace("-", "")
+    nouveau = data.get("nouveau_mdp") or ""
     c = db()
     u = c.execute("SELECT * FROM users WHERE pseudo=?", (pseudo,)).fetchone()
-    if not u: return jsonify({"erreur":"Utilisateur non trouvé"}), 404
-    new = secrets.token_hex(4)
-    c.execute("UPDATE users SET mot_de_passe=? WHERE id=?", (hash_pass(new), u["id"]))
+    if not u:
+        c.close()
+        return jsonify({"erreur":"Pseudo ou code incorrect"}), 404
+    stored = (u["recovery_code"] or "") if "recovery_code" in u.keys() else ""
+    if not stored or not verify_pass(code, stored):
+        c.close()
+        log_sec(0, "reset_refuse", "Tentative sans code valide : " + pseudo[:40])
+        return jsonify({"erreur":"Code de récupération incorrect. Contacte ton professeur."}), 403
+    if not nouveau:
+        nouveau = "EM" + secrets.token_hex(3).upper()
+    elif len(nouveau) < 8 or not re.search(r'[A-Za-z]', nouveau) or not re.search(r'\d', nouveau):
+        c.close()
+        return jsonify({"erreur":"Mot de passe : 8+ caractères, lettre + chiffre"}), 400
+    c.execute("UPDATE users SET mot_de_passe=? WHERE id=?", (hash_pass(nouveau), u["id"]))
+    c.execute("DELETE FROM sessions WHERE user_id=?", (u["id"],))
     c.commit()
     c.close()
-    return jsonify({"ok":True,"nouveau_mdp":new})
+    log_sec(int(u["id"]), "recovery", "Mot de passe récupéré avec code")
+    return jsonify({"ok":True, "nouveau_mdp":nouveau,
+                    "message":"Mot de passe réinitialisé. Toutes les sessions ont été fermées."})
 
 @app.route("/api/quiz/session", methods=["POST"])
 def api_quiz_session():
@@ -2041,6 +2075,87 @@ def api_admin_purge_test():
     c.commit(); c.close()
     return jsonify({"ok":True,"supprimes":len(ids)})
 
+
+
+# ============================================================
+#  ACCÈS AU COMPTE À TOUT MOMENT + CONFORMITÉ GOOGLE PLAY
+# ============================================================
+@app.route("/api/admin/user/reset_password", methods=["POST"])
+def api_admin_user_reset_password():
+    """L'administrateur génère un nouveau mot de passe temporaire pour un élève."""
+    if request.headers.get("X-Admin-Password","") != ADMIN_PASSWORD:
+        return jsonify({"erreur":"Non autorisé"}), 403
+    data = request.get_json(silent=True) or {}
+    uid = data.get("user_id")
+    c = db()
+    u = c.execute("SELECT id,pseudo FROM users WHERE id=?", (uid,)).fetchone()
+    if not u:
+        c.close(); return jsonify({"erreur":"Utilisateur non trouvé"}), 404
+    nouveau = data.get("nouveau_mdp") or ("EM" + secrets.token_hex(3).upper())
+    if len(nouveau) < 8 or not re.search(r'[A-Za-z]', nouveau) or not re.search(r'\d', nouveau):
+        c.close(); return jsonify({"erreur":"Mot de passe : 8+ caractères, lettre + chiffre"}), 400
+    code_recup = "-".join([secrets.token_hex(2).upper() for _ in range(2)])
+    c.execute("UPDATE users SET mot_de_passe=?, recovery_code=? WHERE id=?",
+              (hash_pass(nouveau), hash_pass(code_recup.replace("-","").upper()), uid))
+    c.execute("DELETE FROM sessions WHERE user_id=?", (uid,))
+    c.commit(); c.close()
+    log_sec(1, "admin_action", "Mot de passe réinitialisé pour " + u["pseudo"])
+    return jsonify({"ok": True, "pseudo": u["pseudo"],
+                    "nouveau_mdp": nouveau, "code_recuperation": code_recup})
+
+@app.route("/api/admin/user/recovery_code", methods=["POST"])
+def api_admin_user_recovery_code():
+    """Régénère un code de récupération pour un élève existant."""
+    if request.headers.get("X-Admin-Password","") != ADMIN_PASSWORD:
+        return jsonify({"erreur":"Non autorisé"}), 403
+    data = request.get_json(silent=True) or {}
+    uid = data.get("user_id")
+    c = db()
+    u = c.execute("SELECT id,pseudo FROM users WHERE id=?", (uid,)).fetchone()
+    if not u:
+        c.close(); return jsonify({"erreur":"Utilisateur non trouvé"}), 404
+    code = "-".join([secrets.token_hex(2).upper() for _ in range(2)])
+    c.execute("UPDATE users SET recovery_code=? WHERE id=?", (hash_pass(code.replace("-","").upper()), uid))
+    c.commit(); c.close()
+    return jsonify({"ok": True, "pseudo": u["pseudo"], "code_recuperation": code})
+
+@app.route("/api/account/delete", methods=["POST"])
+def api_account_delete():
+    """Suppression du compte par l'élève lui-même (exigence Google Play)."""
+    u = get_user_by_token(request)
+    if not u: return jsonify({"erreur":"Authentification requise"}), 401
+    data = request.get_json(silent=True) or {}
+    if (data.get("mot_de_passe") or "") and not verify_pass(data["mot_de_passe"], u["mot_de_passe"]):
+        return jsonify({"erreur":"Mot de passe incorrect"}), 403
+    uid = u["id"]
+    c = db()
+    for t in ("sessions","favoris","notifications","usages","abonnements","paiements","results","supports","corrections"):
+        c.execute("DELETE FROM %s WHERE user_id=?" % t, (uid,))
+    c.execute("DELETE FROM users WHERE id=?", (uid,))
+    c.commit(); c.close()
+    log_sec(0, "suppression_compte", "Compte supprimé : " + str(u["pseudo"])[:40])
+    return jsonify({"ok": True, "message": "Compte supprimé définitivement."})
+
+@app.route("/api/recover/info")
+def api_recover_info():
+    """Indique si un pseudo existe (pour guider l'élève)."""
+    p = (request.args.get("pseudo") or "").strip()
+    c = db()
+    r = c.execute("SELECT 1 FROM users WHERE pseudo=?", (p,)).fetchone()
+    c.close()
+    return jsonify({"existe": bool(r)})
+
+
+
+@app.route("/confidentialite")
+@app.route("/confidentialite.html")
+@app.route("/privacy")
+def confidentialite():
+    return serve_html("confidentialite.html")
+
+@app.route("/supprimer-compte")
+def page_supprimer_compte():
+    return serve_html("confidentialite.html")
 
 @app.route('/catalogue')
 @app.route('/catalogue.html')
