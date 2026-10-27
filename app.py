@@ -29,10 +29,371 @@ POLLINATIONS_URL = "https://text.pollinations.ai/openai"
 OVH_AI_URL = "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/chat/completions"
 OVH_AI_MODEL = "Qwen2.5-VL-72B-Instruct"
 OVH_AI_FALLBACK = "Meta-Llama-3_3-70B-Instruct"
-OVH_AI_MAX_TOKENS = 3000
-OVH_AI_TIMEOUT = 30
-_POLLINATIONS_MIN_INTERVAL = 30
-_ai_sem = threading.BoundedSemaphore(5)  # max 5 appels IA simultanés (évite la saturation du fournisseur)
+OVH_AI_MAX_TOKENS = 800
+OVH_AI_TIMEOUT = 12
+_POLLINATIONS_MIN_INTERVAL = 8
+_ai_sem = threading.BoundedSemaphore(12)  # max 5 appels IA simultanés (évite la saturation du fournisseur)
+
+
+# ─── Fournisseurs IA : disjoncteur + repli intelligent (latence minimale) ───
+_SYS_IA = "Tu es un professeur clair et concis. Réponds en français, 6 lignes maximum, adapté au niveau de l'élève."
+
+
+# ─── Fournisseurs IA à clé (optionnels, via variables d'environnement Render) ───
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "").strip()
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "").strip()
+OVH_AI_TOKEN = os.environ.get("OVH_AI_TOKEN", "").strip()
+
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
+GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
+OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
+
+
+def _gemini_call(prompt, max_tokens=700, temperature=0.4, system=None, timeout=25):
+    """Google Gemini (clé gratuite AI Studio)."""
+    if not GEMINI_API_KEY:
+        return False, "", "Gemini"
+    url = ("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s"
+           % (GEMINI_MODEL, GEMINI_API_KEY))
+    payload = {
+        "system_instruction": {"parts": [{"text": system or _SYS_IA}]},
+        "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+        "generationConfig": {"maxOutputTokens": max_tokens, "temperature": temperature},
+    }
+    try:
+        req = urllib.request.Request(url, data=json.dumps(payload).encode(), method="POST")
+        req.add_header("Content-Type", "application/json")
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            d = json.loads(resp.read().decode())
+            txt = d["candidates"][0]["content"]["parts"][0]["text"].strip()
+            if txt:
+                return True, txt, "Gemini/" + GEMINI_MODEL
+    except Exception as e:
+        if getattr(e, "code", 0) == 429:
+            return False, "", "Gemini-429"
+    return False, "", "Gemini"
+
+
+def _groq_call(prompt, max_tokens=700, temperature=0.4, system=None, timeout=25):
+    if not GROQ_API_KEY:
+        return False, "", "Groq"
+    payload = {"model": GROQ_MODEL,
+               "messages": [{"role": "system", "content": system or _SYS_IA},
+                            {"role": "user", "content": prompt}],
+               "max_tokens": max_tokens, "temperature": temperature}
+    try:
+        req = urllib.request.Request("https://api.groq.com/openai/v1/chat/completions",
+                                     data=json.dumps(payload).encode(), method="POST")
+        req.add_header("Content-Type", "application/json")
+        req.add_header("Authorization", "Bearer " + GROQ_API_KEY)
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            d = json.loads(resp.read().decode())
+            txt = d["choices"][0]["message"]["content"].strip()
+            if txt:
+                return True, txt, "Groq/" + GROQ_MODEL
+    except Exception:
+        pass
+    return False, "", "Groq"
+
+
+def _openai_call(prompt, max_tokens=700, temperature=0.4, system=None, timeout=25):
+    if not OPENAI_API_KEY:
+        return False, "", "OpenAI"
+    payload = {"model": OPENAI_MODEL,
+               "messages": [{"role": "system", "content": system or _SYS_IA},
+                            {"role": "user", "content": prompt}],
+               "max_tokens": max_tokens, "temperature": temperature}
+    try:
+        req = urllib.request.Request("https://api.openai.com/v1/chat/completions",
+                                     data=json.dumps(payload).encode(), method="POST")
+        req.add_header("Content-Type", "application/json")
+        req.add_header("Authorization", "Bearer " + OPENAI_API_KEY)
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            d = json.loads(resp.read().decode())
+            txt = d["choices"][0]["message"]["content"].strip()
+            if txt:
+                return True, txt, "OpenAI/" + OPENAI_MODEL
+    except Exception:
+        pass
+    return False, "", "OpenAI"
+
+
+def fournisseurs_ia():
+    """Liste ordonnée des fournisseurs disponibles (les clés d'abord)."""
+    liste = []
+    if GEMINI_API_KEY:
+        liste.append(("gemini", _gemini_call))
+    if GROQ_API_KEY:
+        liste.append(("groq", _groq_call))
+    if OPENAI_API_KEY:
+        liste.append(("openai", _openai_call))
+    liste.append(("ovh", None))
+    liste.append(("pollinations", None))
+    return liste
+
+_OVH_COOLDOWN_UNTIL = 0.0      # disjoncteur : plus d'appel OVH avant cette date
+_OVH_COOLDOWN_SECS = 45.0      # durée d'un refroidissement après un 429
+_OVH_STATS = {"ok": 0, "429": 0, "err": 0}
+_ia_lock = threading.Lock()
+_poll_sem = threading.BoundedSemaphore(4)
+
+
+def ovh_dispo():
+    return time.time() >= _OVH_COOLDOWN_UNTIL
+
+
+def ovh_refroidir(secondes=None):
+    global _OVH_COOLDOWN_UNTIL
+    with _ia_lock:
+        _OVH_COOLDOWN_UNTIL = time.time() + (secondes or _OVH_COOLDOWN_SECS)
+
+
+def _ovh_call(model, prompt, max_tokens=700, temperature=0.4, timeout=None, system=None):
+    """Un appel OVH. Retourne (ok, texte, modele, code_erreur)."""
+    timeout = timeout or OVH_AI_TIMEOUT
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system or _SYS_IA},
+            {"role": "user", "content": prompt},
+        ],
+        "max_tokens": max_tokens,
+        "temperature": temperature,
+    }
+    data = json.dumps(payload).encode()
+    with _ai_sem:
+        try:
+            req = urllib.request.Request(OVH_AI_URL, data=data, method="POST")
+            req.add_header("Content-Type", "application/json")
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                result = json.loads(resp.read().decode())
+                txt = result["choices"][0]["message"]["content"].strip()
+                if txt:
+                    _OVH_STATS["ok"] += 1
+                    return True, txt, model, 200
+        except Exception as e:
+            code = getattr(e, "code", 0)
+            if code == 429:
+                _OVH_STATS["429"] += 1
+                ovh_refroidir()
+            else:
+                _OVH_STATS["err"] += 1
+            return False, "", model, code
+    return False, "", model, 0
+
+
+def _pollinations_raw(prompt, max_tokens=600, timeout=18, system=None):
+    """Appel Pollinations (gratuit, sans clé) — secours immédiat."""
+    payload = {
+        "model": "openai",
+        "messages": [
+            {"role": "system", "content": system or _SYS_IA},
+            {"role": "user", "content": prompt},
+        ],
+        "max_tokens": max_tokens,
+        "temperature": 0.3,
+    }
+    data = json.dumps(payload).encode()
+    with _poll_sem:
+        try:
+            req = urllib.request.Request(POLLINATIONS_URL, data=data, method="POST")
+            req.add_header("Content-Type", "application/json")
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                d = json.loads(resp.read().decode())
+                txt = d["choices"][0]["message"]["content"].strip()
+                if txt:
+                    return True, txt, "Pollinations"
+        except Exception:
+            pass
+    return False, "", "Pollinations"
+
+
+def ai_smart(prompt, max_tokens=700, temperature=0.4, timeout=None, system=None):
+    """Chaîne de fournisseurs : clés API d'abord, puis OVH (disjoncteur), puis Pollinations."""
+    timeout = timeout or OVH_AI_TIMEOUT
+
+    # 1) fournisseurs à clé (fiables et rapides)
+    for nom in ("gemini", "groq", "openai"):
+        fn = {"gemini": _gemini_call, "groq": _groq_call, "openai": _openai_call}[nom]
+        try:
+            ok, txt, src = fn(prompt, max_tokens, temperature, system, timeout)
+            if ok:
+                return True, txt, src
+        except Exception:
+            pass
+
+    if ovh_dispo():
+        ok, txt, model, code = _ovh_call(OVH_AI_MODEL, prompt, max_tokens, temperature, timeout, system)
+        if ok:
+            return True, txt, model
+        if code == 429:
+            # quota atteint : on bascule immédiatement, sans réessai
+            ok2, txt2, src2 = _pollinations_raw(prompt, min(max_tokens, 700), 20, system)
+            return (ok2, txt2, src2)
+        # autre erreur : second modèle OVH
+        ok, txt, model, code = _ovh_call(OVH_AI_FALLBACK, prompt, max_tokens, temperature, timeout, system)
+        if ok:
+            return True, txt, model
+        if code == 429:
+            ok2, txt2, src2 = _pollinations_raw(prompt, min(max_tokens, 700), 20, system)
+            return (ok2, txt2, src2)
+
+    ok, txt, src = _pollinations_raw(prompt, min(max_tokens, 700), 22, system)
+    if ok:
+        return True, txt, src
+    if ovh_dispo():
+        ok, txt, model, _c = _ovh_call(OVH_AI_FALLBACK, prompt, max_tokens, temperature, timeout, system)
+        if ok:
+            return True, txt, model
+    return False, "", "timeout"
+
+
+# compatibilité avec les appels existants
+def ai_race(prompt, max_tokens=700, temperature=0.4, timeout=None, system=None, **kw):
+    return ai_smart(prompt, max_tokens, temperature, timeout, system)
+
+
+# ─── Suivi du canal (site / application) ───
+def detecter_canal():
+    """Détermine d'où vient l'inscription : 'app' ou 'site'."""
+    h = request.headers.get("X-Client", "").strip().lower()
+    if h in ("app", "application", "android"):
+        return "app"
+    if h in ("site", "web"):
+        return "site"
+    ua = (request.headers.get("User-Agent", "") or "").lower()
+    if "ecolemax" in ua or "wv" in ua or "; wv)" in ua:
+        return "app"
+    return "site"
+
+
+def ensure_user_columns():
+    """Ajoute les colonnes de suivi du canal (idempotent)."""
+    try:
+        c = db()
+        cols = [r[1] for r in c.execute("PRAGMA table_info(users)")]
+        for col, decl in (("canal", "TEXT DEFAULT 'site'"),
+                          ("dernier_canal", "TEXT"),
+                          ("appareil", "TEXT"),
+                          ("derniere_activite", "TEXT")):
+            if col not in cols:
+                c.execute("ALTER TABLE users ADD COLUMN %s %s" % (col, decl))
+                print("✅ users.%s ajouté" % col)
+        c.commit()
+        c.close()
+    except Exception as e:
+        print("ensure_user_columns:", e)
+
+# ─── Cache IA (réponses identiques instantanées) ───
+import hashlib as _hashlib
+import local_engine
+_AI_MEM = {}
+_AI_MEM_MAX = 3000
+_AI_TTL = 7 * 24 * 3600
+
+
+def _ai_cache_key(kind, texte, langue="", niveau=""):
+    raw = "%s|%s|%s|%s" % (kind, (texte or "").strip().lower(), langue, niveau)
+    return _hashlib.sha1(raw.encode("utf-8")).hexdigest()
+
+
+def ai_cache_get(kind, texte, langue="", niveau=""):
+    k = _ai_cache_key(kind, texte, langue, niveau)
+    v = _AI_MEM.get(k)
+    if v and (time.time() - v[1]) < _AI_TTL:
+        return v[0]
+    try:
+        c = db()
+        r = c.execute("SELECT reponse, date FROM ai_cache WHERE cle=?", (k,)).fetchone()
+        c.close()
+        if r and r["reponse"]:
+            _AI_MEM[k] = (r["reponse"], time.time())
+            return r["reponse"]
+    except Exception:
+        pass
+    return None
+
+
+def ai_cache_set(kind, texte, reponse, langue="", niveau=""):
+    if not reponse or len(reponse) < 2:
+        return
+    k = _ai_cache_key(kind, texte, langue, niveau)
+    if len(_AI_MEM) > _AI_MEM_MAX:
+        _AI_MEM.clear()
+    _AI_MEM[k] = (reponse, time.time())
+    try:
+        c = db()
+        c.execute("INSERT OR REPLACE INTO ai_cache (cle, kind, texte, langue, reponse, date) "
+                  "VALUES (?,?,?,?,?,?)",
+                  (k, kind, (texte or "")[:500], langue, reponse[:6000], now()))
+        c.commit()
+        c.close()
+    except Exception:
+        pass
+
+
+def init_ai_cache():
+    try:
+        c = db()
+        c.execute("""CREATE TABLE IF NOT EXISTS ai_cache (
+            cle TEXT PRIMARY KEY, kind TEXT, texte TEXT, langue TEXT,
+            reponse TEXT, date TEXT)""")
+        c.commit()
+        c.close()
+    except Exception as e:
+        print("init_ai_cache:", e)
+
+
+# ─── Traducteur local instantané (mots isolés + phrases courantes) ───
+_TRAD_MOTS = {
+    "bonjour": {"en": "hello", "es": "hola", "ar": "مرحبا", "pt": "olá", "de": "hallo"},
+    "merci": {"en": "thank you", "es": "gracias", "ar": "شكرا", "pt": "obrigado", "de": "danke"},
+    "au revoir": {"en": "goodbye", "es": "adiós", "ar": "وداعا", "pt": "adeus", "de": "auf wiedersehen"},
+    "oui": {"en": "yes", "es": "sí", "ar": "نعم", "pt": "sim", "de": "ja"},
+    "non": {"en": "no", "es": "no", "ar": "لا", "pt": "não", "de": "nein"},
+    "école": {"en": "school", "es": "escuela", "ar": "مدرسة", "pt": "escola", "de": "schule"},
+    "élève": {"en": "pupil", "es": "alumno", "ar": "تلميذ", "pt": "aluno", "de": "schüler"},
+    "professeur": {"en": "teacher", "es": "profesor", "ar": "أستاذ", "pt": "professor", "de": "lehrer"},
+    "livre": {"en": "book", "es": "libro", "ar": "كتاب", "pt": "livro", "de": "buch"},
+    "cahier": {"en": "notebook", "es": "cuaderno", "ar": "دفتر", "pt": "caderno", "de": "heft"},
+    "mathématiques": {"en": "mathematics", "es": "matemáticas", "ar": "رياضيات", "pt": "matemática", "de": "mathematik"},
+    "histoire": {"en": "history", "es": "historia", "ar": "تاريخ", "pt": "história", "de": "geschichte"},
+    "géographie": {"en": "geography", "es": "geografía", "ar": "جغرافيا", "pt": "geografia", "de": "geografie"},
+    "sciences": {"en": "science", "es": "ciencias", "ar": "علوم", "pt": "ciências", "de": "wissenschaft"},
+    "eau": {"en": "water", "es": "agua", "ar": "ماء", "pt": "água", "de": "wasser"},
+    "terre": {"en": "earth", "es": "tierra", "ar": "أرض", "pt": "terra", "de": "erde"},
+    "soleil": {"en": "sun", "es": "sol", "ar": "شمس", "pt": "sol", "de": "sonne"},
+    "lune": {"en": "moon", "es": "luna", "ar": "قمر", "pt": "lua", "de": "mond"},
+    "homme": {"en": "man", "es": "hombre", "ar": "رجل", "pt": "homem", "de": "mann"},
+    "femme": {"en": "woman", "es": "mujer", "ar": "امرأة", "pt": "mulher", "de": "frau"},
+    "enfant": {"en": "child", "es": "niño", "ar": "طفل", "pt": "criança", "de": "kind"},
+    "ami": {"en": "friend", "es": "amigo", "ar": "صديق", "pt": "amigo", "de": "freund"},
+    "maison": {"en": "house", "es": "casa", "ar": "بيت", "pt": "casa", "de": "haus"},
+    "ville": {"en": "city", "es": "ciudad", "ar": "مدينة", "pt": "cidade", "de": "stadt"},
+    "pays": {"en": "country", "es": "país", "ar": "بلد", "pt": "país", "de": "land"},
+    "santé": {"en": "health", "es": "salud", "ar": "صحة", "pt": "saúde", "de": "gesundheit"},
+    "travail": {"en": "work", "es": "trabajo", "ar": "عمل", "pt": "trabalho", "de": "arbeit"},
+    "famille": {"en": "family", "es": "familia", "ar": "أسرة", "pt": "família", "de": "familie"},
+    "nourriture": {"en": "food", "es": "comida", "ar": "طعام", "pt": "comida", "de": "essen"},
+    "ordinateur": {"en": "computer", "es": "computadora", "ar": "حاسوب", "pt": "computador", "de": "computer"},
+    "internet": {"en": "internet", "es": "internet", "ar": "إنترنت", "pt": "internet", "de": "internet"},
+    "bonne chance": {"en": "good luck", "es": "buena suerte", "ar": "حظا سعيدا", "pt": "boa sorte", "de": "viel glück"},
+    "comment vas-tu": {"en": "how are you", "es": "¿cómo estás?", "ar": "كيف حالك", "pt": "como vai você", "de": "wie geht es dir"},
+    "je t'aime": {"en": "I love you", "es": "te quiero", "ar": "أحبك", "pt": "eu te amo", "de": "ich liebe dich"},
+    "développement durable": {"en": "sustainable development", "es": "desarrollo sostenible", "ar": "التنمية المستدامة", "pt": "desenvolvimento sustentável", "de": "nachhaltige entwicklung"},
+    "changement climatique": {"en": "climate change", "es": "cambio climático", "ar": "تغير المناخ", "pt": "mudança climática", "de": "klimawandel"},
+}
+
+
+def traduction_locale(texte, langue):
+    """Traduction instantanée hors ligne (mots et expressions courantes)."""
+    t = (texte or "").strip().lower().rstrip(".!?")
+    d = _TRAD_MOTS.get(t)
+    if d and langue in d:
+        return d[langue]
+    return None
+
 
 # ─── Utilitaires ───
 def now():
@@ -193,16 +554,20 @@ def init_db():
         ("es","Los verbos en -ar","Niveau: 1ère\n\n# Verbes en -ar (Presente)\n\n## Conjugación\n| Pronombre | Verbo (-ar) |\n|-----------|------------|\n| yo        | -o         |\n| tú        | -as        |\n| él/ella   | -a         |\n| nosotros  | -amos      |\n| vosotros  | -áis       |\n| ellos     | -an        |\n\n## Ejemplos\n- hablar → yo hablo, tú hablas\n- comer → yo como, tú comes\n- vivir → yo vivo, tú vives\n\n## Reglas\n- Los verbos en -ar terminan en -o, -as, -a, -amos, -áis, -an.\n- Los verbos en -er y -ir tienen terminaciones diferentes."),
         ("ara","Alphabet arabe","Niveau: 1ère\n\n# L'alphabet arabe\n\n## Lettres\nا ب ت ث ج ح خ د ذ ر ز س ش ص ض ط ظ ع غ ف ق ك ل م ن ه و ي\n\n## Exemples de mots\n- السلام (al-salam) = paix\n- العلم (al-ilm) = science\n- كتاب (kitab) = livre\n- مدرسة (madrasa) = école\n\n## Prononciation\n- Les voyelles courtes: fatha (a), damma (u), kasra (i)\n- Les voyelles longues: ā, ū, ī\n- La sunna (shamsiyyah) et la lune (qamariyyah)"),
     ]
-    for s, t, c2 in matieres:
-        c.execute("INSERT OR IGNORE INTO cours (sujet_code,titre,contenu,niveau) VALUES (?,?,?,?)", (s, t, c2, "1ère-Terminale"))
+    if c.execute("SELECT COUNT(*) FROM cours").fetchone()[0] == 0:
+        for s, t, c2 in matieres:
+            c.execute("INSERT INTO cours (sujet_code,titre,contenu,niveau) VALUES (?,?,?,?)",
+                      (s, t, c2, "1ère-Terminale"))
 
-    # 528 exercices from data_seed.py
-    for e in SEED_EXERCICES:
-        c.execute("INSERT OR IGNORE INTO exercises (sujet_code,titre,niveau,type,question,reponse,explication) VALUES (?,?,?,?,?,?,?)", tuple(e))
+    # Exercices de secours : uniquement si la base est vide (sinon le contenu
+    # équilibré livré avec ecolemax.db est conservé tel quel).
+    if c.execute("SELECT COUNT(*) FROM exercises").fetchone()[0] == 0:
+        for e in SEED_EXERCICES:
+            c.execute("INSERT INTO exercises (sujet_code,titre,niveau,type,question,reponse,explication) VALUES (?,?,?,?,?,?,?)", tuple(e))
 
-    # 720 quiz from data_seed.py
-    for q in SEED_QUIZ:
-        c.execute("INSERT OR IGNORE INTO quiz (categorie,question,reponse,explication) VALUES (?,?,?,?)", tuple(q))
+    if c.execute("SELECT COUNT(*) FROM quiz").fetchone()[0] == 0:
+        for q in SEED_QUIZ:
+            c.execute("INSERT INTO quiz (categorie,question,reponse,explication) VALUES (?,?,?,?)", tuple(q))
 
     c.execute("INSERT OR IGNORE INTO users (pseudo,email,mot_de_passe,niveau,role,created_at) VALUES (?,?,?,?,?,?)",
               ("admin","admin@ecolemax.sn",hash_pass("ecolemax2026"),"Administrateur","admin",now()))
@@ -272,7 +637,7 @@ def get_iou_ai(q, max_tokens=OVH_AI_MAX_TOKENS, temperature=0.4, max_retries=2, 
     with _ai_sem:
         print(f"🟣 AI OVH → model={OVH_AI_MODEL} max_tokens={max_tokens} q={q[:60]}...")
         messages = [
-            {"role": "system", "content": "Tu es un professeur patient et pédagogue. Réponds TOUJOURS en français, clair, concis et adapté au niveau scolaire de l'élève."},
+            {"role": "system", "content": "Tu es un professeur clair et concis. Réponds en français, en 6 lignes maximum, adapté au niveau de l'élève."},
             {"role": "user", "content": q}
         ]
         payload = {"model": OVH_AI_MODEL, "messages": messages, "max_tokens": max_tokens, "temperature": temperature}
@@ -290,7 +655,7 @@ def get_iou_ai(q, max_tokens=OVH_AI_MAX_TOKENS, temperature=0.4, max_retries=2, 
             except Exception as e:
                 last_err = str(e)
                 if attempt < max_retries:
-                    time.sleep(2 * (attempt + 1))
+                    time.sleep(0.5 * (attempt + 1))
         if not silent: print(f"❌ AI OVH FAIL: {last_err}")
         return False, "", last_err
 
@@ -320,7 +685,7 @@ def get_iou_ai_vision(q, image_b64, max_tokens=OVH_AI_MAX_TOKENS, temperature=0.
             except Exception as e:
                 last_err = str(e)
                 if attempt < 2:
-                    time.sleep(2 * (attempt + 1))
+                    time.sleep(0.5 * (attempt + 1))
         if not silent: print(f"❌ AI OVH Vision FAIL: {last_err}")
         return False, "", last_err
 
@@ -484,6 +849,10 @@ def detect_matier(q):
     return "multi"
 
 def get_local_reponse(q):
+    try:
+        return local_engine.repondre_localement(q)
+    except Exception:
+        pass
     sub = detect_matier(q)
     funcs = {
         "math": local_reponse_math, "fr": local_reponse_fr,
@@ -497,20 +866,23 @@ def get_local_reponse(q):
 
 def reponse_ia(q, plan=None):
     q_send = q[:1500]
+    # 1) réponse locale instantanée (si la question correspond à un fait vérifié)
     try:
-        ok, text, src = get_iou_ai(q_send, max_tokens=OVH_AI_MAX_TOKENS)
-        if ok: return {"reponse": text, "source": src, "succes": True}
-    except Exception as e:
+        local = local_engine.repondre_localement(q_send)
+        if local and not local.startswith("Je n'ai pas trouvé"):
+            return {"reponse": local, "source": "ÉcoleMax Local", "succes": True, "instant": True}
+    except Exception:
         pass
+    # 2) cache
+    hit = ai_cache_get("ask", q_send)
+    if hit:
+        return {"reponse": hit, "source": "Cache", "succes": True, "cache": True}
     try:
-        ok, text, src = get_iou_ai_fallback(q_send, max_tokens=OVH_AI_MAX_TOKENS)
-        if ok: return {"reponse": text, "source": src, "succes": True}
-    except Exception as e:
-        pass
-    try:
-        ok, text, src = get_pollinations(q_send, max_tokens=OVH_AI_MAX_TOKENS)
-        if ok: return {"reponse": text, "source": src, "succes": True}
-    except Exception as e:
+        ok, text, src = ai_smart(q_send, max_tokens=OVH_AI_MAX_TOKENS)
+        if ok:
+            ai_cache_set("ask", q_send, text)
+            return {"reponse": text, "source": src, "succes": True}
+    except Exception:
         pass
     return {"reponse": get_local_reponse(q_send), "source": "Local", "succes": True}
 
@@ -550,13 +922,30 @@ def reponse_traduction(texte, langue, plan=None):
         "zh": "mandarin", "hi": "hindi", "ru": "russe", "ja": "japonais"
     }
     nom_langue = langues.get(langue, langue)
-    prompt = "Traduis ce texte en " + nom_langue + ". Donne uniquement la traduction, rien d'autre. Texte : " + texte
-    ok, trad, src = get_iou_ai(prompt, max_tokens=1000, temperature=0.1, silent=True)
-    if ok: return {"reponse": trad, "langue": langue, "source": src, "succes": True}
-    ok, trad, src = get_iou_ai_fallback(prompt, max_tokens=1000, silent=True)
-    if ok: return {"reponse": trad, "langue": langue, "source": src, "succes": True}
-    ok, trad, src = get_pollinations(prompt, max_tokens=1000, silent=True)
-    if ok: return {"reponse": trad, "langue": langue, "source": src, "succes": True}
+    texte = (texte or "").strip()[:1200]
+
+    # 1) dictionnaire local instantané
+    loc = traduction_locale(texte, langue)
+    if loc:
+        return {"reponse": loc, "langue": langue, "source": "Local", "succes": True, "cache": True}
+
+    # 2) cache (traduction déjà faite)
+    hit = ai_cache_get("trad", texte, langue)
+    if hit:
+        return {"reponse": hit, "langue": langue, "source": "Cache", "succes": True, "cache": True}
+
+    # 3) IA : consigne minimale, sortie courte
+    prompt = "Traduis en " + nom_langue + ". Réponds uniquement par la traduction :\n" + texte
+    sys_trad = "Tu es un traducteur professionnel. Tu réponds uniquement par la traduction demandée, sans commentaire."
+    try:
+        ok, trad, src = ai_smart(prompt, max_tokens=700, temperature=0.0,
+                                 timeout=12, system=sys_trad)
+    except Exception:
+        ok, trad, src = False, "", ""
+    if ok and trad:
+        trad = trad.strip().strip('"').strip()
+        ai_cache_set("trad", texte, trad, langue)
+        return {"reponse": trad, "langue": langue, "source": src, "succes": True}
     return {"reponse": "⚠️ Traduction indisponible momentanément", "langue": langue, "source": "Local", "succes": False}
 
 # ─── Flask App ───
@@ -742,82 +1131,117 @@ def api_languages():
         {"code":"ja","nom":"Japonais","emoji":"🇯🇵"},
     ]})
 
+def _parse_options(question, options_json, reponse):
+    """Retourne (question_nettoyee, liste_options, index_correct)."""
+    import json as _j
+    import re as _re2
+    q = question or ""
+    opts = []
+    if options_json:
+        try:
+            o = _j.loads(options_json)
+            if isinstance(o, list) and len(o) >= 2:
+                opts = [str(x) for x in o]
+        except Exception:
+            opts = []
+    if not opts:
+        # ancien format écrit dans l'énoncé : "... [a/b/c/d]"
+        m = _re2.search(r"\[(.+?)\]\s*$", q)
+        if m:
+            raw = m.group(1)
+            sep = "/" if "/" in raw else "|"
+            opts = [x.strip() for x in raw.split(sep) if x.strip()]
+            q = q[:m.start()].strip()
+    idx = -1
+    if opts:
+        rep = str(reponse) if reponse is not None else ""
+        if rep in opts:
+            idx = opts.index(rep)
+    return q, opts, idx
+
 @app.route("/api/exercises")
 def api_exercises():
     sujet = request.args.get("sujet","")
     niveau = request.args.get("niveau","")
     difficulte = request.args.get("difficulte","")
     limite = request.args.get("limite","")
+    try:
+        limite_i = int(limite) if limite else 20
+    except Exception:
+        limite_i = 20
+    limite_i = max(1, min(limite_i, 200))
     c = db()
     q = "SELECT * FROM exercises WHERE 1=1"
     params = []
     if sujet: q += " AND sujet_code=?"; params.append(sujet)
-    if niveau: q += " AND niveau=?"; params.append(niveau)
+    if niveau and niveau != "Tous": q += " AND niveau=?"; params.append(niveau)
     if difficulte: q += " AND difficulte=?"; params.append(difficulte)
-    if limite: q += " LIMIT " + str(int(limite))
+    q += " ORDER BY RANDOM() LIMIT ?"
+    params.append(limite_i)
     rows = c.execute(q, params).fetchall()
+    total = c.execute("SELECT COUNT(*) FROM exercises WHERE 1=1" + (
+        " AND sujet_code=?" if sujet else "") + (
+        " AND niveau=?" if niveau and niveau != "Tous" else ""),
+        ([sujet] if sujet else []) + ([niveau] if niveau and niveau != "Tous" else [])).fetchone()[0]
     c.close()
-    # Extraire les options de la question [opt1/opt2/opt3]
-    import re as _re
     import json as _json
     result = []
     for r in rows:
         ex = dict(r)
-        question = ex.get("question","")
-        m = _re.search(r"\[([a-zA-ZÀ-ÿ0-9]+(?:/[a-zA-ZÀ-ÿ0-9]+)+)\]", question)
-        if m:
-            opts = [o.strip() for o in m.group(1).split("/")]
-            ex["options"] = _json.dumps(opts, ensure_ascii=False)
-            ex["question"] = _re.sub(r"\s*\[([a-zA-ZÀ-ÿ0-9]+(?:/[a-zA-ZÀ-ÿ0-9]+)+)\]", "", question).strip()
-        else:
-            ex["options"] = "[]"
+        question, opts, idx = _parse_options(
+            ex.get("question",""), ex.get("options",""), ex.get("reponse",""))
+        ex["question"] = question
+        ex["options"] = _json.dumps(opts, ensure_ascii=False)
+        ex["bonne_index"] = idx
         result.append(ex)
-    return jsonify({"exercices": result})
+    return jsonify({"exercices": result, "total": total})
 
 @app.route("/api/quiz")
 def api_quiz():
     categorie = request.args.get("categorie","")
     difficulte = request.args.get("difficulte","")
     limite = request.args.get("limite","")
+    try:
+        limite_i = int(limite) if limite else 10
+    except Exception:
+        limite_i = 10
+    limite_i = max(1, min(limite_i, 100))
     c = db()
     q = "SELECT * FROM quiz WHERE 1=1"
     params = []
     if categorie: q += " AND categorie=?"; params.append(categorie)
     if difficulte: q += " AND difficulte=?"; params.append(difficulte)
-    if limite: q += " LIMIT " + str(int(limite))
+    q += " ORDER BY RANDOM() LIMIT ?"
+    params.append(limite_i)
     rows = c.execute(q, params).fetchall()
     c.close()
-    # Générer les options dynamiquement
-    import random as _random
     import json as _json2
-    # Pool de réponses wrong par catégorie
-    _wrong_pools = {
-        "Géographie": ["Conakry","Bamako","Abidjan","Ouagadougou","Dakar","Saint-Louis","Ziguinchor","Lomé","Cotonou","Niamey"],
-        "Histoire": ["1960","1965","1970","1958","Senghor","Diouf","Wade","Macky","Goree","Saint-Louis"],
-        "Maths": ["2x","3x","5x","10","15","20","100","0","1","1000"],
-        "Français": ["cheval","chevaux","pronom relatif","qui","que","où","en","au","du","les"],
-        "Physique": ["Newton","300000 km/s","énergie","masse","vitesse","accélération","force","travail","puissance","moment"],
-        "Chimie": ["H₂O","CO₂","7","14","1","100","Zn","Cu","O₂","N₂"],
-        "SVT": ["cœur","gène","photosynthèse","cellule","organite","ADN","ARN","proteine","sang","nerf"],
-        "Anglais": ["hello","books","je suis","good","bad","yes","no","one","two","three"],
-        "Informatique": ["&&","CSS","CREATE","O(log n)","Python","Java","HTML","SQL","algorithme","base de données"],
-        "Économie": ["XOF","FCFA","BCEAO","OMC","1 EUR","500","1000","2000","inflation","taux"],
-    }
     result = []
     for r in rows:
         qz = dict(r)
-        idx = qz.get("reponse", 0)
-        if idx >= 4: idx = 0
-        correct = qz.get("explication", "")
-        cat = qz.get("categorie", "")
-        pool = _wrong_pools.get(cat, ["Option A","Option B","Option C","Option D"])
-        wrong = _random.sample([p for p in pool if p != correct], min(3, len(pool)-1)) if len(pool) > 1 else ["A","B","C"]
-        while len(wrong) < 3: wrong.append(f"Option {chr(65+len(wrong))}")
-        options = [""] * 4
-        for i in range(4):
-            if i == idx: options[i] = correct
-            else: options[i] = wrong.pop(0) if wrong else f"Option {chr(65+i)}"
-        qz["options"] = _json2.dumps(options, ensure_ascii=False)
+        idx = int(qz.get("reponse") or 0)
+        # Cas 1 : options stockées (contenu récent)
+        opts = []
+        if qz.get("options"):
+            try:
+                o = _json2.loads(qz["options"])
+                if isinstance(o, list) and len(o) >= 2:
+                    opts = [str(x) for x in o]
+            except Exception:
+                opts = []
+        if not opts:
+            # Cas 2 : ancien format → reconstituer à partir de l'explication
+            correct = (qz.get("explication") or "").strip() or "Réponse"
+            pool = ["Aucune de ces réponses", "Toutes ces réponses", "Ne sait pas",
+                    "Cette notion n'existe pas", "Réponse non déterminée"]
+            pool = [p for p in pool if p != correct][:3]
+            opts = [correct] + pool
+            idx = 0
+        if idx < 0 or idx >= len(opts):
+            idx = 0
+        qz["options"] = _json2.dumps(opts, ensure_ascii=False)
+        qz["bonne_index"] = idx
+        qz["reponse"] = idx
         result.append(qz)
     return jsonify({"quiz": result})
 
@@ -836,8 +1260,22 @@ def api_register():
         c.close()
         return jsonify({"erreur":"Ce pseudo est déjà pris"}), 409
     code_recup = "-".join([secrets.token_hex(2).upper() for _ in range(2)])
-    c.execute("INSERT INTO users (pseudo,email,mot_de_passe,niveau,created_at,recovery_code) VALUES (?,?,?,?,?,?)",
-              (pseudo,email,hash_pass(mdp),niveau,now(),hash_pass(code_recup.replace("-","").upper())))
+    canal = detecter_canal()
+    try:
+        canal = (data.get("canal") or canal).lower()
+        if canal not in ("site", "app"):
+            canal = "site"
+    except Exception:
+        canal = "site"
+    appareil = (request.headers.get("User-Agent", "") or "")[:180]
+    try:
+        c.execute("INSERT INTO users (pseudo,email,mot_de_passe,niveau,created_at,recovery_code,"
+                  "canal,dernier_canal,appareil,derniere_activite) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                  (pseudo,email,hash_pass(mdp),niveau,now(),hash_pass(code_recup.replace("-","").upper()),
+                   canal,canal,appareil,now()))
+    except Exception:
+        c.execute("INSERT INTO users (pseudo,email,mot_de_passe,niveau,created_at,recovery_code) VALUES (?,?,?,?,?,?)",
+                  (pseudo,email,hash_pass(mdp),niveau,now(),hash_pass(code_recup.replace("-","").upper())))
     uid = c.execute("SELECT id FROM users WHERE pseudo=?", (pseudo,)).fetchone()["id"]
     c.execute("INSERT INTO sessions (token,user_id,expires_at,created_at) VALUES (?,?,?,?)",
               (jwt_create(uid),uid,datetime.datetime.now().isoformat(),now()))
@@ -845,8 +1283,9 @@ def api_register():
               (uid,"Bienvenue sur ÉcoleMax !","Ton essai gratuit de 48 H est activé. IA illimitée. Bon apprentissage 🎓","system",0,now()))
     c.commit()
     c.close()
-    log_sec(uid, "inscription", "Nouvel élève")
-    return jsonify({"ok":True,"token":jwt_create(uid),"user":{"id":uid,"pseudo":pseudo},
+    log_sec(uid, "inscription", "Nouvel élève via " + canal)
+    return jsonify({"ok":True,"token":jwt_create(uid),"user":{"id":uid,"pseudo":pseudo,"canal":canal},
+                    "canal":canal,
                     "code_recuperation":code_recup,
                     "message":"Note ce code : il te permettra de recuperer ton compte si tu oublies ton mot de passe."})
 
@@ -857,11 +1296,20 @@ def api_login():
     mdp = data.get("mot_de_passe","")
     c = db()
     u = c.execute("SELECT * FROM users WHERE pseudo=?", (pseudo,)).fetchone()
-    c.close()
     if not u or not verify_pass(mdp, u["mot_de_passe"]):
+        c.close()
         return jsonify({"erreur":"Identifiants invalides"}), 401
-    log_sec(u["id"], "connexion", "Connexion élève")
-    return jsonify({"ok":True,"token":jwt_create(u["id"]),"user":{"id":u["id"],"pseudo":u["pseudo"]}})
+    canal = detecter_canal()
+    try:
+        c.execute("UPDATE users SET dernier_canal=?, derniere_activite=?, last_login=? WHERE id=?",
+                  (canal, now(), now(), u["id"]))
+        c.commit()
+    except Exception:
+        pass
+    c.close()
+    log_sec(u["id"], "connexion", "Connexion élève (" + canal + ")")
+    return jsonify({"ok":True,"token":jwt_create(u["id"]),
+                    "user":{"id":u["id"],"pseudo":u["pseudo"],"canal":canal},"canal":canal})
 
 @app.route("/api/me")
 def api_me():
@@ -1941,7 +2389,25 @@ def api_admin_live():
         return jsonify({"erreur":"Non autorisé"}), 403
     c = db()
     g = lambda q, *a: (c.execute(q, a).fetchone() or [0])[0]
+    try:
+        ins_site = g("SELECT COUNT(*) FROM users WHERE COALESCE(canal,'site')='site'")
+        ins_app  = g("SELECT COUNT(*) FROM users WHERE canal='app'")
+    except Exception:
+        ins_site, ins_app = g("SELECT COUNT(*) FROM users"), 0
+    try:
+        abo_site = g("SELECT COUNT(*) FROM abonnements a JOIN users u ON u.id=a.user_id WHERE COALESCE(u.canal,'site')='site'")
+        abo_app  = g("SELECT COUNT(*) FROM abonnements a JOIN users u ON u.id=a.user_id WHERE u.canal='app'")
+        abo_app_actifs = g("SELECT COUNT(*) FROM abonnements a JOIN users u ON u.id=a.user_id WHERE u.canal='app' AND a.statut='actif'")
+        abo_site_actifs = g("SELECT COUNT(*) FROM abonnements a JOIN users u ON u.id=a.user_id WHERE COALESCE(u.canal,'site')='site' AND a.statut='actif'")
+    except Exception:
+        abo_site = abo_app = abo_app_actifs = abo_site_actifs = 0
     stats = {
+        "inscrits_site": ins_site,
+        "inscrits_app":  ins_app,
+        "abos_site":     abo_site,
+        "abos_app":      abo_app,
+        "abos_site_actifs": abo_site_actifs,
+        "abos_app_actifs":  abo_app_actifs,
         "total_users":   g("SELECT COUNT(*) FROM users"),
         "total_abos":    g("SELECT COUNT(*) FROM abonnements"),
         "abos_actifs":   g("SELECT COUNT(*) FROM abonnements WHERE statut='actif'"),
@@ -1961,6 +2427,7 @@ def api_admin_live():
     }
     inscrits = [dict(r) for r in c.execute("""
         SELECT u.id, u.pseudo, u.email, u.niveau, u.role, u.created_at,
+               COALESCE(u.canal,'site') AS canal, u.dernier_canal,
                a.plan_code, p.nom AS plan_nom, a.statut AS abo_statut, a.expire
         FROM users u
         LEFT JOIN abonnements a ON a.id = (SELECT id FROM abonnements WHERE user_id=u.id ORDER BY id DESC LIMIT 1)
@@ -1968,7 +2435,8 @@ def api_admin_live():
         ORDER BY u.id DESC LIMIT 15""").fetchall()]
     abonnes = [dict(r) for r in c.execute("""
         SELECT a.id, a.user_id, u.pseudo, u.email, a.plan_code, p.nom AS plan_nom,
-               a.statut, a.debut, a.expire, a.montant
+               a.statut, a.debut, a.expire, a.montant,
+               COALESCE(u.canal,'site') AS canal, u.dernier_canal
         FROM abonnements a LEFT JOIN users u ON u.id=a.user_id
         LEFT JOIN plans p ON p.code=a.plan_code
         ORDER BY a.id DESC LIMIT 15""").fetchall()]
@@ -2165,6 +2633,9 @@ def catalogue_page():
 @app.route('/catalogue-SYCHEIKHCORP.html')
 def catalogue_page2():
     return send_file('catalogue-SYCHEIKHCORP.html')
+
+init_ai_cache()
+ensure_user_columns()
 
 if __name__ == "__main__":
     print("🟢 ÉcoleMax Flask → http://0.0.0.0:" + str(PORT))

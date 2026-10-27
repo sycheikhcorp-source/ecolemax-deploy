@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ÉcoleMax — Catalogue SYCHEIKHCORP</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#f8fafc;color:#0f172a;line-height:1.6}
+.page{max-width:800px;margin:0 auto;background:#fff;padding:40px;box-shadow:0 2px 20px rgba(0,0,0,.08)}
+.cover{text-align:center;padding:60px 40px;background:linear-gradient(135deg,#1565d8 0%,#7c3aed 100%);color:#fff;border-radius:20px;margin-bottom:30px}
+.cover h1{font-size:36px;font-weight:900;margin-bottom:10px}
+.cover p{opacity:.9;font-size:16px}
+.section{margin:30px 0}
+.section h2{color:#1565d8;font-size:22px;margin-bottom:15px;padding-bottom:8px;border-bottom:2px solid #e8f1ff}
+.service-card{background:#f8fafc;border-radius:16px;padding:20px;margin:15px 0;border:1px solid #e2e8f0}
+.service-card h3{color:#1565d8;margin-bottom:8px}
+.service-card p{color:#475569;font-size:14px}
+.feature-list{list-style:none;margin:10px 0}
+.feature-list li{padding:6px 0;padding-left:24px;position:relative}
+.feature-list li::before{content:"✓";color:#16a34a;font-weight:900;position:absolute;left:0}
+.mockup{text-align:center;margin:20px 0}
+.mockup img{max-width:100%;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.12)}
+.mockup figcaption{font-size:13px;color:#64748b;margin-top:8px}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:15px;margin:20px 0}
+.stat-card{background:linear-gradient(135deg,#1565d8 0%,#7c3aed 100%);color:#fff;padding:20px;border-radius:16px;text-align:center}
+.stat-card .num{font-size:28px;font-weight:900}
+.stat-card .label{font-size:12px;opacity:.9}
+.plan{border:2px solid #1565d8;border-radius:16px;padding:20px;margin:15px 0}
+.plan h3{color:#1565d8}
+.plan .price{font-size:24px;font-weight:900;color:#7c3aed}
+.plan ul{list-style:none;margin:10px 0}
+.plan ul li{padding:4px 0;padding-left:20px;position:relative}
+.plan ul li::before{content:"•";color:#1565d8;position:absolute;left:0}
+.footer{text-align:center;padding:30px;margin-top:30px;border-top:2px solid #e2e8f0}
+.footer .brand{font-size:18px;font-weight:900;color:#1565d8}
+.footer .verif{font-size:14px;color:#64748b;margin-top:8px}
+.footer .verif strong{color:#7c3aed}
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="cover">
+  <h1>ÉcoleMax</h1>
+  <p>Plateforme d'apprentissage complète — Site + App Android + Dashboard Admin</p>
+  <p>47 522 exercices · 48 946 quiz · IA pédagogique · 4 niveaux de difficulté</p>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card"><div class="num">47 522</div><div class="label">Exercices</div></div>
+  <div class="stat-card"><div class="num">48 946</div><div class="label">Quiz</div></div>
+  <div class="stat-card"><div class="num">176+</div><div class="label">Élèves</div></div>
+</div>
+
+<div class="section">
+  <h2>Site Web — ecolemax.onrender.com</h2>
+  <div class="service-card">
+    <h3>🌐 Accès par navigateur</h3>
+    <p>Site accessible sur tous les navigateurs modernes. Inscription, connexion, exercices, quiz, IA.</p>
+  </div>
+  <ul class="feature-list">
+    <li>Inscription et connexion sécurisées (JWT)</li>
+    <li>Exercices interactifs avec correction automatique</li>
+    <li>Quiz de 15+ questions par session</li>
+    <li>Assistant IA pédagogique (français)</li>
+    <li>Traduction en 10 langues</li>
+    <li>Historique synchronisé</li>
+  </ul>
+</div>
+
+<div class="section">
+  <h2>Application Android — APK</h2>
+  <div class="mockup">
+    <img src="images/app-android.png" alt="Application Android ÉcoleMax">
+    <figcaption>Application ÉcoleMax sur Android</figcaption>
+  </div>
+  <div class="service-card">
+    <h3>📱 Installation facile</h3>
+    <p>APK signé, compatible Android 10+. Télécharger → Installer → Ouvrir → Créer compte.</p>
+  </div>
+  <ul class="feature-list">
+    <li>Compatible Android 10+ (minSdk=29)</li>
+    <li>Toutes les matières et exercices du site</li>
+    <li>Niveaux : facile, moyen, difficile, expert</li>
+    <li>Quiz 15+ questions + chronomètre</li>
+    <li>Assistant IA accessible depuis l'app</li>
+    <li>Synchronisation avec le site et dashboard</li>
+  </ul>
+  <p><strong>Lien APK :</strong> https://ecolemax.onrender.com/EcoleMax.apk</p>
+</div>
+
+<div class="section">
+  <h2>Dashboard Administrateur</h2>
+  <div class="mockup">
+    <img src="images/dashboard-admin.png" alt="Dashboard administrateur ÉcoleMax">
+    <figcaption>Dashboard admin — gestion complète en temps réel</figcaption>
+  </div>
+  <div class="service-card">
+    <h3>🛡️ Gestion complète</h3>
+    <p>Connecté en temps réel à la base de données. Inscriptions, activités, comptes, résultats.</p>
+  </div>
+  <ul class="feature-list">
+    <li>Inscriptions en temps réel (site + app)</li>
+    <li>Liste des 176+ élèves</li>
+    <li>Blocage / déblocage / suppression</li>
+    <li>Statistiques : exercices, quiz, résultats, IA</li>
+    <li>Gestion abonnements et paiements</li>
+    <li>Journal d'activité et logs sécurité</li>
+  </ul>
+  <p><strong>Dashboard :</strong> https://ecolemax.onrender.com/dashboard </p>
+</div>
+
+<div class="section">
+  <h2>Abonnements (FCFA)</h2>
+  <div class="plan">
+    <h3>Test 10 jours</h3>
+    <div class="price">500 FCFA</div>
+    <ul><li>Accès complet 10 jours</li><li>IA illimitée</li><li>Tous les exercices et quiz</li><li>4 niveaux de difficulté</li></ul>
+  </div>
+  <div class="plan">
+    <h3>Mensuel</h3>
+    <div class="price">1 500 FCFA</div>
+    <ul><li>Accès complet 30 jours</li><li>IA illimitée</li><li>Tous les exercices et quiz</li><li>4 niveaux de difficulté</li></ul>
+  </div>
+  <div class="plan">
+    <h3>Trimestriel</h3>
+    <div class="price">3 000 FCFA</div>
+    <ul><li>Accès complet 90 jours</li><li>IA illimitée</li><li>Tous les exercices et quiz</li><li>4 niveaux de difficulté</li></ul>
+  </div>
+  <div class="plan">
+    <h3>Annuel</h3>
+    <div class="price">10 000 FCFA</div>
+    <ul><li>Accès complet 365 jours</li><li>IA illimitée</li><li>Tous les exercices et quiz</li><li>Le plus économique</li></ul>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Fonctionnalités principales</h2>
+  <div class="service-card">
+    <h3>📚 Exercices — 47 522</h3>
+    <ul class="feature-list">
+      <li>4 niveaux : facile, moyen, difficile, expert</li>
+      <li>10 matières</li>
+      <li>Niveaux : 2nde, 1ère, Terminale, 3ème, 2ème</li>
+      <li>Correction automatique + explications</li>
+    </ul>
+  </div>
+  <div class="service-card">
+    <h3>🎯 Quiz — 48 946</h3>
+    <ul class="feature-list">
+      <li>15+ questions par session</li>
+      <li>4 niveaux de difficulté</li>
+      <li>Correction automatique</li>
+      <li>Explications détaillées</li>
+    </ul>
+  </div>
+  <div class="service-card">
+    <h3>🤖 Assistant IA</h3>
+    <ul class="feature-list">
+      <li>Réponses rapides, précises, pédagogiques</li>
+      <li>Français optimisé</li>
+      <li>Traduction 10 langues</li>
+      <li>Correction + analyse photos</li>
+    </ul>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Contact</h2>
+  <div class="service-card">
+    <p>📧 sycheikhcorp@gmail.com</p>
+    <p>📞 +221 767 283 959</p>
+    <p>🌐 https://ecolemax.onrender.com</p>
+  </div>
+</div>
+
+<div class="footer">
+  <div class="brand">SYCHEIKHCORP</div>
+  <div class="verif">✅ <strong>CREE PAR SYCHEIKHCORP</strong></div>
+</div>
+
+</div>
+</body>
+</html>
+<!-- rebuild Mon Oct 26 23:13:07 UTC 2026 -->

@@ -1,12 +1,5 @@
+*.bak_*
+ecolemax.db.avant-contenu-*
+ecolemax.db.*
 __pycache__/
 *.pyc
-apk-build/sortie/
-apk-build/assets/
-*.db-shm
-*.db-wal
-trigger
-*.bak_*
-*.OLD_*
-*.OLD_EXPOSE_PW
-cloudflared.log
-images/

@@ -348,6 +348,8 @@ tbody tr.nouveau{animation:rowNew 3s ease}
     <div class="view on" id="v-apercu">
       <div class="kpis">
         <div class="kpi" id="k-users"><div class="kpi-lbl">Élèves inscrits</div><div class="kpi-val bleu" id="s-users">—</div><div class="kpi-sub" id="s-users-sub">total base</div></div>
+        <div class="kpi" id="k-site"><div class="kpi-lbl">Inscrits — Site web</div><div class="kpi-val bleu" id="s-site">—</div><div class="kpi-sub" id="s-site-sub">—</div></div>
+        <div class="kpi" id="k-app"><div class="kpi-lbl">Inscrits — Application</div><div class="kpi-val violet" id="s-app">—</div><div class="kpi-sub" id="s-app-sub">—</div></div>
         <div class="kpi" id="k-abos"><div class="kpi-lbl">Abonnés actifs</div><div class="kpi-val vert" id="s-abos">—</div><div class="kpi-sub" id="s-abos-sub">—</div></div>
         <div class="kpi" id="k-new"><div class="kpi-lbl">Nouveaux 24 h</div><div class="kpi-val violet" id="s-new">—</div><div class="kpi-sub" id="s-new-sub">—</div></div>
         <div class="kpi" id="k-pays"><div class="kpi-lbl">Paiements en attente</div><div class="kpi-val orange" id="s-pays">—</div><div class="kpi-sub">à valider</div></div>
@@ -361,7 +363,7 @@ tbody tr.nouveau{animation:rowNew 3s ease}
           <span class="card-badge" id="badge-inscrits">0</span>
         </div>
         <div class="card-body"><div class="tbl-wrap"><table>
-          <thead><tr><th>Élève</th><th>Niveau</th><th>Inscription</th><th>Abonnement</th></tr></thead>
+          <thead><tr><th>Élève</th><th>Niveau</th><th>Canal</th><th>Inscription</th><th>Abonnement</th></tr></thead>
           <tbody id="tb-inscrits-recent"></tbody>
         </table></div></div>
       </div>
@@ -377,7 +379,7 @@ tbody tr.nouveau{animation:rowNew 3s ease}
       <div class="card">
         <div class="card-head"><div class="card-title">Inscriptions en temps réel</div><span class="card-badge" id="badge-insc">0</span></div>
         <div class="tbl-wrap"><table>
-          <thead><tr><th>Élève</th><th>Email</th><th>Niveau</th><th>Date d'inscription</th><th>Statut</th></tr></thead>
+          <thead><tr><th>Élève</th><th>Email</th><th>Niveau</th><th>Canal</th><th>Date d'inscription</th><th>Statut</th></tr></thead>
           <tbody id="tb-inscriptions"></tbody>
         </table></div>
       </div>
@@ -388,7 +390,7 @@ tbody tr.nouveau{animation:rowNew 3s ease}
       <div class="card">
         <div class="card-head"><div class="card-title">Abonnements</div><span class="card-badge" id="badge-abos">0</span></div>
         <div class="tbl-wrap"><table>
-          <thead><tr><th>Élève</th><th>Formule</th><th>Statut</th><th>Début</th><th>Expiration</th><th>Montant</th></tr></thead>
+          <thead><tr><th>Élève</th><th>Formule</th><th>Canal</th><th>Statut</th><th>Début</th><th>Expiration</th><th>Montant</th></tr></thead>
           <tbody id="tb-abonnes"></tbody>
         </table></div>
       </div>
@@ -584,6 +586,10 @@ function renderAll(d){
 
   $('s-users').textContent = nf(s.total_users);
   $('s-users-sub').textContent = s.bloques + ' bloqué(s) · ' + s.inscrits_7j + ' sur 7 j';
+  $('s-site').textContent = nf(s.inscrits_site || 0);
+  $('s-site-sub').textContent = (s.abos_site_actifs || 0) + ' abonné(s) actif(s) · ' + (s.abos_site || 0) + ' au total';
+  $('s-app').textContent = nf(s.inscrits_app || 0);
+  $('s-app-sub').textContent = (s.abos_app_actifs || 0) + ' abonné(s) actif(s) · ' + (s.abos_app || 0) + ' au total';
   $('s-abos').textContent = nf(s.abos_actifs);
   $('s-abos-sub').textContent = s.abos_attente + ' en attente · ' + s.total_abos + ' au total';
   $('s-new').textContent = nf(s.inscrits_24h);
@@ -612,10 +618,11 @@ function renderAll(d){
       <tr>
         <td><div class="u-pseudo"><div class="avatar">${esc(initials(u.pseudo))}</div>${esc(u.pseudo)}</div></td>
         <td><span class="tag bleu">${esc(u.niveau || '—')}</span></td>
+        <td>${(u.canal==='app')?'<span class="tag violet">📱 App</span>':'<span class="tag bleu">💻 Site</span>'}</td>
         <td class="muted">${esc(fmtDate(u.created_at))}<br><span style="font-size:11.5px">${esc(ago(u.created_at))}</span></td>
         <td>${u.plan_nom ? '<span class="tag violet">'+esc(u.plan_nom)+'</span>' : '<span class="tag gris">Aucun</span>'}</td>
       </tr>`).join('')
-    : emptyRow(4, "Aucune inscription pour l'instant");
+    : emptyRow(6, "Aucune inscription pour l'instant");
 
   $('badge-inscrits').textContent = s.total_users + ' inscrits';
 
@@ -626,10 +633,11 @@ function renderAll(d){
         <td><div class="u-pseudo"><div class="avatar">${esc(initials(u.pseudo))}</div>${esc(u.pseudo)}</div></td>
         <td class="muted">${esc(u.email || '—')}</td>
         <td><span class="tag bleu">${esc(u.niveau || '—')}</span></td>
+        <td>${(u.canal==='app')?'<span class="tag violet">📱 App</span>':'<span class="tag bleu">💻 Site</span>'}${u.dernier_canal && u.dernier_canal!==u.canal ? '<br><span style="font-size:10.5px;color:var(--muet)">dernier : '+esc(u.dernier_canal)+'</span>' : ''}</td>
         <td class="muted">${esc(fmtDate(u.created_at))}</td>
         <td>${u.role === 'bloque' ? '<span class="tag rouge">Bloqué</span>' : '<span class="tag vert">Actif</span>'}</td>
       </tr>`).join('')
-    : emptyRow(5, "Aucune inscription pour l'instant");
+    : emptyRow(6, "Aucune inscription pour l'instant");
   $('badge-insc').textContent = s.total_users;
 
   // --- Abonnés ---
@@ -638,12 +646,13 @@ function renderAll(d){
       <tr>
         <td><div class="u-pseudo"><div class="avatar">${esc(initials(a.pseudo))}</div>${esc(a.pseudo || 'Utilisateur #' + a.user_id)}</div></td>
         <td><span class="tag violet">${esc(a.plan_nom || a.plan_code || '—')}</span></td>
+        <td>${(a.canal==='app')?'<span class="tag violet">📱 App</span>':'<span class="tag bleu">💻 Site</span>'}</td>
         <td>${statutTag(a.statut)}</td>
         <td class="muted">${esc(fmtDate(a.debut))}</td>
         <td class="muted">${esc(fmtDate(a.expire))}</td>
         <td><strong>${nf(a.montant)}</strong> <span class="muted">FCFA</span></td>
       </tr>`).join('')
-    : emptyRow(6, 'Aucun abonnement enregistré');
+    : emptyRow(7, 'Aucun abonnement enregistré');
   $('badge-abos').textContent = s.total_abos;
 
   // --- Paiements ---
