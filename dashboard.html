@@ -388,6 +388,15 @@ tbody tr.nouveau{animation:rowNew 3s ease}
                 <td><button class="btn-sm" onclick="saveKey('GROQ_API_KEY')">Enregistrer</button></td></tr>
           </tbody>
         </table></div>
+        <div class="card-head" style="margin-top:14px"><div class="card-title">📲 Numéros de paiement mobile money</div></div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Moyen</th><th>Numéro marchand</th><th></th></tr></thead>
+          <tbody>
+            <tr><td><strong>Wave</strong></td><td><input id="kNUM_WAVE" placeholder="77 123 45 67" style="width:100%;padding:7px;border:1px solid #d5dbe8;border-radius:8px"></td><td><button class="btn-sm" onclick="saveKey('NUM_WAVE')">Enregistrer</button></td></tr>
+            <tr><td><strong>Orange Money</strong></td><td><input id="kNUM_ORANGE" placeholder="77 123 45 67" style="width:100%;padding:7px;border:1px solid #d5dbe8;border-radius:8px"></td><td><button class="btn-sm" onclick="saveKey('NUM_ORANGE')">Enregistrer</button></td></tr>
+            <tr><td><strong>Free Money</strong></td><td><input id="kNUM_FREE" placeholder="77 123 45 67" style="width:100%;padding:7px;border:1px solid #d5dbe8;border-radius:8px"></td><td><button class="btn-sm" onclick="saveKey('NUM_FREE')">Enregistrer</button></td></tr>
+          </tbody>
+        </table></div>
         <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn-sm" onclick="testTrad()">🚀 Tester la traduction (4 langues)</button>
           <span id="tradRes" class="muted"></span>

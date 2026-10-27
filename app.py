@@ -45,8 +45,9 @@ _SYS_IA = "Tu es un professeur clair et concis. Réponds en français, 6 lignes 
 # survit à TOUS les déploiements (contrairement à la base SQLite).
 def _charger_cles_persistantes():
     import glob
-    chemins = ["/etc/secrets/cles.env", "/etc/secrets/.env", "/etc/secrets/cles.txt",
-               os.path.join(os.path.dirname(os.path.abspath(__file__)), "cles.env")]
+    import glob as _glob
+    chemins = sorted(_glob.glob("/etc/secrets/*")) + [
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "cles.env")]
     charges = 0
     for chemin in chemins:
         try:
@@ -1825,6 +1826,21 @@ def api_support():
         print("[support] email échoué: %s" % e, flush=True)
     return jsonify({"ok":True, "message":"Votre demande a été envoyée. Nous vous répondrons rapidement."})
 
+@app.route("/api/payment/infos")
+def api_payment_infos():
+    """Numéros marchands et moyens de paiement affichés aux élèves (configurables depuis le dashboard)."""
+    moyens = [
+        {"code": "wave",   "nom": "Wave",         "numero": reglage_get("NUM_WAVE", "")},
+        {"code": "orange", "nom": "Orange Money", "numero": reglage_get("NUM_ORANGE", "")},
+        {"code": "free",   "nom": "Free Money",   "numero": reglage_get("NUM_FREE", "")},
+        {"code": "card",   "nom": "Carte bancaire", "numero": ""},
+    ]
+    return jsonify({"moyens": moyens,
+                    "beneficiaire": reglage_get("MARCHAND_NOM", "ÉcoleMax"),
+                    "devise": "FCFA",
+                    "validation": "Ton abonnement est activé dès que le paiement est vérifié par l'administration."})
+
+
 @app.route("/api/subscribe", methods=["POST"])
 def api_subscribe():
     u = get_user_by_token(request)
@@ -1848,7 +1864,17 @@ def api_subscribe():
     c.commit()
     c.close()
     log_sec(u["id"], "paiement_creation", plan_code + " " + method + " " + ref)
-    return jsonify({"ok":True,"reference":ref,"abonnement_id":aid,"montant":plan["prix"]})
+    nums = {"wave": reglage_get("NUM_WAVE", ""), "orange": reglage_get("NUM_ORANGE", ""),
+            "free": reglage_get("NUM_FREE", ""), "card": ""}
+    return jsonify({"ok": True, "reference": ref, "abonnement_id": aid,
+                    "montant": plan["prix"], "plan_nom": plan["nom"], "method": method,
+                    "numero": nums.get(method, ""),
+                    "beneficiaire": reglage_get("MARCHAND_NOM", "ÉcoleMax"),
+                    "statut": "en_attente",
+                    "instructions": ("Envoie %s FCFA au %s (%s) puis indique la référence %s. "
+                                     "Ton abonnement est activé dès vérification."
+                                     % (int(plan["prix"]), nums.get(method, "") or "numéro affiché",
+                                        method, ref))})
 
 @app.route("/api/change_plan", methods=["POST"])
 def api_change_plan():
@@ -1876,9 +1902,18 @@ def api_change_plan():
 
 @app.route("/api/payment/confirm", methods=["POST"])
 def api_payment_confirm():
+    # SÉCURITÉ : la confirmation d'un paiement est réservée à l'administration.
+    # Un élève ne peut donc plus activer un abonnement sans avoir payé.
+    if request.headers.get("X-Admin-Password", "") != ADMIN_PASSWORD:
+        return jsonify({"erreur": "La confirmation est réservée à l'administrateur"}), 403
     u = get_user_by_token(request)
-    if not u: return jsonify({"erreur":"Authentification requise"}), 401
     data = request.get_json(silent=True) or {}
+    if not u:
+        uid = data.get("user_id")
+        c0 = db()
+        u = c0.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone() if uid else None
+        c0.close()
+    if not u: return jsonify({"erreur":"Utilisateur introuvable"}), 400
     ref = data.get("reference","")
     c = db()
     pay = c.execute("SELECT * FROM paiements WHERE reference=?", (ref,)).fetchone()
@@ -1888,6 +1923,10 @@ def api_payment_confirm():
         return jsonify({"erreur":"Ce paiement est déjà traité"}), 400
     c.execute("UPDATE paiements SET statut='success', confirmed_at=? WHERE id=?", (now(), pay["id"]))
     plan = c.execute("SELECT * FROM plans WHERE code=?", (data.get("plan",""),)).fetchone()
+    if not plan and pay["abonnement_id"]:
+        ab = c.execute("SELECT * FROM abonnements WHERE id=?", (pay["abonnement_id"],)).fetchone()
+        if ab:
+            plan = c.execute("SELECT * FROM plans WHERE code=?", (ab["plan_code"],)).fetchone()
     if plan:
         debut = datetime.datetime.now()
         expire = debut + datetime.timedelta(days=plan["duree_jours"])
@@ -1915,6 +1954,25 @@ def api_payment_test():
     log_sec(1, "test_paiement", "Test " + method + " " + ref)
     return jsonify({"ok": True, "reference": ref, "statut": "test_success", "montant": montant,
                     "message": "Paiement test simulé — " + str(montant) + " FCFA"})
+
+
+@app.route("/api/admin/cles/etat")
+def api_admin_cles_etat():
+    """Diagnostic : fichiers secrets vus par le serveur + clés effectivement chargées."""
+    if request.headers.get("X-Admin-Password", "") != ADMIN_PASSWORD:
+        return jsonify({"erreur": "Non autorisé"}), 401
+    import glob as _glob
+    fichiers = {}
+    for f in sorted(_glob.glob("/etc/secrets/*")):
+        try:
+            fichiers[f] = {"taille": os.path.getsize(f),
+                           "apercu": open(f, encoding="utf-8").read()[:60].replace("\n", " | ")}
+        except Exception as e:
+            fichiers[f] = {"erreur": str(e)}
+    env = sorted([k for k in os.environ if any(x in k for x in ("KEY", "DEEPL", "GEMINI", "GROQ", "OPENAI"))])
+    return jsonify({"fichiers_secrets": fichiers, "variables_env": env,
+                    "chargees": {k: bool(cle_api(k)) for k in
+                                 ("DEEPL_API_KEY", "GEMINI_API_KEY", "GROQ_API_KEY", "OPENAI_API_KEY")}})
 
 
 @app.route("/api/admin/reglages", methods=["GET"])
@@ -1957,7 +2015,8 @@ def api_admin_reglage_set():
     data = request.get_json(silent=True) or {}
     cle = (data.get("cle") or "").strip().upper()
     valeur = (data.get("valeur") or "").strip()
-    autorisees = {"GEMINI_API_KEY", "DEEPL_API_KEY", "GROQ_API_KEY", "OPENAI_API_KEY", "TRAD_EMAIL"}
+    autorisees = {"GEMINI_API_KEY", "DEEPL_API_KEY", "GROQ_API_KEY", "OPENAI_API_KEY", "TRAD_EMAIL",
+                  "NUM_WAVE", "NUM_ORANGE", "NUM_FREE", "MARCHAND_NOM"}
     if cle not in autorisees:
         return jsonify({"ok": False, "erreur": "Réglage inconnu"}), 400
     reglage_set(cle, valeur)
