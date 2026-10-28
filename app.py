@@ -3047,7 +3047,7 @@ def keepalive():
 
 
 if KEEPALIVE_ACTIF:
-    _threading.Thread(target=keepalive, daemon=True, name="veille").start()
+    threading.Thread(target=keepalive, daemon=True, name="veille").start()
 
 # Initialiser la base de données au démarrage (fonctionne avec Gunicorn et Flask dev)
 init_db()
