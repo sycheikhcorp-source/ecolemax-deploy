@@ -3242,6 +3242,13 @@ def page_supprimer_compte():
 def catalogue_page():
     return send_file('catalogue-SYCHEIKHCORP.html')
 
+
+@app.route('/catalogue-partenaires')
+@app.route('/catalogue-partenaires.html')
+def catalogue_partenaires_page():
+    """Dossier de présentation aux partenaires (7 pages, imprimable en PDF)."""
+    return send_file('catalogue-partenaires.html')
+
 @app.route('/catalogue-SYCHEIKHCORP.html')
 def catalogue_page2():
     return send_file('catalogue-SYCHEIKHCORP.html')
