@@ -4,3 +4,8 @@ ecolemax.db.*
 __pycache__/
 *.pyc
 apk-build/
+
+# fichiers de veille (générés à l'exécution)
+.demarrage
+.veille.json
+.veille.lock

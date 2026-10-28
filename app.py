@@ -1273,7 +1273,16 @@ def _cors_preflight(_p):
 @app.route("/health")
 @app.route("/api/health")
 def health():
-    return jsonify({"status":"ok","service":"ecolemax","time":now()})
+    """État du serveur + durée de vie de l'instance (preuve qu'il ne dort pas)."""
+    return jsonify({
+        "status": "ok",
+        "service": "ecolemax",
+        "version": "2.4.7",
+        "time": now(),
+        "uptime_s": int(time.time() - DEMARRE_A),
+        "uptime_h": round((time.time() - DEMARRE_A) / 3600.0, 2),
+        "keepalive": etat_veille(),
+    })
 
 
 @app.route("/api/ping")
@@ -2963,25 +2972,82 @@ def api_admin_quiz():
         return jsonify({"ok":True})
 
 
-# Keepalive thread — empêche Render de suspendre le service
+# ─────────────────────────────────────────────────────────────────────────────
+# VEILLE AUTOMATIQUE — empêche Render (offre gratuite) de mettre le service
+# en veille au bout de 15 minutes sans trafic.
+#   • un seul worker Gunicorn pingue (verrou de fichier)
+#   • toutes les 4 minutes
+#   • état exposé publiquement dans /health (uptime_s, keepalive)
+#   • désactivable avec KEEPALIVE=0
+# ─────────────────────────────────────────────────────────────────────────────
+_DOSSIER = os.path.dirname(os.path.abspath(__file__))
+_FICHIER_DEMARRAGE = os.path.join(_DOSSIER, ".demarrage")
+_FICHIER_VEILLE = os.path.join(_DOSSIER, ".veille.json")
+_VERROU_VEILLE = os.path.join(_DOSSIER, ".veille.lock")
+
+try:
+    if not os.path.exists(_FICHIER_DEMARRAGE):
+        _fd = open(_FICHIER_DEMARRAGE, "w"); _fd.write(str(int(time.time()))); _fd.close()
+    DEMARRE_A = int(open(_FICHIER_DEMARRAGE).read().strip() or time.time())
+except Exception:
+    DEMARRE_A = int(time.time())
+
+
+def etat_veille():
+    """Dernier passage de la veille (lu depuis un fichier partagé entre workers)."""
+    try:
+        with open(_FICHIER_VEILLE, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {"actif": KEEPALIVE_ACTIF, "dernier": None, "ok": None}
+
+
+def _ecrire_etat_veille(donnees):
+    try:
+        with open(_FICHIER_VEILLE, "w", encoding="utf-8") as f:
+            json.dump(donnees, f)
+    except Exception:
+        pass
+
+
+KEEPALIVE_ACTIF = os.environ.get("KEEPALIVE", "1") != "0"
+
+
 def keepalive():
-    """Demande /health toutes les 4 minutes pour éviter la suspension Render."""
+    """Ping du service toutes les 4 minutes pour qu'il ne se mette jamais en veille."""
+    import fcntl
     import urllib.request as urlreq
-    # Déterminer l'URL du service
-    service_url = (os.environ.get("RENDER_EXTERNAL_URL", "")
+    url_service = (os.environ.get("RENDER_EXTERNAL_URL", "")
                    or os.environ.get("RENDER_SERVICE_URL", "")
                    or "https://ecolemax.onrender.com").rstrip("/")
+    cible = url_service + "/health"
+    time.sleep(30)  # laisser le serveur finir de démarrer
     while True:
         try:
-            urlreq.urlopen(service_url + "/health", timeout=10)
-            print("[keepalive] OK -> " + service_url + "/health", flush=True)
-        except Exception as ex:
-            print("[keepalive] ERR: " + str(ex), flush=True)
-        time.sleep(240)  # 4 minutes
+            with open(_VERROU_VEILLE, "w") as verrou:
+                try:
+                    fcntl.flock(verrou, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                except OSError:
+                    time.sleep(240)   # un autre worker s'occupe de la veille
+                    continue
+                try:
+                    debut = time.time()
+                    code = urlreq.urlopen(cible, timeout=25).getcode()
+                    _ecrire_etat_veille({"actif": True, "dernier": now(),
+                                         "http": code, "ms": int((time.time() - debut) * 1000),
+                                         "ok": code == 200, "cible": cible})
+                    print("[veille] OK " + str(code) + " -> " + cible, flush=True)
+                except Exception as ex:
+                    _ecrire_etat_veille({"actif": True, "dernier": now(),
+                                         "ok": False, "erreur": str(ex)[:200], "cible": cible})
+                    print("[veille] ERREUR: " + str(ex), flush=True)
+        except Exception:
+            pass
+        time.sleep(240)
 
-# Lancer le keepalive dans un thread séparé (sans bloqué le startup)
-import threading as _threading
-_threading.Thread(target=keepalive, daemon=True).start()
+
+if KEEPALIVE_ACTIF:
+    _threading.Thread(target=keepalive, daemon=True, name="veille").start()
 
 # Initialiser la base de données au démarrage (fonctionne avec Gunicorn et Flask dev)
 init_db()
