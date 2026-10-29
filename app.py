@@ -36,7 +36,31 @@ _ai_sem = threading.BoundedSemaphore(12)  # max 5 appels IA simultanés (évite 
 
 
 # ─── Fournisseurs IA : disjoncteur + repli intelligent (latence minimale) ───
-_SYS_IA = "Tu es un professeur clair et concis. Réponds en français, 6 lignes maximum, adapté au niveau de l'élève."
+_SYS_IA_BASE = ("Tu es un professeur clair et concis. Réponds en français, "
+                "6 lignes maximum, adapté au niveau de l'élève.")
+
+
+def _sys_ia():
+    """Prompt système daté — calculé à chaque appel.
+
+    Sans date explicite, les modèles inventaient une année (ils répondaient
+    « 15 mars 2023 »). La date suit l'horloge du serveur (heure de Dakar, UTC).
+    """
+    try:
+        d = datetime.datetime.now(datetime.timezone.utc)
+    except Exception:
+        d = datetime.datetime.utcnow()
+    jours = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
+    mois = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet",
+            "août", "septembre", "octobre", "novembre", "décembre"]
+    date_fr = "%s %d %s %d" % (jours[d.weekday()], d.day, mois[d.month - 1], d.year)
+    return (_SYS_IA_BASE +
+            " Nous sommes le " + date_fr + " (heure de Dakar). "
+            "Cette date est la seule valable : ne dis jamais une autre année. "
+            "Si on te demande la date, réponds exactement celle-ci.")
+
+
+_SYS_IA = _SYS_IA_BASE  # conservé pour compatibilité
 
 
 # ─── Fournisseurs IA à clé (optionnels, via variables d'environnement Render) ───
@@ -102,7 +126,7 @@ def _gemini_call(prompt, max_tokens=700, temperature=0.4, system=None, timeout=2
     if not cle_api("GEMINI_API_KEY"):
         return False, "", "Gemini"
     payload = {
-        "system_instruction": {"parts": [{"text": system or _SYS_IA}]},
+        "system_instruction": {"parts": [{"text": system or _sys_ia()}]},
         "contents": [{"role": "user", "parts": [{"text": prompt}]}],
         "generationConfig": {"maxOutputTokens": max_tokens, "temperature": temperature},
     }
@@ -137,7 +161,7 @@ def _groq_call(prompt, max_tokens=700, temperature=0.4, system=None, timeout=25)
     if not cle_api("GROQ_API_KEY"):
         return False, "", "Groq"
     payload = {"model": GROQ_MODEL,
-               "messages": [{"role": "system", "content": system or _SYS_IA},
+               "messages": [{"role": "system", "content": system or _sys_ia()},
                             {"role": "user", "content": prompt}],
                "max_tokens": max_tokens, "temperature": temperature}
     try:
@@ -161,7 +185,7 @@ def _openai_call(prompt, max_tokens=700, temperature=0.4, system=None, timeout=2
     if not cle_api("OPENAI_API_KEY"):
         return False, "", "OpenAI"
     payload = {"model": OPENAI_MODEL,
-               "messages": [{"role": "system", "content": system or _SYS_IA},
+               "messages": [{"role": "system", "content": system or _sys_ia()},
                             {"role": "user", "content": prompt}],
                "max_tokens": max_tokens, "temperature": temperature}
     try:
@@ -215,7 +239,7 @@ def _ovh_call(model, prompt, max_tokens=700, temperature=0.4, timeout=None, syst
     payload = {
         "model": model,
         "messages": [
-            {"role": "system", "content": system or _SYS_IA},
+            {"role": "system", "content": system or _sys_ia()},
             {"role": "user", "content": prompt},
         ],
         "max_tokens": max_tokens,
@@ -252,7 +276,7 @@ def _pollinations_raw(prompt, max_tokens=600, timeout=18, system=None):
         payload = {
             "model": modele,
             "messages": [
-                {"role": "system", "content": system or _SYS_IA},
+                {"role": "system", "content": system or _sys_ia()},
                 {"role": "user", "content": prompt},
             ],
             "max_tokens": max_tokens,
